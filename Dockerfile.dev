@@ -52,7 +52,8 @@ USER devuser
 # Expose ports
 EXPOSE 8000
 EXPOSE 5678
-EXPOSE 8888  # Jupyter
+# Jupyter
+EXPOSE 8888  
 
 # Default command for development
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

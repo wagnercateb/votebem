@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load socialaccount %}
+
+{% block title %}Social Account Connections - VoteBem{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Social Account Connections</h3>
+                </div>
+                <div class="card-body">
+                    {% if form.accounts %}
+                        <h5>Connected Accounts</h5>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="list-group mb-4">
+                                {% for base_account in form.accounts %}
+                                    {% with base_account.get_provider_account as account %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                {% if account.provider == 'google' %}
+                                                    <i class="fab fa-google text-danger me-2"></i>
+                                                {% elif account.provider == 'facebook' %}
+                                                    <i class="fab fa-facebook-f text-primary me-2"></i>
+                                                {% endif %}
+                                                <strong>{{ account.get_provider.name }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ account }}</small>
+                                            </div>
+                                            <div>
+                                                <label class="form-check-label">
+                                                    {{ base_account.radio }}
+                                                    Remove
+                                                </label>
+                                            </div>
+                                        </div>
+                                    {% endwith %}
+                                {% endfor %}
+                            </div>
+                            
+                            {% if form.accounts|length > 1 %}
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-danger">Remove Selected</button>
+                                </div>
+                            {% endif %}
+                        </form>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            You haven't connected any social accounts yet.
+                        </div>
+                    {% endif %}
+                    
+                    <hr class="my-4">
+                    
+                    <h5>Add Social Account</h5>
+                    <div class="d-grid gap-2">
+                        {% get_providers as socialaccount_providers %}
+                        {% for provider in socialaccount_providers %}
+                            {% if provider.id == "google" %}
+                                <a href="{% provider_login_url provider.id process="connect" %}" class="btn btn-outline-danger">
+                                    <i class="fab fa-google me-2"></i>Connect Google Account
+                                </a>
+                            {% elif provider.id == "facebook" %}
+                                <a href="{% provider_login_url provider.id process="connect" %}" class="btn btn-outline-primary">
+                                    <i class="fab fa-facebook-f me-2"></i>Connect Facebook Account
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{% url 'account_email' %}" class="btn btn-secondary">Manage Email Addresses</a>
+                        <a href="{% url 'account_change_password' %}" class="btn btn-secondary">Change Password</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% endblock %}

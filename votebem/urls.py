@@ -23,6 +23,7 @@ from .health import health_check
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/', include('allauth.urls')),
     path('users/', include('users.urls')),
     path('voting/', include('voting.urls')),
     path('polls/', include('polls.urls')),

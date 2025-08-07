@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load socialaccount %}
+
+{% block title %}Login - VoteBem{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center">Login</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Social Login Buttons -->
+                    <div class="mb-4">
+                        <div class="d-grid gap-2">
+                            <a href="{% provider_login_url 'google' %}" class="btn btn-danger btn-lg">
+                                <i class="fab fa-google me-2"></i>Login with Google
+                            </a>
+                            <a href="{% provider_login_url 'facebook' %}" class="btn btn-primary btn-lg">
+                                <i class="fab fa-facebook-f me-2"></i>Login with Facebook
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    <p class="text-center text-muted">Or login with your email</p>
+                    
+                    <!-- Regular Login Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">Login</button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-3">
+                        <p>Don't have an account? <a href="{% url 'account_signup' %}">Sign up here</a></p>
+                        <p><a href="{% url 'account_reset_password' %}">Forgot your password?</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .btn-google {
+        background-color: #db4437;
+        border-color: #db4437;
+    }
+    .btn-google:hover {
+        background-color: #c23321;
+        border-color: #c23321;
+    }
+</style>
+{% endblock %}

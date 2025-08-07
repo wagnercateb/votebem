@@ -343,6 +343,13 @@ make dev
 
 ### Production Deployment:
 ```bash
+# Local Development
+make setup-dev && make dev
+
+# Production Deployment (on VPS)
+# (não sei isso já foi feito acima)
+./scripts/setup_linode_vps.sh
+
 # On VPS (after setup)
 ./scripts/deploy_production.sh
 
