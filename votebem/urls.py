@@ -19,12 +19,14 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
+from .health import health_check
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('users/', include('users.urls')),
     path('voting/', include('voting.urls')),
     path('polls/', include('polls.urls')),
+    path('health/', health_check, name='health_check'),
     path('', RedirectView.as_view(url='/voting/', permanent=False)),
 ]
 

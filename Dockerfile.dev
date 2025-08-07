@@ -1,0 +1,58 @@
+# Development Dockerfile for VoteBem
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=votebem.settings.development
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        postgresql-client \
+        build-essential \
+        libpq-dev \
+        curl \
+        vim \
+        git \
+        tree \
+        htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install development dependencies
+RUN pip install --no-cache-dir \
+    django-debug-toolbar==4.2.0 \
+    ipython==8.15.0 \
+    jupyter==1.0.0 \
+    pytest==7.4.2 \
+    pytest-django==4.5.2 \
+    coverage==7.3.2 \
+    black==23.9.1 \
+    flake8==6.1.0 \
+    isort==5.12.0
+
+# Copy project
+COPY . /app/
+
+# Create directories
+RUN mkdir -p /app/staticfiles /app/media /app/logs
+
+# Create non-root user for development
+RUN adduser --disabled-password --gecos '' devuser
+RUN chown -R devuser:devuser /app
+USER devuser
+
+# Expose ports
+EXPOSE 8000
+EXPOSE 5678
+EXPOSE 8888  # Jupyter
+
+# Default command for development
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
