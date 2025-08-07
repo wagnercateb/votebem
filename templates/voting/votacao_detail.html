@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ votacao.titulo }} - VoteBem{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Voting Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}
+                    </h5>
+                    {% if user_vote %}
+                        <span class="badge bg-success fs-6">
+                            <i class="bi bi-check-circle"></i> Você votou: {{ user_vote.voto }}
+                        </span>
+                    {% elif votacao.is_active %}
+                        <span class="badge bg-primary fs-6">
+                            <i class="bi bi-clock"></i> Votação Ativa
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6">
+                            <i class="bi bi-pause-circle"></i> Votação Inativa
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <h4 class="card-title">{{ votacao.titulo }}</h4>
+                <p class="card-text">{{ votacao.resumo }}</p>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Data da Votação Original:</strong><br>
+                        <span class="text-muted">{{ votacao.data_hora_votacao|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Votação Popular Ativa:</strong><br>
+                        <span class="text-muted">{{ votacao.no_ar_desde|date:"d/m/Y H:i" }}</span>
+                        {% if votacao.no_ar_ate %}
+                            até {{ votacao.no_ar_ate|date:"d/m/Y H:i" }}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Proposition Details -->
+                <div class="border-top pt-3">
+                    <h6>Detalhes da Proposição:</h6>
+                    <p><strong>Ementa:</strong> {{ votacao.proposicao.ementa }}</p>
+                    {% if votacao.proposicao.autor %}
+                        <p><strong>Autor:</strong> {{ votacao.proposicao.autor }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Voting Form -->
+        {% if can_vote %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-vote-fill"></i> Registre seu Voto</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'voting:votar' votacao.id %}">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="d-grid">
+                                    <button type="submit" name="voto" value="SIM" class="btn btn-success btn-lg">
+                                        <i class="bi bi-hand-thumbs-up"></i><br>
+                                        <strong>SIM</strong>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="d-grid">
+                                    <button type="submit" name="voto" value="NAO" class="btn btn-danger btn-lg">
+                                        <i class="bi bi-hand-thumbs-down"></i><br>
+                                        <strong>NÃO</strong>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="d-grid">
+                                    <button type="submit" name="voto" value="ABSTENCAO" class="btn btn-secondary btn-lg">
+                                        <i class="bi bi-dash-circle"></i><br>
+                                        <strong>ABSTENÇÃO</strong>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% elif not user.is_authenticated %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>Faça login para votar!</strong>
+                <a href="{% url 'users:login' %}?next={{ request.path }}" class="btn btn-primary btn-sm ms-2">Entrar</a>
+            </div>
+        {% elif user_vote %}
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle"></i>
+                <strong>Você já votou nesta proposição!</strong>
+                Seu voto: <strong>{{ user_vote.voto }}</strong>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>Esta votação não está mais ativa.</strong>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Voting Statistics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Resultados Populares</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-success"><strong>SIM</strong></span>
+                        <span class="badge bg-success">{{ votos_sim }}</span>
+                    </div>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-success" style="width: {{ percentual_sim }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ percentual_sim }}%</small>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-danger"><strong>NÃO</strong></span>
+                        <span class="badge bg-danger">{{ votos_nao }}</span>
+                    </div>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-danger" style="width: {{ percentual_nao }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ percentual_nao }}%</small>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-secondary"><strong>ABSTENÇÃO</strong></span>
+                        <span class="badge bg-secondary">{{ votos_abstencao }}</span>
+                    </div>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-secondary" style="width: {{ percentual_abstencao }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ percentual_abstencao }}%</small>
+                </div>
+                
+                <hr>
+                <div class="text-center">
+                    <strong>Total de Votos: {{ total_votos }}</strong>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Official Results -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-building"></i> Resultado Oficial</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="text-success">
+                            <h4>{{ votacao.sim_oficial }}</h4>
+                            <small>SIM</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-danger">
+                            <h4>{{ votacao.nao_oficial }}</h4>
+                            <small>NÃO</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <a href="{% url 'voting:votacoes_disponiveis' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Voltar às Votações
+        </a>
+    </div>
+</div>
+{% endblock %}

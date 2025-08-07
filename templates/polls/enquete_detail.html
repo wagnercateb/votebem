@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ enquete.titulo }} - VoteBem{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Enquete Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">{{ enquete.titulo }}</h5>
+                    <div>
+                        <span class="badge bg-{% if enquete.estado == 'publicada' %}success{% elif enquete.estado == 'rascunho' %}secondary{% else %}warning{% endif %} me-2">
+                            {{ enquete.get_estado_display }}
+                        </span>
+                        {% if user == enquete.autor %}
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'polls:editar_enquete' enquete.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'polls:deletar_enquete' enquete.id %}" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="bi bi-person"></i> {{ enquete.autor.get_full_name|default:enquete.autor.username }}
+                        <span class="ms-3">
+                            <i class="bi bi-calendar"></i> {{ enquete.criada_em|date:"d/m/Y H:i" }}
+                        </span>
+                        {% if enquete.atualizada_em != enquete.criada_em %}
+                            <span class="ms-3">
+                                <i class="bi bi-pencil"></i> Atualizada em {{ enquete.atualizada_em|date:"d/m/Y H:i" }}
+                            </span>
+                        {% endif %}
+                    </small>
+                </div>
+                
+                <h4 class="card-title">{{ enquete.pergunta }}</h4>
+                
+                {% if enquete.descricao %}
+                    <p class="card-text">{{ enquete.descricao|linebreaks }}</p>
+                {% endif %}
+                
+                {% if enquete.proposicao %}
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-link"></i> Proposição Relacionada</h6>
+                        <p class="mb-1">
+                            <strong>{{ enquete.proposicao.tipo }} {{ enquete.proposicao.numero }}/{{ enquete.proposicao.ano }}</strong>
+                        </p>
+                        <p class="mb-1">{{ enquete.proposicao.ementa }}</p>
+                        <a href="{% url 'voting:votacao_detail' enquete.proposicao.id %}" class="btn btn-sm btn-outline-primary">
+                            Ver Votação
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Response Form -->
+        {% if can_respond %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Sua Resposta</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Enviar Resposta
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% elif not user.is_authenticated %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>Faça login para responder!</strong>
+                <a href="{% url 'users:login' %}?next={{ request.path }}" class="btn btn-primary btn-sm ms-2">Entrar</a>
+            </div>
+        {% elif user_response %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-check-circle"></i> Sua Resposta</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-light mb-3">
+                        <strong>Resposta:</strong> {{ user_response.resposta }}
+                    </div>
+                    {% if user_response.comentario %}
+                        <div class="alert alert-light">
+                            <strong>Comentário:</strong><br>
+                            {{ user_response.comentario|linebreaks }}
+                        </div>
+                    {% endif %}
+                    <small class="text-muted">
+                        <i class="bi bi-clock"></i> Respondido em {{ user_response.created_at|date:"d/m/Y H:i" }}
+                    </small>
+                </div>
+            </div>
+        {% elif enquete.estado != 'publicada' %}
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>Esta enquete não está disponível para respostas.</strong>
+            </div>
+        {% endif %}
+        
+        <!-- Recent Responses -->
+        {% if respostas %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-chat-text"></i> Respostas Recentes</h5>
+                </div>
+                <div class="card-body">
+                    {% for resposta in respostas %}
+                        <div class="border-bottom pb-3 mb-3{% if not forloop.last %} border-bottom{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <strong>{{ resposta.user.get_full_name|default:resposta.user.username }}</strong>
+                                <small class="text-muted">{{ resposta.created_at|date:"d/m/Y H:i" }}</small>
+                            </div>
+                            <div class="alert alert-light py-2 mb-2">
+                                <strong>Resposta:</strong> {{ resposta.resposta }}
+                            </div>
+                            {% if resposta.comentario %}
+                                <p class="text-muted small mb-0">{{ resposta.comentario|linebreaks }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    
+                    {% if total_respostas > respostas|length %}
+                        <div class="text-center">
+                            <small class="text-muted">
+                                Mostrando {{ respostas|length }} de {{ total_respostas }} respostas
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Statistics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Estatísticas</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ total_respostas }}</h4>
+                        <small class="text-muted">Resposta{{ total_respostas|pluralize }}</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ respostas_com_comentario }}</h4>
+                        <small class="text-muted">Com Comentário</small>
+                    </div>
+                </div>
+                
+                {% if response_stats %}
+                    <hr>
+                    <h6>Distribuição de Respostas:</h6>
+                    {% for stat in response_stats %}
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span><strong>{{ stat.resposta }}</strong></span>
+                                <span class="badge bg-primary">{{ stat.count }}</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar" style="width: {{ stat.percentage }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ stat.percentage }}%</small>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> Ações</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'polls:enquete_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Voltar às Enquetes
+                    </a>
+                    
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'polls:minhas_enquetes' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-person-circle"></i> Minhas Enquetes
+                        </a>
+                        
+                        <a href="{% url 'polls:criar_enquete' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Nova Enquete
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

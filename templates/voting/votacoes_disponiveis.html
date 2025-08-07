@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Votações Disponíveis - VoteBem{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="bi bi-vote-fill"></i> Votações Disponíveis</h1>
+            {% if user.is_authenticated %}
+                <a href="{% url 'voting:meus_votos' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-list-check"></i> Meus Votos
+                </a>
+            {% endif %}
+        </div>
+        
+        {% if votacoes %}
+            <div class="row">
+                {% for votacao in votacoes %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100 {% if votacao.id in user_votes %}border-success{% endif %}">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">{{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}</h6>
+                                {% if votacao.id in user_votes %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Votado
+                                    </span>
+                                {% else %}
+                                    {% if votacao.is_active %}
+                                        <span class="badge bg-primary">
+                                            <i class="bi bi-clock"></i> Ativa
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-pause-circle"></i> Inativa
+                                        </span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            
+                            <div class="card-body">
+                                <h6 class="card-title">{{ votacao.titulo|truncatechars:60 }}</h6>
+                                <p class="card-text text-muted small">{{ votacao.resumo|truncatechars:100 }}</p>
+                                
+                                <div class="row text-center mb-3">
+                                    <div class="col-6">
+                                        <div class="text-success">
+                                            <strong>{{ votacao.get_votos_sim_populares }}</strong>
+                                            <br><small>SIM</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-danger">
+                                            <strong>{{ votacao.get_votos_nao_populares }}</strong>
+                                            <br><small>NÃO</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center">
+                                    <small class="text-muted">
+                                        Total: {{ votacao.get_total_votos_populares }} votos
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="card-footer">
+                                <div class="d-grid">
+                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye"></i> Ver Detalhes
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if is_paginated %}
+                <nav aria-label="Navegação das votações">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1">&laquo; Primeira</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                            </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                            </span>
+                        </li>
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última &raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h3 class="text-muted mt-3">Nenhuma votação disponível</h3>
+                <p class="text-muted">Não há votações ativas no momento.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

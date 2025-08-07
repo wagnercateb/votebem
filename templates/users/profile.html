@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Meu Perfil - VoteBem{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="bi bi-person-circle"></i> Meu Perfil</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ user_form|crispy }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ profile_form|crispy }}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- User Statistics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bi bi-bar-chart"></i> Suas Estatísticas</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ user_stats.total_votos }}</h4>
+                        <small class="text-muted">Votos</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ user_stats.total_enquetes }}</h4>
+                        <small class="text-muted">Enquetes</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-info">{{ user_stats.respostas_enquetes }}</h4>
+                        <small class="text-muted">Respostas</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ user_stats.pontos_ranking }}</h4>
+                        <small class="text-muted">Pontos</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-lightning"></i> Ações Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'voting:votacoes_disponiveis' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-vote-fill"></i> Ver Votações
+                    </a>
+                    <a href="{% url 'polls:minhas_enquetes' %}" class="btn btn-outline-success">
+                        <i class="bi bi-question-circle"></i> Minhas Enquetes
+                    </a>
+                    <a href="{% url 'polls:criar_enquete' %}" class="btn btn-outline-info">
+                        <i class="bi bi-plus-circle"></i> Nova Enquete
+                    </a>
+                    <a href="{% url 'users:ranking' %}" class="btn btn-outline-warning">
+                        <i class="bi bi-trophy"></i> Ranking
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
