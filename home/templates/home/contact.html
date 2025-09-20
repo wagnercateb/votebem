@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contato - {{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .contact-section {
+        padding: 80px 0;
+        background-color: #f8f9fa;
+    }
+    
+    .contact-form {
+        background: white;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .contact-info {
+        background: #667eea;
+        color: white;
+        padding: 40px;
+        border-radius: 10px;
+        height: 100%;
+    }
+    
+    .contact-info h3 {
+        color: white;
+        margin-bottom: 30px;
+    }
+    
+    .contact-item {
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .contact-item i {
+        margin-right: 15px;
+        width: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="contact-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12 text-center mb-5">
+                <h2 class="section-heading text-uppercase">Entre em Contato</h2>
+                <h3 class="section-subheading text-muted">
+                    Sugestões, críticas, elogios ou dúvidas? Queremos ouvir você!
+                </h3>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="contact-form">
+                    <h3>Envie sua mensagem</h3>
+                    
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post" id="contactForm">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nome" class="form-label">Nome *</label>
+                                    <input type="text" class="form-control" id="nome" name="nome" required maxlength="100">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email *</label>
+                                    <input type="email" class="form-control" id="email" name="email" required maxlength="100">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="assunto" class="form-label">Assunto *</label>
+                            <select class="form-select" id="assunto" name="assunto" required>
+                                <option value="">Selecione um assunto</option>
+                                <option value="sugestao">Sugestão</option>
+                                <option value="critica">Crítica</option>
+                                <option value="elogio">Elogio</option>
+                                <option value="duvida">Dúvida</option>
+                                <option value="erro">Relatar erro</option>
+                                <option value="votacao">Sugestão de votação</option>
+                                <option value="doacao">Doação</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="mensagem" class="form-label">Mensagem *</label>
+                            <textarea class="form-control" id="mensagem" name="mensagem" rows="6" required maxlength="1000" 
+                                      placeholder="Descreva sua mensagem aqui..."></textarea>
+                            <div class="form-text">Máximo 1000 caracteres</div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fa fa-paper-plane"></i> Enviar Mensagem
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="contact-info">
+                    <h3>Informações de Contato</h3>
+                    
+                    <div class="contact-item">
+                        <i class="fa fa-envelope"></i>
+                        <div>
+                            <strong>Email:</strong><br>
+                            <a href="mailto:faleconosco@votobom.com" style="color: white;">
+                                faleconosco@votobom.com
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <i class="fa fa-twitter"></i>
+                        <div>
+                            <strong>Twitter:</strong><br>
+                            <a href="https://twitter.com/votobom" target="_blank" style="color: white;">
+                                @votobom
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="contact-item">
+                        <i class="fa fa-facebook"></i>
+                        <div>
+                            <strong>Facebook:</strong><br>
+                            <a href="https://facebook.com/votobom" target="_blank" style="color: white;">
+                                /votobom
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <hr style="border-color: rgba(255,255,255,0.3);">
+                    
+                    <h4>Como podemos ajudar?</h4>
+                    <ul style="list-style: none; padding-left: 0;">
+                        <li><i class="fa fa-check"></i> Sugestões de novas votações</li>
+                        <li><i class="fa fa-check"></i> Relatar erros ou problemas</li>
+                        <li><i class="fa fa-check"></i> Feedback sobre o site</li>
+                        <li><i class="fa fa-check"></i> Parcerias e colaborações</li>
+                        <li><i class="fa fa-check"></i> Informações sobre doações</li>
+                    </ul>
+                    
+                    <div class="mt-4">
+                        <p><small>
+                            Respondemos todas as mensagens em até 48 horas. 
+                            Sua opinião é muito importante para melhorarmos o VotoBom!
+                        </small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-5">
+            <div class="col-lg-12 text-center">
+                <h4>Outras formas de participar</h4>
+                <p class="text-muted">
+                    Além do contato direto, você pode participar criando suas próprias enquetes ou 
+                    divulgando o site nas redes sociais.
+                </p>
+                <div class="mt-3">
+                    <a href="{% url 'polls:enquete_list' %}" class="btn btn-outline-primary me-3">
+                        <i class="fa fa-poll"></i> Criar Enquete
+                    </a>
+                    <a href="{% url 'home:index' %}" class="btn btn-outline-success">
+                        <i class="fa fa-home"></i> Voltar ao Início
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+document.getElementById('contactForm').addEventListener('submit', function(e) {
+    var mensagem = document.getElementById('mensagem').value;
+    if (mensagem.length > 1000) {
+        e.preventDefault();
+        alert('A mensagem deve ter no máximo 1000 caracteres.');
+        return false;
+    }
+});
+
+// Contador de caracteres para a mensagem
+document.getElementById('mensagem').addEventListener('input', function() {
+    var length = this.value.length;
+    var maxLength = 1000;
+    var remaining = maxLength - length;
+    
+    var helpText = this.nextElementSibling;
+    if (remaining < 100) {
+        helpText.textContent = `Restam ${remaining} caracteres`;
+        helpText.style.color = remaining < 50 ? '#dc3545' : '#ffc107';
+    } else {
+        helpText.textContent = 'Máximo 1000 caracteres';
+        helpText.style.color = '#6c757d';
+    }
+});
+</script>
+{% endblock %}

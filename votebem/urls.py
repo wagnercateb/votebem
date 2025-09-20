@@ -27,11 +27,18 @@ urlpatterns = [
     path('users/', include('users.urls')),
     path('voting/', include('voting.urls')),
     path('polls/', include('polls.urls')),
+    path('home/', include('home.urls')),
     path('health/', health_check, name='health_check'),
-    path('', RedirectView.as_view(url='/voting/', permanent=False)),
+    path('', RedirectView.as_view(url='/home/', permanent=False)),
 ]
 
 # Serve media files during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    
+    # Add Django Debug Toolbar URLs
+    import debug_toolbar
+    urlpatterns = [
+        path('__debug__/', include(debug_toolbar.urls)),
+    ] + urlpatterns

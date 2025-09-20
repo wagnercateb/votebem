@@ -91,3 +91,64 @@ class Voto(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.voto} em {self.votacao.titulo[:30]}"
+
+class Congressman(models.Model):
+    """Model for congressmen/deputies"""
+    id_cadastro = models.IntegerField(unique=True, verbose_name="ID Cadastro")
+    nome = models.CharField(max_length=200, verbose_name="Nome")
+    partido = models.CharField(max_length=50, verbose_name="Partido")
+    uf = models.CharField(max_length=2, verbose_name="UF")
+    foto_url = models.URLField(blank=True, null=True, verbose_name="URL da Foto")
+    ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Congressista"
+        verbose_name_plural = "Congressistas"
+        ordering = ['nome']
+    
+    def __str__(self):
+        return f"{self.nome} ({self.partido}/{self.uf})"
+    
+    def get_foto_url(self):
+        """Get congressman photo URL from Camara dos Deputados"""
+        if self.foto_url:
+            return self.foto_url
+        return f"http://www.camara.gov.br/internet/deputado/bandep/{self.id_cadastro}.jpg"
+
+class CongressmanVote(models.Model):
+    """Model for congressman votes on propositions"""
+    VOTO_CHOICES = [
+        (1, 'Sim'),
+        (-1, 'Não'),
+        (0, 'Abstenção'),
+        (None, 'Não Compareceu'),
+    ]
+    
+    congressman = models.ForeignKey(Congressman, on_delete=models.CASCADE, verbose_name="Congressista")
+    proposicao = models.ForeignKey(Proposicao, on_delete=models.CASCADE, verbose_name="Proposição")
+    voto = models.IntegerField(choices=VOTO_CHOICES, blank=True, null=True, verbose_name="Voto")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Voto do Congressista"
+        verbose_name_plural = "Votos dos Congressistas"
+        unique_together = ['congressman', 'proposicao']
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        voto_display = self.get_voto_display() if self.voto is not None else "Não Compareceu"
+        return f"{self.congressman.nome} - {voto_display} em {self.proposicao.titulo[:30]}"
+    
+    def get_voto_display_text(self):
+        """Get human-readable vote display"""
+        if self.voto is None:
+            return "Não compareceu"
+        elif self.voto == 0:
+            return "Abstenção"
+        elif self.voto == 1:
+            return "Sim"
+        elif self.voto == -1:
+            return "Não"
+        return "Desconhecido"

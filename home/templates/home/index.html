@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+<style>
+    .masthead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 100px 0;
+        text-align: center;
+    }
+    
+    .intro-heading {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+    }
+    
+    .intro-lead-in {
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .nova-secao {
+        padding: 80px 0;
+    }
+    
+    .bg-primary-1 {
+        background-color: #f8f9fa;
+    }
+    
+    .bg-primary-2 {
+        background-color: #e9ecef;
+    }
+    
+    .bg-primary-3 {
+        background-color: #f8f9fa;
+    }
+    
+    .fa-stack {
+        margin-bottom: 20px;
+    }
+    
+    .service-heading {
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .section-heading {
+        margin-bottom: 30px;
+        color: #333;
+    }
+    
+    .section-subheading {
+        margin-bottom: 50px;
+        color: #666;
+    }
+    
+    .panel {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .panel-heading {
+        background-color: #f5f5f5;
+        border-bottom: 1px solid #ddd;
+        padding: 15px;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .panel-body {
+        padding: 15px;
+    }
+    
+    .text-color.twitter {
+        color: #1da1f2;
+    }
+    
+    .text-color.facebook {
+        color: #4267b2;
+    }
+    
+    .social-links {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        margin-top: 15px;
+    }
+    
+    .social-links a {
+        text-decoration: none;
+        transition: transform 0.2s;
+    }
+    
+    .social-links a:hover {
+        transform: scale(1.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<header class="masthead">
+    <div class="container">
+        <div class="intro-text">
+            <div class="intro-heading">Vote como um deputado...</div>
+            <div class="intro-lead-in">...e veja que deputados votaram como você!</div>
+        </div>
+    </div>
+</header>
+
+<!-- Passo a passo do site -->
+<section id="passo-a-passo" class="bg-primary-1 nova-secao">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12 text-center">
+                <h2 class="section-heading text-uppercase">Um <b>voto bom</b> é difícil...</h2>
+                <h3 class="section-subheading text-muted">
+                    Afinal, não é fácil lembrar tudo o que foi votado, por tanta gente, nos últimos 4 anos...
+                    <br><br>Vamos ajudá-lo a achar <b>quem merece o seu voto</b>!
+                </h3>
+            </div>
+        </div>
+        <div class="row text-center">
+            <div class="col-md-6">
+                <span class="fa-stack fa-4x text-primary">
+                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
+                    <i class="fa fa-newspaper-o fa-stack-1x fa-inverse"></i>
+                </span>
+                <h4 class="service-heading">Acompanhe conosco</h4>
+                <p class="text-muted">
+                    É muita notícia, muitas votações... Não dá para ler e lembrar de tudo? Então veja aqui o que foi votado no Congresso. 
+                    Eleja um tema que acha importante. Entenda os prós e contras e <b>vote</b> (sabendo das coisas).
+                </p>
+            </div>
+            <div class="col-md-6">
+                <span class="fa-stack fa-4x">
+                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
+                    <i class="fa fa-pencil-square-o fa-stack-1x fa-inverse"></i>
+                </span>
+                <h4 class="service-heading">Vote como <i>você</i> pensa</h4>
+                <p class="text-muted">
+                    Decida o que é melhor para você, sua família e seu país. Vote como se fosse um deputado federal ou senador consciente, 
+                    sem lobbies, sem politicagem, sem interesses escusos.
+                </p>
+            </div>
+        </div>
+
+        <br><br><br>
+        <div class="row text-center">
+            <div class="col-md-6">
+                <span class="fa-stack fa-4x">
+                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
+                    <i class="fa fa-handshake-o fa-stack-1x fa-inverse"></i>
+                </span>
+                <h4 class="service-heading">Veja quem te representou melhor</h4>
+                <p class="text-muted">
+                    Fazemos o <b>seu</b> ranking, mostramos que parlamentares votaram como você votaria. Em 1, 5, 20, 100 votações... 
+                    Enfim, em 4 anos de mandato. E conosco <b>você não esquece quem pisou na bola</b>!
+                </p>
+            </div>
+            <div class="col-md-6">
+                <span class="fa-stack fa-4x">
+                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
+                    <i class="fa fa-list-ol fa-stack-1x fa-inverse"></i>
+                </span>
+                <h4 class="service-heading">Reeleja (ou não...) usando o ranking</h4>
+                <p class="text-muted">
+                    Nosso ranking te mostra quem te representou bem, quem vale a pena reeleger. Há muita gente boa! 
+                    Mas se não gostou de ninguém, fica certo de que precisa achar sangue novo.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Que fazer em 2024 -->
+<section id="que-fazer-em-2024" class="bg-primary-2 nova-secao">
+    <div class="container">
+        <div class="text-center">
+            <div class="fa-stack fa-4x">
+                <i class="fa fa-calendar fa-stack-1x text-primary"></i>
+            </div>
+            <div class="intro-text intro-lead-in">E em 2024, em quem votar?</div>
+        </div>
+        <br><br>
+        <div class="row">
+            <div class="col-md-4 text-center">
+                <div class="fa-stack fa-4x">
+                    <i class="fa fa-users fa-stack-1x text-primary"></i>
+                </div>
+                <h2>Precisamos deles</h2>
+                <p>
+                    No Brasil o Presidente da República precisa do Congresso para governar. Ou elegemos políticos decentes, 
+                    ou o Presidente vai negociar com eles usando cargos e favores, clientelismo, etc.
+                </p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="fa-stack fa-4x">
+                    <i class="fa fa-bomb fa-stack-1x text-primary"></i>
+                </div>
+                <h2>"Odeio esses políticos, vou votar nulo!"</h2>
+                <p>
+                    Infelizmente não ajuda muito. Quanto menos votos bons, menos votos os maus políticos precisarão para se elegerem, 
+                    mais difícil será derrotá-los no Congresso. Mais fisiologismo, mais toma lá dá cá... 
+                    Enfim, <b>é perpetuar o problema</b>!
+                </p>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="fa-stack fa-4x">
+                    <i class="fa fa-binoculars fa-stack-1x text-primary"></i>
+                </div>
+                <h2>Novos candidatos</h2>
+                <p>
+                    Renovar é essencial! Se você conhecer alguém melhor do que encontrar aqui, vá em frente! 
+                    E acompanhe conosco como os novatos vão se comportar nos próximos anos.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Que faço agora -->
+<section id="que-faco-agora" class="bg-primary-3 nova-secao">
+    <div class="container">
+        <div class="text-center">
+            <div class="intro-text intro-lead-in">Gostei, quero participar!</div>
+        </div>
+        <br><br>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3>Siga-nos</h3>
+                    </div>
+                    <div class="panel-body">
+                        Vamos soltando novas votações aos poucos pra não dar canseira. Siga-nos para saber quando as pusermos no ar 
+                        ou cadastre seu email para te informarmos.
+                        <div class="social-links">
+                            <a href="https://twitter.com/votobom" target="_blank" title="Siga-nos no Twitter">
+                                <span class="fa fa-twitter-square fa-4x text-color twitter"></span>
+                            </a>
+                            <a href="https://facebook.com/votobom" target="_blank" title="Siga-nos no Facebook">
+                                <span class="fa fa-facebook-square fa-4x text-color facebook"></span>
+                            </a>
+                            <a href="#" onclick="abrirModalMalaDireta()" title="Informe seu email">
+                                <i class="fa fa-envelope fa-4x text-primary"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3>Divulgue-nos nas redes sociais</h3>
+                    </div>
+                    <div class="panel-body">
+                        Uma andorinha sozinha não faz verão... <b>Se muita gente avaliar direito os atuais parlamentares e mostrarmos 
+                        como estamos atentos, poderemos melhorar o Congresso</b> dos próximos anos. Para isto acontecer, divulgue o site, 
+                        as votações e seus votos que achar mais importantes.
+                        <div class="social-links">
+                            <a href="https://twitter.com/intent/tweet?text=Site bacana para saber que político te representa bem! Vote como um deputado e veja que deputados votaram como você&url={{ request.build_absolute_uri }}" 
+                               target="_blank" title="Divulgue-nos no seu Twitter">
+                                <span class="fa fa-twitter-square fa-4x text-color twitter"></span>
+                            </a>
+                            <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri }}" 
+                               target="_blank" title="Divulgue-nos no Facebook">
+                                <span class="fa fa-facebook-square fa-4x text-color facebook"></span>
+                            </a>
+                            <a href="#" onclick="divulgarPorEmail()" title="Divulgue-nos por email">
+                                <i class="fa fa-envelope fa-4x text-primary"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3>Sugestões, críticas, elogios, doações</h3>
+                    </div>
+                    <div class="panel-body">
+                        Contate-nos por <a href="mailto:faleconosco@votobom.com?subject=Sugestões, críticas e elogios">
+                        <u>faleconosco@votobom.com</u></a>, queremos ouvir sua opinião. Alguma votação importante que deveria ir para o ar? 
+                        Que tal <a href="{% url 'polls:enquete_list' %}">criar suas próprias enquetes</a> (a gente te ajuda)?
+                        Correções de erros, ideias novas, recursos financeiros, é tudo bem vindo!
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12 text-center">
+                <h2>Comece a votar agora!</h2>
+                <p></p>
+                <p>
+                    <a class="btn btn-success btn-lg" href="{% url 'voting:votacoes_disponiveis' %}" role="button">
+                        Clique para votar
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para entrar na mala direta -->
+    <div id="malaDireta" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 id="tituloModalMalaDireta" class="modal-title">Receba informações por email</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Se preferir receber as novidades do site por email, cadastre-o aqui</p>
+                    <form id="newsletterForm">
+                        <div class="input-group mb-3">
+                            <span class="input-group-text"><i class="fa fa-user-o"></i></span>
+                            <input id="nome" type="text" maxlength="60" class="form-control" name="nome" placeholder="Informe seu nome">
+                        </div>
+                        <div class="input-group mb-3">
+                            <span class="input-group-text"><i class="fa fa-envelope"></i></span>
+                            <input id="email" type="email" maxlength="60" class="form-control" name="email" placeholder="Informe seu email">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btnCadastrarEmail" class="btn btn-success" onclick="cadastrarEmail()">Cadastrar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+// Envio de email de divulgação
+function divulgarPorEmail() {
+    var body_message = 'Olá,%0D%0A%0D%0AConheci o site {{ request.build_absolute_uri }} e gostaria de compartilhar com você.%0D%0A%0D%0AÉ uma forma fácil de saber que senadores e deputados federais estão afinados conosco, quem realmente nos representa, quem merece ser reeleito.%0D%0A%0D%0AMuito útil para chegarmos às eleições conhecendo melhor os atuais parlamentares.%0D%0A%0D%0ADá uma olhada, vale a pena! Até o fim do ano você também vai estar mais por dentro.%0D%0A%0D%0AAté mais!';
+    var subject = 'Site muito interessante!';
+    var mailto_link = 'mailto:?subject=' + subject + '&body=' + body_message;
+    window.open(mailto_link, 'emailWindow');
+}
+
+// Exibe modal de cadastro de mala direta
+function abrirModalMalaDireta() {
+    var modal = new bootstrap.Modal(document.getElementById('malaDireta'));
+    modal.show();
+    document.querySelectorAll('#malaDireta input, #btnCadastrarEmail').forEach(el => el.style.display = 'block');
+    document.getElementById('tituloModalMalaDireta').textContent = 'Receba informações por email';
+}
+
+// Cadastrar email do usuário
+function cadastrarEmail() {
+    // Serializa os dados do formulário
+    var formData = new FormData(document.getElementById('newsletterForm'));
+    var dados = [];
+    for (var pair of formData.entries()) {
+        dados.push({name: pair[0], value: pair[1]});
+    }
+    
+    chamaWebserviceViaJS(JSON.stringify(dados), '{% url "home:newsletter_signup" %}');
+}
+
+// POST para o webservice Django
+function chamaWebserviceViaJS(dadosAEnviar, url) {
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: dadosAEnviar
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('tituloModalMalaDireta').textContent = 'Email gravado com sucesso!';
+            document.querySelectorAll('#malaDireta input, #btnCadastrarEmail').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('#malaDireta input').forEach(el => el.value = '');
+        } else {
+            document.getElementById('tituloModalMalaDireta').textContent = 'Lamentamos, ocorreu um erro e email não foi gravado! Você poderia tentar novamente depois?';
+            document.querySelectorAll('#malaDireta input, #btnCadastrarEmail').forEach(el => el.style.display = 'none');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('tituloModalMalaDireta').textContent = 'Lamentamos, ocorreu um erro e email não foi gravado! Você poderia tentar novamente depois?';
+        document.querySelectorAll('#malaDireta input, #btnCadastrarEmail').forEach(el => el.style.display = 'none');
+    });
+}
+</script>
+{% endblock %}

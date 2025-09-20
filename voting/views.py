@@ -1,10 +1,13 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, View
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum, Case, When, IntegerField, F
+from django.db.models.functions import Coalesce
 from django.utils import timezone
-from .models import VotacaoDisponivel, Voto, Proposicao
+from .models import VotacaoDisponivel, Voto, Proposicao, Congressman, CongressmanVote
+from .forms import VotoForm
 from users.models import UserProfile
 
 class VotacoesDisponiveisView(ListView):
@@ -130,4 +133,161 @@ class RankingView(ListView):
         ).filter(total_votos__gt=0).order_by('-total_votos')[:10]
         
         context['top_voters'] = top_voters
+        return context
+
+class PersonalizedRankingView(LoginRequiredMixin, ListView):
+    """Personalized ranking view equivalent to vb14_RankingPersonalizado.php"""
+    model = Congressman
+    template_name = 'voting/ranking_personalizado.html'
+    context_object_name = 'congressmen_ranking'
+    paginate_by = 20
+    
+    def get_queryset(self):
+        user = self.request.user
+        user_uf = None
+        
+        # Get user's UF from profile or session
+        try:
+            user_profile = UserProfile.objects.get(user=user)
+            user_uf = user_profile.uf
+        except UserProfile.DoesNotExist:
+            pass
+        
+        # If no UF in profile, try to get from GET parameter
+        if not user_uf:
+            user_uf = self.request.GET.get('uf')
+        
+        if not user_uf:
+            return Congressman.objects.none()
+        
+        # Get congressmen from user's state with their scores
+        # This query calculates the score based on how often the congressman voted
+        # the same way as the user on the same propositions
+        queryset = Congressman.objects.filter(uf=user_uf, ativo=True)
+        
+        # Annotate with score calculation
+        queryset = queryset.annotate(
+            total_score=Coalesce(
+                Sum(
+                    Case(
+                        # When user voted SIM and congressman voted 1 (SIM)
+                        When(
+                            congressmanvote__proposicao__voto__user=user,
+                            congressmanvote__proposicao__voto__voto='SIM',
+                            congressmanvote__voto=1,
+                            then=1
+                        ),
+                        # When user voted NAO and congressman voted -1 (NAO)
+                        When(
+                            congressmanvote__proposicao__voto__user=user,
+                            congressmanvote__proposicao__voto__voto='NAO',
+                            congressmanvote__voto=-1,
+                            then=1
+                        ),
+                        # When user voted ABSTENCAO and congressman voted 0 (ABSTENCAO)
+                        When(
+                            congressmanvote__proposicao__voto__user=user,
+                            congressmanvote__proposicao__voto__voto='ABSTENCAO',
+                            congressmanvote__voto=0,
+                            then=1
+                        ),
+                        default=0,
+                        output_field=IntegerField()
+                    )
+                ),
+                0
+            ),
+            total_votes_compared=Count(
+                'congressmanvote',
+                filter=Q(congressmanvote__proposicao__voto__user=user)
+            )
+        ).filter(total_votes_compared__gt=0).order_by('-total_score', 'nome')
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get user's UF
+        user_uf = None
+        try:
+            user_profile = UserProfile.objects.get(user=self.request.user)
+            user_uf = user_profile.uf
+        except UserProfile.DoesNotExist:
+            pass
+        
+        if not user_uf:
+            user_uf = self.request.GET.get('uf')
+        
+        context['user_uf'] = user_uf
+        context['available_ufs'] = [
+            'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
+            'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
+            'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+        ]
+        
+        return context
+
+class CongressmanDetailView(LoginRequiredMixin, DetailView):
+    """Congressman detail view equivalent to vb16_DetalheRanking.php"""
+    model = Congressman
+    template_name = 'voting/congressman_detail.html'
+    context_object_name = 'congressman'
+    pk_url_kwarg = 'congressman_id'
+    
+    def get_object(self):
+        congressman_id = self.kwargs.get('congressman_id')
+        return get_object_or_404(Congressman, id_cadastro=congressman_id)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        congressman = self.get_object()
+        user = self.request.user
+        
+        # Get detailed voting comparison between user and congressman
+        # This is equivalent to the getDetalheRanking function in PHP
+        voting_details = []
+        accumulated_points = 0
+        
+        # Get all propositions where both user and congressman voted
+        user_votes = Voto.objects.filter(user=user).select_related('votacao__proposicao')
+        
+        for user_vote in user_votes:
+            try:
+                congressman_vote = CongressmanVote.objects.get(
+                    congressman=congressman,
+                    proposicao=user_vote.votacao.proposicao
+                )
+                
+                # Calculate points based on vote agreement
+                points = 0
+                if user_vote.voto == 'SIM' and congressman_vote.voto == 1:
+                    points = 1
+                elif user_vote.voto == 'NAO' and congressman_vote.voto == -1:
+                    points = 1
+                elif user_vote.voto == 'ABSTENCAO' and congressman_vote.voto == 0:
+                    points = 1
+                
+                accumulated_points += points
+                
+                voting_details.append({
+                    'titulo': user_vote.votacao.titulo,
+                    'ementa': user_vote.votacao.proposicao.ementa,
+                    'id_proposicao': user_vote.votacao.proposicao.id_proposicao,
+                    'data_votacao': user_vote.votacao.data_hora_votacao,
+                    'voto_congressman': congressman_vote.get_voto_display_text(),
+                    'voto_user': user_vote.get_voto_display(),
+                    'data_user_vote': user_vote.created_at,
+                    'points': points,
+                    'accumulated_points': accumulated_points,
+                })
+                
+            except CongressmanVote.DoesNotExist:
+                # Congressman didn't vote on this proposition
+                continue
+        
+        context['voting_details'] = voting_details
+        context['total_accumulated_points'] = accumulated_points
+        context['congressman_photo_url'] = congressman.get_foto_url()
+        
         return context
