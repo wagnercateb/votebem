@@ -113,7 +113,8 @@ LOGGING = {
     },
 }
 
-# Remote debugging for development
-import debugpy
-debugpy.listen(('0.0.0.0', 5678))
-print('Development debugpy listening on port 5678')
+# Remote debugging for development (disabled by default to avoid port conflicts)
+# To enable remote debugging, uncomment the lines below:
+# import debugpy
+# debugpy.listen(('0.0.0.0', 5678))
+# print('Development debugpy listening on port 5678')
