@@ -1,3 +1,11 @@
+# Visão Geral
+- para acessar o Git remoto (no bash): eval $(ssh-agent); ssh-add C:/Users/desig.cateb/.ssh/id_rsa_paraPutty.ppk
+- no computador de casa (no bash): eval $(ssh-agent); ssh-add C:/Users/User/.ssh/id_rsa_paraPutty.ppk
+- para conferir as chaves carregadas: ssh-add -l
+- to set the SSH agent service to start automatically when you log in and starts it immediately:
+    Set-Service -Name 'ssh-agent' -StartupType Automatic
+    Start-Service ssh-agent
+
 # Complete Docker Setup for VoteBem Django Application
 
 This comprehensive guide covers the complete dockerization of the VoteBem Django application with production-ready deployment on a VPS, including remote debugging capabilities.
@@ -102,14 +110,22 @@ This script handles the complete application deployment:
 - **Helper Scripts**: Creates management scripts for ongoing operations
 - **Systemd Service**: Sets up auto-start on boot
 
+Antes dos passos abaixo definidos pelo TRAE:
+- copie o arquivo id_rsa_bcb2.ppk para ~/.ssh
+- altere a permissão da chave (senão ela não funciona): chmod 600 ~/.ssh/id_rsa_bcb2.ppk
+- ative o servidor ssh: eval $(ssh-agent)
+- adicione a chave: ssh-add ~/.ssh/id_rsa_bcb2.ppk
+- vá para o diretório do user: cd ~
+- clone o repo:  git clone git@github.com:wagnercateb/votebem.git
+
 #### Usage:
 ```bash
 # SSH into your VPS as the votebem user
 ssh votebem@your-vps-ip
 
-# Clone the repository
-git clone https://github.com/yourusername/django_votebem.git
-cd django_votebem
+# Clone the repository (só vai funcionar com a chave SSH funcionando, ver acima)
+git clone git@github.com:wagnercateb/votebem.git
+cd votebem
 
 # Make the deployment script executable
 chmod +x scripts/deploy_production.sh

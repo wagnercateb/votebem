@@ -4,7 +4,26 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV DJANGO_SETTINGS_MODULE=votebem.settings
+
+# Set default environment variables for build
+ENV DEBUG=False
+ENV SECRET_KEY=build-time-secret-key
+ENV ALLOWED_HOSTS=localhost
+ENV DB_NAME=votebem_db
+ENV DB_USER=votebem_user
+ENV DB_PASSWORD=build_password
+ENV DB_HOST=localhost
+ENV DB_PORT=5432
+ENV REDIS_URL=redis://localhost:6379/0
+ENV EMAIL_HOST=localhost
+ENV EMAIL_PORT=587
+ENV EMAIL_USE_TLS=True
+ENV EMAIL_HOST_USER=
+ENV EMAIL_HOST_PASSWORD=
+ENV DEFAULT_FROM_EMAIL=noreply@votebem.com
+ENV USE_HTTPS=False
+ENV CORS_ALLOWED_ORIGINS=
+ENV ENABLE_REMOTE_DEBUG=False
 
 # Set work directory
 WORKDIR /app
@@ -38,8 +57,12 @@ COPY . /app/
 # Create static files directory
 RUN mkdir -p /app/staticfiles
 
-# Collect static files
+# Collect static files using build settings (optimized for Docker build)
+ENV DJANGO_SETTINGS_MODULE=votebem.settings.build
 RUN python manage.py collectstatic --noinput
+
+# Set production settings for runtime
+ENV DJANGO_SETTINGS_MODULE=votebem.settings.production
 
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser

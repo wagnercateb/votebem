@@ -250,11 +250,23 @@ chown votebem:votebem /opt/votebem/monitor.sh
 # Configure SSH security
 log "Configuring SSH security..."
 cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup
-sed -i 's/#PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+
+# o ideal é não permitir root login
+sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/' /etc/ssh/sshd_config
+
 sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
 sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
-echo "AllowUsers votebem" >> /etc/ssh/sshd_config
-systemctl restart sshd
+echo "AllowUsers root votebem" >> /etc/ssh/sshd_config
+
+# Detect SSH service name and restart
+if systemctl is-active --quiet ssh; then
+    systemctl restart ssh
+elif systemctl is-active --quiet sshd; then
+    systemctl restart sshd
+else
+    warn "Could not detect SSH service name, trying both ssh and sshd..."
+    systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || error "Failed to restart SSH service"
+fi
 
 # Install and configure automatic updates
 log "Setting up automatic security updates..."

@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 APP_DIR="/opt/votebem"
-REPO_URL="https://github.com/wagnercateb/django-votebem.git"
+REPO_URL="git@github.com:wagnercateb/votebem.git"
 BRANCH="main"
 DOMAIN=""
 EMAIL=""
@@ -62,16 +62,43 @@ fi
 # Navigate to application directory
 cd "$APP_DIR"
 
+# Verify SSH key authentication with GitHub
+log "Verifying SSH key authentication with GitHub..."
+if ! ssh -T git@github.com -o StrictHostKeyChecking=no -o ConnectTimeout=10 2>&1 | grep -q "successfully authenticated"; then
+    error "SSH key authentication with GitHub failed. Please ensure your SSH key is properly configured and added to GitHub."
+fi
+
 # Clone or update repository
 if [[ -d ".git" ]]; then
     log "Updating existing repository..."
+    
+    # Check if remote origin exists and update to SSH if it's HTTPS
+    CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+    if [[ "$CURRENT_REMOTE" == https://github.com/* ]]; then
+        log "Converting HTTPS remote to SSH..."
+        git remote set-url origin "$REPO_URL"
+    elif [[ -z "$CURRENT_REMOTE" ]]; then
+        log "Adding SSH remote..."
+        git remote add origin "$REPO_URL"
+    fi
+    
     git fetch origin
     git reset --hard origin/$BRANCH
     git clean -fd
 else
-    log "Cloning repository..."
-    git clone "$REPO_URL" .
-    git checkout "$BRANCH"
+    # Check if directory has files but no git repository
+    if [[ "$(ls -A .)" ]]; then
+        log "Directory contains files but no git repository. Initializing git and setting up remote..."
+        git init
+        git remote add origin "$REPO_URL"
+        git fetch origin
+        git reset --hard origin/$BRANCH
+        git branch --set-upstream-to=origin/$BRANCH $BRANCH
+    else
+        log "Cloning repository..."
+        git clone "$REPO_URL" .
+        git checkout "$BRANCH"
+    fi
 fi
 
 # Create necessary directories
