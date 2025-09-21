@@ -288,6 +288,30 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     log "Certbot installed. Run 'certbot --nginx -d yourdomain.com' to get SSL certificate"
 fi
 
+# Clone the repository and set up the application
+log "Cloning VoteBem repository..."
+sudo -u votebem git clone https://github.com/wagnercateb/django-votebem.git /opt/votebem
+cd /opt/votebem
+
+# Get server IP for ALLOWED_HOSTS configuration
+log "Detecting server IP address..."
+SERVER_IP=$(curl -s ifconfig.me || curl -s ipinfo.io/ip || hostname -I | awk '{print $1}')
+if [ -z "$SERVER_IP" ]; then
+    warn "Could not detect server IP address automatically"
+    SERVER_IP="127.0.0.1"
+fi
+log "Server IP detected: $SERVER_IP"
+
+# Create initial .env file with server IP included in ALLOWED_HOSTS
+log "Creating initial environment configuration..."
+sudo -u votebem cp .env.example .env
+
+# Update ALLOWED_HOSTS to include server IP
+sudo -u votebem sed -i "s|ALLOWED_HOSTS=localhost,127.0.0.1|ALLOWED_HOSTS=localhost,127.0.0.1,$SERVER_IP|" .env
+
+# Set proper ownership
+chown -R votebem:votebem /opt/votebem
+
 # Create deployment info file
 log "Creating deployment info..."
 cat > /opt/votebem/deployment_info.txt << EOF
@@ -295,14 +319,17 @@ VoteBem VPS Setup Completed
 ============================
 Date: $(date)
 Server: $(hostname)
-IP: $(curl -s ifconfig.me)
+IP: $SERVER_IP
 Docker Version: $(docker --version)
 Docker Compose Version: $(docker-compose --version)
 
+Repository: Cloned and configured
+ALLOWED_HOSTS: Configured with server IP ($SERVER_IP)
+
 Next Steps:
 1. Switch to votebem user: sudo su - votebem
-2. Clone the repository: git clone https://github.com/wagnercateb/django-votebem.git /opt/votebem
-3. Run the deployment script: /opt/votebem/scripts/deploy_production.sh
+2. Run the deployment script: cd /opt/votebem && ./scripts/deploy_production.sh
+3. Access your application at: http://$SERVER_IP/
 
 Important Files:
 - Application: /opt/votebem/
@@ -319,6 +346,11 @@ Monitoring:
 - System monitor: /opt/votebem/monitor.sh
 - Backup script: /opt/votebem/backup.sh
 - Logs: tail -f /var/log/votebem/monitor.log
+
+Quick Commands:
+- Check application: curl http://$SERVER_IP/health/
+- View logs: docker-compose -f docker-compose.prod.yml logs web
+- Restart containers: docker-compose -f docker-compose.prod.yml restart
 EOF
 
 chown votebem:votebem /opt/votebem/deployment_info.txt

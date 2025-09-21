@@ -124,8 +124,8 @@ Antes dos passos abaixo definidos pelo TRAE:
 ssh votebem@your-vps-ip
 
 # Clone the repository (só vai funcionar com a chave SSH funcionando, ver acima)
-git clone git@github.com:wagnercateb/votebem.git
-cd votebem
+git clone git@github.com:wagnercateb/votebem.git /opt/votebem
+cd /opt/votebem
 
 # Make the deployment script executable
 chmod +x scripts/deploy_production.sh

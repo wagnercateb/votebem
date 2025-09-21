@@ -50,27 +50,21 @@ fi
 
 log "Starting VoteBem Production Deployment..."
 
-# Get domain and email for SSL
-read -p "Enter your domain name (e.g., votebem.com): " DOMAIN
-read -p "Enter your email for SSL certificate: " EMAIL
+# Get domain for configuration (optional)
+read -p "Enter your domain name (optional, leave empty for localhost): " DOMAIN
 
 # Validate inputs
 if [[ -z "$DOMAIN" ]]; then
-    warn "No domain provided. SSL will not be configured."
+    DOMAIN="localhost"
+    warn "No domain provided. Using localhost. You can set up SSL later using ./scripts/setup_ssl.sh"
 fi
 
 # Navigate to application directory
 cd "$APP_DIR"
 
-# Verify SSH key authentication with GitHub
-log "Verifying SSH key authentication with GitHub..."
-if ! ssh -T git@github.com -o StrictHostKeyChecking=no -o ConnectTimeout=10 2>&1 | grep -q "successfully authenticated"; then
-    error "SSH key authentication with GitHub failed. Please ensure your SSH key is properly configured and added to GitHub."
-fi
-
-# Clone or update repository
+# Check if repository is already cloned (by setup_linode_vps.sh)
 if [[ -d ".git" ]]; then
-    log "Updating existing repository..."
+    log "Repository already exists, updating..."
     
     # Check if remote origin exists and update to SSH if it's HTTPS
     CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
@@ -82,22 +76,30 @@ if [[ -d ".git" ]]; then
         git remote add origin "$REPO_URL"
     fi
     
-    git fetch origin
-    git reset --hard origin/$BRANCH
-    git clean -fd
-else
-    # Check if directory has files but no git repository
-    if [[ "$(ls -A .)" ]]; then
-        log "Directory contains files but no git repository. Initializing git and setting up remote..."
-        git init
-        git remote add origin "$REPO_URL"
+    # Try to update repository, but don't fail if SSH is not configured
+    if ssh -T git@github.com -o StrictHostKeyChecking=no -o ConnectTimeout=10 2>&1 | grep -q "successfully authenticated"; then
+        log "Updating repository with SSH..."
         git fetch origin
         git reset --hard origin/$BRANCH
-        git branch --set-upstream-to=origin/$BRANCH $BRANCH
+        git clean -fd
     else
-        log "Cloning repository..."
+        warn "SSH key authentication not available. Using existing repository files."
+        log "To enable updates, configure SSH key authentication with GitHub."
+    fi
+else
+    # Repository not cloned yet, try to clone
+    log "Repository not found, attempting to clone..."
+    
+    # Try SSH first, fall back to HTTPS if SSH fails
+    if ssh -T git@github.com -o StrictHostKeyChecking=no -o ConnectTimeout=10 2>&1 | grep -q "successfully authenticated"; then
+        log "Cloning repository with SSH..."
         git clone "$REPO_URL" .
         git checkout "$BRANCH"
+    else
+        warn "SSH key authentication not available. Cloning with HTTPS..."
+        git clone "https://github.com/wagnercateb/django-votebem.git" .
+        git checkout "$BRANCH"
+        log "Repository cloned with HTTPS. For updates, configure SSH key authentication."
     fi
 fi
 
@@ -122,8 +124,11 @@ DJANGO_SETTINGS_MODULE=votebem.settings.production
 DEBUG=False
 SECRET_KEY=$SECRET_KEY
 
-# Allowed Hosts
-ALLOWED_HOSTS=localhost,127.0.0.1,$DOMAIN,www.$DOMAIN
+# Get server IP address
+SERVER_IP=$(curl -s ifconfig.me || curl -s ipinfo.io/ip || hostname -I | awk '{print $1}')
+
+# Allowed Hosts (include server IP, localhost, and domain)
+ALLOWED_HOSTS=localhost,127.0.0.1,$SERVER_IP,$DOMAIN,www.$DOMAIN
 
 # Database Configuration
 DB_NAME=votebem_db
@@ -247,28 +252,26 @@ networks:
     driver: bridge
 EOF
 
-# Update nginx configuration for production
+# Update nginx configuration for production (HTTP-only)
 log "Updating nginx configuration for production..."
-if [[ -n "$DOMAIN" ]]; then
+# Use the production HTTP-only configuration
+cp nginx/production.conf nginx/default.conf
+
+# Update server name if domain is provided
+if [[ "$DOMAIN" != "localhost" ]]; then
     sed -i "s/server_name localhost;/server_name $DOMAIN www.$DOMAIN;/g" nginx/default.conf
-    
-    # Enable SSL configuration
-    sed -i 's/# listen 443 ssl http2;/listen 443 ssl http2;/' nginx/default.conf
-    sed -i 's/# ssl_certificate/ssl_certificate/' nginx/default.conf
-    sed -i 's/# ssl_certificate_key/ssl_certificate_key/' nginx/default.conf
-    sed -i 's/# ssl_protocols/ssl_protocols/' nginx/default.conf
-    sed -i 's/# ssl_ciphers/ssl_ciphers/' nginx/default.conf
-    sed -i 's/# ssl_prefer_server_ciphers/ssl_prefer_server_ciphers/' nginx/default.conf
-    sed -i 's/# ssl_session_cache/ssl_session_cache/' nginx/default.conf
-    sed -i 's/# ssl_session_timeout/ssl_session_timeout/' nginx/default.conf
-    
-    # Enable HTTP to HTTPS redirect
-    sed -i 's/# return 301 https/return 301 https/' nginx/default.conf
 fi
 
 # Stop existing containers if running
 log "Stopping existing containers..."
 docker-compose -f docker-compose.prod.yml down --remove-orphans || true
+
+# Clean up any problematic volumes if this is a fresh deployment
+if [[ ! -f ".deployment_completed" ]]; then
+    log "Fresh deployment detected. Cleaning up any existing volumes..."
+    docker volume rm votebem_postgres_data votebem_redis_data 2>/dev/null || true
+    log "Cleaned up existing volumes for fresh start"
+fi
 
 # Build and start containers
 log "Building and starting containers..."
@@ -414,10 +417,37 @@ sudo systemctl enable votebem.service
 # Final health check
 log "Performing final health check..."
 sleep 10
-if curl -f http://localhost/health/ > /dev/null 2>&1; then
-    log "Application is healthy and responding!"
+
+# Try multiple health check attempts
+HEALTH_CHECK_ATTEMPTS=5
+HEALTH_CHECK_SUCCESS=false
+
+for i in $(seq 1 $HEALTH_CHECK_ATTEMPTS); do
+    log "Health check attempt $i/$HEALTH_CHECK_ATTEMPTS..."
+    if curl -f http://localhost/health/ > /dev/null 2>&1; then
+        log "Application is healthy and responding!"
+        HEALTH_CHECK_SUCCESS=true
+        break
+    else
+        if [[ $i -lt $HEALTH_CHECK_ATTEMPTS ]]; then
+            warn "Health check failed, retrying in 10 seconds..."
+            sleep 10
+        fi
+    fi
+done
+
+if [[ "$HEALTH_CHECK_SUCCESS" == "false" ]]; then
+    warn "Application health check failed after $HEALTH_CHECK_ATTEMPTS attempts."
+    warn "Check logs with: ./logs.sh"
+    warn "Check container status with: docker-compose -f docker-compose.prod.yml ps"
+    
+    # Show recent logs for debugging
+    log "Recent container logs:"
+    docker-compose -f docker-compose.prod.yml logs --tail=20 web
 else
-    warn "Application health check failed. Check logs with: ./logs.sh"
+    # Mark deployment as completed
+    touch .deployment_completed
+    log "Deployment marked as completed successfully!"
 fi
 
 # Display completion message
