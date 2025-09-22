@@ -110,6 +110,11 @@ mkdir -p media
 mkdir -p backups
 mkdir -p ssl
 
+# Set proper permissions for logs directory
+log "Setting proper permissions for logs directory..."
+chmod 755 logs
+chown -R $USER:$USER logs
+
 # Generate secure passwords and secrets
 log "Generating secure configuration..."
 DB_PASSWORD=$(openssl rand -base64 32)

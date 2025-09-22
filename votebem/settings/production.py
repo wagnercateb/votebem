@@ -75,10 +75,7 @@ CORS_ALLOW_CREDENTIALS = True
 import os
 import logging.handlers
 
-# Ensure logs directory exists
-LOG_DIR = '/app/logs'
-os.makedirs(LOG_DIR, exist_ok=True)
-
+# Container-friendly logging configuration
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -88,23 +85,15 @@ LOGGING = {
             'style': '{',
         },
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
     },
     'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(LOG_DIR, 'django.log'),
-            'formatter': 'verbose',
-            'maxBytes': 1024*1024*10,  # 10MB
-            'backupCount': 5,
-        },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'verbose',
         },
     },
     'root': {
@@ -122,8 +111,58 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'gunicorn': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'gunicorn.error': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'gunicorn.access': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
+
+# Optional file logging if logs directory is writable
+LOG_DIR = '/app/logs'
+try:
+    # Only add file logging if we can create the directory and it's writable
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR, exist_ok=True)
+    
+    # Test if we can write to the directory
+    test_file = os.path.join(LOG_DIR, 'test_write.tmp')
+    with open(test_file, 'w') as f:
+        f.write('test')
+    os.remove(test_file)
+    
+    # If we get here, file logging is possible
+    LOGGING['handlers']['file'] = {
+        'level': 'INFO',
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': os.path.join(LOG_DIR, 'django.log'),
+        'formatter': 'verbose',
+        'maxBytes': 1024*1024*10,  # 10MB
+        'backupCount': 5,
+    }
+    
+    # Add file handler to loggers
+    for logger_name in ['django', 'votebem', 'gunicorn', 'gunicorn.error']:
+        if logger_name in LOGGING['loggers']:
+            LOGGING['loggers'][logger_name]['handlers'].append('file')
+    
+    LOGGING['root']['handlers'].append('file')
+    
+except (OSError, IOError, PermissionError):
+    # If file logging fails, just use console logging
+    # This prevents the container from failing to start
+    pass
 
 # Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
