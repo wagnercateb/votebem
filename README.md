@@ -41,7 +41,7 @@ Um sistema web desenvolvido em Django para permitir que cidadãos participem de 
 
 ### 1. Clone o repositório
 ```bash
-git clone https://github.com/wagnercateb/django-votebem.git
+git clone https://github.com/wagnercateb/votebem.git
 cd django-votebem
 ```
 

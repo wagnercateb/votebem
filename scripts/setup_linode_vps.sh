@@ -324,7 +324,7 @@ log "Cloning VoteBem repository..."
 # Clone to a temporary directory first, then move contents to /opt/votebem
 TEMP_CLONE_DIR="/tmp/votebem_clone_$$"
 # Ensure we clone without authentication (public repository)
-sudo -u votebem git -c credential.helper= clone https://github.com/wagnercateb/django-votebem.git "$TEMP_CLONE_DIR"
+sudo -u votebem git -c credential.helper= clone https://github.com/wagnercateb/votebem.git "$TEMP_CLONE_DIR"
 sudo -u votebem cp -r "$TEMP_CLONE_DIR"/* /opt/votebem/
 sudo -u votebem cp -r "$TEMP_CLONE_DIR"/.* /opt/votebem/ 2>/dev/null || true  # Copy hidden files, ignore errors
 rm -rf "$TEMP_CLONE_DIR"

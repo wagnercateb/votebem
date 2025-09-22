@@ -97,7 +97,7 @@ else
         git checkout "$BRANCH"
     else
         warn "SSH key authentication not available. Cloning with HTTPS..."
-        git clone "https://github.com/wagnercateb/django-votebem.git" .
+        git clone "https://github.com/wagnercateb/votebem.git" .
         git checkout "$BRANCH"
         log "Repository cloned with HTTPS. For updates, configure SSH key authentication."
     fi

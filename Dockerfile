@@ -67,6 +67,7 @@ ENV DJANGO_SETTINGS_MODULE=votebem.settings.production
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser
 RUN chown -R appuser:appuser /app
+RUN chmod -R 755 /app/logs
 USER appuser
 
 # Expose port

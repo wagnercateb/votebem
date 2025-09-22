@@ -28,7 +28,7 @@ This guide provides comprehensive instructions for deploying the VoteBem Django 
 
 ```bash
 # Clone the repository
-git clone https://github.com/wagnercateb/django-votebem.git
+git clone https://github.com/wagnercateb/votebem.git
 cd django-votebem
 
 # Start development environment
@@ -42,7 +42,7 @@ open http://localhost:8000
 
 ```bash
 # Clone the repository
-git clone https://github.com/wagnercateb/django-votebem.git
+git clone https://github.com/wagnercateb/votebem.git
 cd django-votebem
 
 # Copy and configure environment
