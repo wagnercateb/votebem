@@ -32,6 +32,28 @@ error() {
     exit 1
 }
 
+# Check if votebem user exists, create if necessary
+if ! id "votebem" &>/dev/null; then
+    if [[ $(whoami) != "root" ]]; then
+        error "User 'votebem' does not exist. Please run this script as root first to create the user, then re-run as votebem."
+    fi
+    
+    log "Creating votebem user..."
+    useradd -m -s /bin/bash votebem
+    
+    # Create docker group if it doesn't exist
+    if ! getent group docker > /dev/null 2>&1; then
+        log "Creating docker group..."
+        groupadd docker
+    fi
+    
+    usermod -aG docker votebem
+    log "User 'votebem' created and added to docker group"
+    log "Please now run this script as the votebem user: sudo su - votebem"
+    log "Then navigate to $APP_DIR and run: ./scripts/setup_ssl.sh"
+    exit 0
+fi
+
 # Check if running as votebem user
 if [[ $(whoami) != "votebem" ]]; then
    error "This script must be run as the 'votebem' user. Run: sudo su - votebem"

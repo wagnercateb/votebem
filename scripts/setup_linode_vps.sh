@@ -3,6 +3,11 @@
 # VoteBem - Linode VPS Setup Script
 # This script configures a fresh Linode VPS for hosting the Django VoteBem application
 # Run as root: curl -sSL https://raw.githubusercontent.com/wagnercateb/django-votebem/main/scripts/setup_linode_vps.sh | bash
+#
+# Environment Variables (optional):
+# - SSH_PUBLIC_KEY: SSH public key to add for votebem user authentication
+# - INSTALL_CERTBOT: Set to "true" to install Certbot for SSL certificates
+# - NO_REBOOT: Set to "true" to skip automatic reboot at the end
 
 set -e  # Exit on any error
 
@@ -86,18 +91,21 @@ else
     warn "User 'votebem' already exists"
 fi
 
-# Set up SSH key for votebem user (optional)
-read -p "Do you want to set up SSH key authentication for votebem user? (y/n): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    read -p "Enter the public SSH key: " ssh_key
-    if [[ -n "$ssh_key" ]]; then
-        sudo -u votebem mkdir -p /home/votebem/.ssh
-        echo "$ssh_key" | sudo -u votebem tee /home/votebem/.ssh/authorized_keys
-        sudo -u votebem chmod 700 /home/votebem/.ssh
-        sudo -u votebem chmod 600 /home/votebem/.ssh/authorized_keys
-        log "SSH key added for votebem user"
+# Set up SSH key for votebem user (optional - set SSH_PUBLIC_KEY environment variable)
+if [[ -n "$SSH_PUBLIC_KEY" ]]; then
+    log "Setting up SSH key authentication for votebem user..."
+    # Remove existing SSH directory if it exists
+    if [ -d "/home/votebem/.ssh" ]; then
+        rm -rf /home/votebem/.ssh
+        log "Removed existing SSH directory"
     fi
+    sudo -u votebem mkdir -p /home/votebem/.ssh
+    echo "$SSH_PUBLIC_KEY" | sudo -u votebem tee /home/votebem/.ssh/authorized_keys
+    sudo -u votebem chmod 700 /home/votebem/.ssh
+    sudo -u votebem chmod 600 /home/votebem/.ssh/authorized_keys
+    log "SSH key added for votebem user"
+else
+    log "No SSH key provided (set SSH_PUBLIC_KEY environment variable to add one)"
 fi
 
 # Configure firewall
@@ -142,9 +150,28 @@ systemctl enable fail2ban
 
 # Create application directories
 log "Creating application directories..."
+
+# Clean and create /opt/votebem
+if [ -d "/opt/votebem" ]; then
+    log "Removing existing /opt/votebem directory..."
+    rm -rf /opt/votebem
+fi
 mkdir -p /opt/votebem
+
+# Clean and create /var/log/votebem
+if [ -d "/var/log/votebem" ]; then
+    log "Removing existing /var/log/votebem directory..."
+    rm -rf /var/log/votebem
+fi
 mkdir -p /var/log/votebem
+
+# Clean and create /var/backups/votebem
+if [ -d "/var/backups/votebem" ]; then
+    log "Removing existing /var/backups/votebem directory..."
+    rm -rf /var/backups/votebem
+fi
 mkdir -p /var/backups/votebem
+
 chown -R votebem:votebem /opt/votebem
 chown -R votebem:votebem /var/log/votebem
 chown -R votebem:votebem /var/backups/votebem
@@ -276,21 +303,31 @@ dpkg-reconfigure -plow unattended-upgrades
 
 # Create SSL certificate directory
 log "Creating SSL certificate directory..."
+if [ -d "/opt/votebem/ssl" ]; then
+    log "Removing existing SSL directory..."
+    rm -rf /opt/votebem/ssl
+fi
 mkdir -p /opt/votebem/ssl
 chown votebem:votebem /opt/votebem/ssl
 
-# Install Certbot for Let's Encrypt (optional)
-read -p "Do you want to install Certbot for SSL certificates? (y/n): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+# Install Certbot for Let's Encrypt (optional - set INSTALL_CERTBOT=true to install)
+if [[ "$INSTALL_CERTBOT" == "true" ]]; then
     log "Installing Certbot..."
     apt install -y certbot python3-certbot-nginx
     log "Certbot installed. Run 'certbot --nginx -d yourdomain.com' to get SSL certificate"
+else
+    log "Certbot installation skipped (set INSTALL_CERTBOT=true to install)"
 fi
 
 # Clone the repository and set up the application
 log "Cloning VoteBem repository..."
-sudo -u votebem git clone https://github.com/wagnercateb/django-votebem.git /opt/votebem
+# Clone to a temporary directory first, then move contents to /opt/votebem
+TEMP_CLONE_DIR="/tmp/votebem_clone_$$"
+# Ensure we clone without authentication (public repository)
+sudo -u votebem git -c credential.helper= clone https://github.com/wagnercateb/django-votebem.git "$TEMP_CLONE_DIR"
+sudo -u votebem cp -r "$TEMP_CLONE_DIR"/* /opt/votebem/
+sudo -u votebem cp -r "$TEMP_CLONE_DIR"/.* /opt/votebem/ 2>/dev/null || true  # Copy hidden files, ignore errors
+rm -rf "$TEMP_CLONE_DIR"
 cd /opt/votebem
 
 # Get server IP for ALLOWED_HOSTS configuration
@@ -378,11 +415,9 @@ echo -e "${BLUE}===========================================${NC}"
 log "Setup script completed. Check /opt/votebem/deployment_info.txt for details."
 
 # Reboot recommendation
-read -p "Do you want to reboot the server now? (recommended) (y/n): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    log "Rebooting server..."
+if [[ "$NO_REBOOT" != "true" ]]; then
+    log "Rebooting server automatically (set NO_REBOOT=true to skip)..."
     reboot
 else
-    warn "Please reboot the server manually when convenient"
+    warn "Reboot skipped (NO_REBOOT=true set). Please reboot the server manually when convenient"
 fi

@@ -6,6 +6,12 @@
     Set-Service -Name 'ssh-agent' -StartupType Automatic
     Start-Service ssh-agent
 
+- copie o arquivo id_rsa_bcb2.ppk para ~/.ssh
+- altere a permissão da chave (senão ela não funciona): chmod 600 ~/.ssh/id_rsa_bcb2.ppk
+- ative o servidor ssh: eval $(ssh-agent)
+- adicione a chave: ssh-add ~/.ssh/id_rsa_bcb2.ppk
+
+
 # Complete Docker Setup for VoteBem Django Application
 
 This comprehensive guide covers the complete dockerization of the VoteBem Django application with production-ready deployment on a VPS, including remote debugging capabilities.
@@ -109,14 +115,6 @@ This script handles the complete application deployment:
 - **Health Checks**: Verifies deployment success
 - **Helper Scripts**: Creates management scripts for ongoing operations
 - **Systemd Service**: Sets up auto-start on boot
-
-Antes dos passos abaixo definidos pelo TRAE:
-- copie o arquivo id_rsa_bcb2.ppk para ~/.ssh
-- altere a permissão da chave (senão ela não funciona): chmod 600 ~/.ssh/id_rsa_bcb2.ppk
-- ative o servidor ssh: eval $(ssh-agent)
-- adicione a chave: ssh-add ~/.ssh/id_rsa_bcb2.ppk
-- vá para o diretório do user: cd ~
-- clone o repo:  git clone git@github.com:wagnercateb/votebem.git
 
 #### Usage:
 ```bash

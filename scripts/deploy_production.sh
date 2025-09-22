@@ -163,8 +163,6 @@ EOF
 # Update docker-compose for production
 log "Updating docker-compose configuration..."
 cat > docker-compose.prod.yml << EOF
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
@@ -290,12 +288,32 @@ else
     error "Some services failed to start. Check logs with: docker-compose -f docker-compose.prod.yml logs"
 fi
 
+# Wait for web container to be stable and ready
+log "Waiting for web container to be stable..."
+for i in {1..12}; do
+    if docker-compose -f docker-compose.prod.yml exec -T web python manage.py check --deploy > /dev/null 2>&1; then
+        log "Web container is ready!"
+        break
+    fi
+    if [ $i -eq 12 ]; then
+        log "Warning: Web container may not be fully ready. Proceeding anyway..."
+        break
+    fi
+    log "Web container not ready yet, waiting... (attempt $i/12)"
+    sleep 10
+done
+
 # Create superuser
 log "Creating Django superuser..."
 read -p "Do you want to create a Django superuser? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+    # Additional check before creating superuser
+    if docker-compose -f docker-compose.prod.yml ps web | grep -q "Up"; then
+        docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+    else
+        error "Web container is not running. Cannot create superuser."
+    fi
 fi
 
 # Set up SSL certificate if domain is provided

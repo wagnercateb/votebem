@@ -54,8 +54,8 @@ RUN pip install --no-cache-dir \
 # Copy project
 COPY . /app/
 
-# Create static files directory
-RUN mkdir -p /app/staticfiles
+# Create necessary directories
+RUN mkdir -p /app/staticfiles /app/logs /app/media
 
 # Collect static files using build settings (optimized for Docker build)
 ENV DJANGO_SETTINGS_MODULE=votebem.settings.build
