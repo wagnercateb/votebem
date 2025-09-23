@@ -129,7 +129,8 @@ apt install -y \
     logrotate \
     cron \
     rsync \
-    tree
+    tree \
+    net-tools 
 
 # Install Docker
 log "Installing Docker..."
