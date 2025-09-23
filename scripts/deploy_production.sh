@@ -53,10 +53,43 @@ log "Starting VoteBem Production Deployment..."
 # Get domain for configuration (optional)
 read -p "Enter your domain name (optional, leave empty for localhost): " DOMAIN
 
+# Get VPS IP address for nginx configuration
+read -p "Enter your VPS IP address: " VPS_IP
+
 # Validate inputs
 if [[ -z "$DOMAIN" ]]; then
     DOMAIN="localhost"
     warn "No domain provided. Using localhost. You can set up SSL later using ./scripts/setup_ssl.sh"
+fi
+
+if [[ -z "$VPS_IP" ]]; then
+    error "VPS IP address is required for proper nginx configuration"
+fi
+
+# Update nginx configuration files with VPS IP
+log "Updating nginx configuration with VPS IP: $VPS_IP"
+if [[ -f "nginx/default.conf" ]]; then
+    # Replace placeholder if it exists, otherwise replace any existing IP
+    if grep -q "VPS_IP_PLACEHOLDER" nginx/default.conf; then
+        sed -i "s/VPS_IP_PLACEHOLDER/$VPS_IP/g" nginx/default.conf
+        log "Updated nginx/default.conf with VPS IP (replaced placeholder)"
+    else
+        # Replace any existing IP pattern in server_name line
+        sed -i "s/server_name localhost [0-9.]\+ /server_name localhost $VPS_IP /" nginx/default.conf
+        log "Updated nginx/default.conf with VPS IP (replaced existing IP)"
+    fi
+fi
+
+if [[ -f "nginx/production.conf" ]]; then
+    # Replace placeholder if it exists, otherwise replace any existing IP
+    if grep -q "VPS_IP_PLACEHOLDER" nginx/production.conf; then
+        sed -i "s/VPS_IP_PLACEHOLDER/$VPS_IP/g" nginx/production.conf
+        log "Updated nginx/production.conf with VPS IP (replaced placeholder)"
+    else
+        # Replace any existing IP pattern in server_name line
+        sed -i "s/server_name localhost [0-9.]\+ /server_name localhost $VPS_IP /" nginx/production.conf
+        log "Updated nginx/production.conf with VPS IP (replaced existing IP)"
+    fi
 fi
 
 # Navigate to application directory
@@ -129,11 +162,11 @@ DJANGO_SETTINGS_MODULE=votebem.settings.production
 DEBUG=False
 SECRET_KEY=$SECRET_KEY
 
-# Get server IP address
-SERVER_IP=$(curl -s ifconfig.me || curl -s ipinfo.io/ip || hostname -I | awk '{print $1}')
+# Use VPS IP provided by user
+SERVER_IP=$VPS_IP
 
-# Allowed Hosts (include server IP, localhost, and domain)
-ALLOWED_HOSTS=localhost,127.0.0.1,$SERVER_IP,$DOMAIN,www.$DOMAIN
+# Allowed Hosts (include server IP, localhost, domain, and 'web' for nginx internal communication)
+ALLOWED_HOSTS=localhost,127.0.0.1,$SERVER_IP,$DOMAIN,www.$DOMAIN,web
 
 # Database Configuration
 DB_NAME=votebem_db
@@ -154,7 +187,9 @@ EMAIL_HOST_PASSWORD=your-app-password
 DEFAULT_FROM_EMAIL=noreply@$DOMAIN
 
 # Security Settings
-USE_HTTPS=True
+USE_HTTPS=False
+SECURE_SSL_REDIRECT=False
+USE_TLS=False
 CORS_ALLOWED_ORIGINS=https://$DOMAIN,https://www.$DOMAIN
 
 # Remote Debugging (disabled in production)
