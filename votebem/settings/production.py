@@ -46,6 +46,7 @@ SESSION_CACHE_ALIAS = 'default'
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = '/app/staticfiles'
+STATICFILES_DIRS = []  # No additional static dirs in production, only STATIC_ROOT
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files

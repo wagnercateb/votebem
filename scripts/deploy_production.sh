@@ -224,7 +224,7 @@ services:
       sh -c "python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              python manage.py createcachetable &&
-             gunicorn --bind 0.0.0.0:8000 --workers 3 --worker-class gthread --threads 2 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100 --access-logfile /app/logs/gunicorn_access.log --error-logfile /app/logs/gunicorn_error.log votebem.wsgi:application"
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --worker-class gthread --threads 2 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile - votebem.wsgi:application"
 
   nginx:
     image: nginx:alpine
