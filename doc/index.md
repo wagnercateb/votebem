@@ -1,0 +1,220 @@
+# VoteBem Documentation Index
+
+Welcome to the comprehensive documentation for the VoteBem Django application - a web system that enables citizens to participate in popular votes on legislative propositions and create polls on public interest topics.
+
+## 📚 Documentation Overview
+
+This documentation is organized to guide you through every aspect of the VoteBem application, from initial setup to production deployment and maintenance.
+
+---
+
+## 🚀 Getting Started
+
+### [README.md](./README.md)
+**Main project overview and feature documentation**
+- **Use Case**: Start here to understand what VoteBem does and its core features
+- **Contains**: Project description, feature list, technology stack, and basic usage instructions
+- **When to Use**: First-time users, project overview, understanding system capabilities
+
+### [WINDOWS_DEV_SETUP.md](./WINDOWS_DEV_SETUP.md)
+**Windows 11 development environment setup**
+- **Use Case**: Setting up a local development environment on Windows
+- **Contains**: Step-by-step Windows setup, automated scripts, manual configuration
+- **When to Use**: Developers setting up local development on Windows machines
+
+---
+
+## 🐳 Docker & Deployment
+
+### [DOCKER_README.md](./DOCKER_README.md)
+**Comprehensive Docker deployment guide**
+- **Use Case**: Containerized deployment for both development and production
+- **Contains**: Docker configuration, compose files, environment setup, VPS deployment
+- **When to Use**: Deploying with Docker, containerized environments, production setup
+
+### [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)
+**Complete production deployment instructions**
+- **Use Case**: Production deployment on VPS with detailed configuration
+- **Contains**: SSH setup, Git configuration, Docker deployment, troubleshooting
+- **When to Use**: Production deployments, VPS configuration, deployment troubleshooting
+
+---
+
+## 🔧 Scripts & Automation
+
+### [SCRIPTS_README.md](./SCRIPTS_README.md)
+**Overview of deployment and management scripts**
+- **Use Case**: Understanding available automation scripts
+- **Contains**: Script descriptions, usage instructions, deployment workflows
+- **When to Use**: Automated deployments, script selection, workflow understanding
+
+### [SCRIPTS_DETAILED_README.md](./SCRIPTS_DETAILED_README.md)
+**Detailed VPS setup and provisioning scripts**
+- **Use Case**: VPS provisioning and application-specific configuration
+- **Contains**: Two-phase setup process, security configuration, application deployment
+- **When to Use**: New VPS setup, security hardening, automated provisioning
+
+---
+
+## 🏗️ Architecture & Authentication
+
+### [ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md)
+**System architecture and workflow diagrams**
+- **Use Case**: Understanding system design, database structure, and application flows
+- **Contains**: Mermaid diagrams for architecture, ERD, user flows, deployment structure
+- **When to Use**: System analysis, development planning, architecture review
+
+### [SOCIAL_AUTH_GUIDE.md](./SOCIAL_AUTH_GUIDE.md)
+**Social authentication setup with Google and Facebook**
+- **Use Case**: Implementing OAuth2 login with social providers
+- **Contains**: Google/Facebook OAuth setup, django-allauth configuration, account linking
+- **When to Use**: Adding social login features, OAuth configuration, user authentication
+
+---
+
+## 🗺️ Complete VoteBem Setup Process
+
+The following UML diagram shows the complete process of setting up the VoteBem application from VPS provisioning to production deployment:
+
+```mermaid
+graph TD
+    A[🚀 Start: Fresh VPS] --> B[📋 Prerequisites Check]
+    B --> C{VPS Provider?}
+    
+    C -->|Linode| D[🔧 Linode VPS Setup]
+    C -->|Other| E[🔧 Generic VPS Setup]
+    
+    D --> F[🔐 Initial Security Setup]
+    E --> F
+    
+    F --> G[📦 Install Base Dependencies]
+    G --> H[🐳 Install Docker & Docker Compose]
+    H --> I[🔑 Configure SSH Keys]
+    I --> J[🛡️ Setup Firewall Rules]
+    J --> K[👤 Create Non-root User]
+    
+    K --> L[📥 Clone VoteBem Repository]
+    L --> M[⚙️ Environment Configuration]
+    M --> N[🔐 Generate Secure Secrets]
+    N --> O[🌐 Configure Domain/IP]
+    
+    O --> P{Deployment Type?}
+    
+    P -->|HTTP Only| Q[🔧 HTTP Configuration]
+    P -->|HTTPS/SSL| R[🔒 SSL Certificate Setup]
+    
+    Q --> S[🐳 Docker Compose Build]
+    R --> T[🔒 Let's Encrypt Setup]
+    T --> S
+    
+    S --> U[🗄️ Database Migration]
+    U --> V[👑 Create Superuser]
+    V --> W[📊 Collect Static Files]
+    W --> X[🌐 Configure Nginx]
+    
+    X --> Y[🚀 Start Services]
+    Y --> Z[✅ Health Check]
+    Z --> AA{All Services OK?}
+    
+    AA -->|No| AB[🔍 Troubleshoot Issues]
+    AB --> AC[📋 Check Logs]
+    AC --> AD[🔧 Fix Configuration]
+    AD --> Y
+    
+    AA -->|Yes| AE[🎉 Deployment Complete]
+    AE --> AF[🔗 Access Application]
+    AF --> AG[👤 Setup Social Auth]
+    AG --> AH[📝 Configure Polls/Voting]
+    AH --> AI[🎯 Production Ready]
+
+    %% Styling
+    classDef startEnd fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef process fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef security fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef docker fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px
+    classDef config fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef success fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    
+    class A,AI startEnd
+    class B,G,H,L,M,S,U,V,W,X,Y,AB,AC,AD process
+    class C,P,AA decision
+    class F,I,J,K,N,T security
+    class D,E,Q,R docker
+    class O,Z,AE,AF,AG,AH config
+    class AI success
+```
+
+### 📋 Setup Phase Descriptions
+
+1. **🚀 VPS Provisioning** ([SCRIPTS_DETAILED_README.md](./SCRIPTS_DETAILED_README.md))
+   - Choose VPS provider (Linode recommended)
+   - Basic server setup and security hardening
+   - User account creation and SSH configuration
+
+2. **🔧 Environment Setup** ([DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md))
+   - Docker installation and configuration
+   - Repository cloning and environment variables
+   - Security configuration and firewall setup
+
+3. **🐳 Application Deployment** ([DOCKER_README.md](./DOCKER_README.md))
+   - Docker Compose configuration
+   - Database setup and migrations
+   - Static file collection and Nginx configuration
+
+4. **🔒 Security & SSL** ([SCRIPTS_README.md](./SCRIPTS_README.md))
+   - SSL certificate generation (optional)
+   - HTTPS configuration
+   - Security best practices implementation
+
+5. **👤 User Authentication** ([SOCIAL_AUTH_GUIDE.md](./SOCIAL_AUTH_GUIDE.md))
+   - Social authentication setup
+   - OAuth provider configuration
+   - User account management
+
+6. **🏗️ System Architecture** ([ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md))
+   - Understanding system components
+   - Database relationships
+   - Application workflow analysis
+
+---
+
+## 📖 How to Use This Documentation
+
+### For New Developers
+1. Start with [README.md](./README.md) to understand the project
+2. Follow [WINDOWS_DEV_SETUP.md](./WINDOWS_DEV_SETUP.md) for local development
+3. Review [ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md) for system understanding
+
+### For DevOps/Deployment
+1. Begin with [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for overview
+2. Use [SCRIPTS_DETAILED_README.md](./SCRIPTS_DETAILED_README.md) for VPS setup
+3. Follow [DOCKER_README.md](./DOCKER_README.md) for containerized deployment
+4. Reference [SCRIPTS_README.md](./SCRIPTS_README.md) for automation
+
+### For Feature Development
+1. Review [ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md) for system design
+2. Check [SOCIAL_AUTH_GUIDE.md](./SOCIAL_AUTH_GUIDE.md) for authentication features
+3. Use [README.md](./README.md) for feature specifications
+
+### For Troubleshooting
+1. Check [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for common issues
+2. Review [DOCKER_README.md](./DOCKER_README.md) for container problems
+3. Use [SCRIPTS_README.md](./SCRIPTS_README.md) for script-related issues
+
+---
+
+## 🔄 Documentation Maintenance
+
+This documentation is actively maintained and updated with each release. If you find any issues or have suggestions for improvement, please:
+
+1. Check the relevant documentation file for the most current information
+2. Review the UML diagram above for the complete setup workflow
+3. Consult multiple related documents for comprehensive understanding
+4. Report issues or contribute improvements to the documentation
+
+---
+
+**Last Updated**: January 2025  
+**VoteBem Version**: Latest  
+**Documentation Version**: 1.0
