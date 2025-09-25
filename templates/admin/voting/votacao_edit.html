@@ -1,0 +1,279 @@
+{% extends 'base_administrativo.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .edit-form {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .form-control[readonly] {
+        background-color: #f9fafb;
+        color: #6b7280;
+    }
+    
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+    
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        margin: 0;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2563eb;
+    }
+    
+    .btn-secondary {
+        background-color: #6b7280;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #4b5563;
+    }
+    
+    .info-section {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .info-section h3 {
+        margin: 0 0 1rem 0;
+        color: #1e293b;
+        font-size: 1.25rem;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .info-item {
+        background: white;
+        padding: 1rem;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .info-item strong {
+        display: block;
+        color: #374151;
+        margin-bottom: 0.25rem;
+    }
+    
+    .datetime-input {
+        font-family: monospace;
+    }
+    
+    .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .row {
+            grid-template-columns: 1fr;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>{{ title }}</h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'administrativo:dashboard' %}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'administrativo:votacoes_management' %}">Votações</a></li>
+                        <li class="breadcrumb-item active">Editar Votação</li>
+                    </ol>
+                </nav>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" class="edit-form">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="titulo">Título da Votação *</label>
+                    <input type="text" id="titulo" name="titulo" class="form-control" 
+                           value="{{ votacao.titulo }}" required maxlength="500">
+                </div>
+
+                <div class="form-group">
+                    <label for="resumo">Resumo *</label>
+                    <textarea id="resumo" name="resumo" class="form-control" required>{{ votacao.resumo }}</textarea>
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label for="data_hora_votacao">Data/Hora da Votação Original *</label>
+                        <input type="datetime-local" id="data_hora_votacao" name="data_hora_votacao" 
+                               class="form-control datetime-input" 
+                               value="{{ votacao.data_hora_votacao|date:'Y-m-d\TH:i' }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="no_ar_desde">No Ar Desde *</label>
+                        <input type="datetime-local" id="no_ar_desde" name="no_ar_desde" 
+                               class="form-control datetime-input" 
+                               value="{{ votacao.no_ar_desde|date:'Y-m-d\TH:i' }}" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label for="no_ar_ate">No Ar Até (opcional)</label>
+                        <input type="datetime-local" id="no_ar_ate" name="no_ar_ate" 
+                               class="form-control datetime-input" 
+                               value="{% if votacao.no_ar_ate %}{{ votacao.no_ar_ate|date:'Y-m-d\TH:i' }}{% endif %}">
+                        <small class="text-muted">Deixe em branco para manter ativo indefinidamente</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="ativo" name="ativo" {% if votacao.ativo %}checked{% endif %}>
+                            <label for="ativo">Votação Ativa</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="form-group">
+                        <label for="sim_oficial">Votos SIM Oficiais</label>
+                        <input type="number" id="sim_oficial" name="sim_oficial" class="form-control" 
+                               value="{{ votacao.sim_oficial }}" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nao_oficial">Votos NÃO Oficiais</label>
+                        <input type="number" id="nao_oficial" name="nao_oficial" class="form-control" 
+                               value="{{ votacao.nao_oficial }}" min="0">
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar Alterações
+                    </button>
+                    <a href="{% url 'administrativo:votacoes_management' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+
+            <!-- Informações Adicionais -->
+            <div class="info-section">
+                <h3>Informações da Votação</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Proposição Relacionada:</strong>
+                        <a href="{% url 'administrativo:proposicao_edit' votacao.proposicao.pk %}">
+                            {{ votacao.proposicao.titulo|truncatechars:50 }}
+                        </a>
+                    </div>
+                    <div class="info-item">
+                        <strong>Total de Votos Populares:</strong>
+                        {{ total_votos }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Criado em:</strong>
+                        {{ votacao.created_at|date:"d/m/Y H:i" }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Última Atualização:</strong>
+                        {{ votacao.updated_at|date:"d/m/Y H:i" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Form Test</title>
+</head>
+<body>
+    <h1>Simple Form Test</h1>
+    
+    <h2>Test 1: Basic Form (No JavaScript)</h2>
+    <form method="post" action="/administrativo/test-form/">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="test">
+        <button type="submit">Submit Test</button>
+    </form>
+    
+    <h2>Test 2: Form with JavaScript Logging</h2>
+    <form method="post" action="/administrativo/test-form/" id="jsForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="test_js">
+        <button type="submit">Submit Test with JS</button>
+    </form>
+    
+    <h2>Test 3: Manual POST with Fetch</h2>
+    <button onclick="manualPost()">Manual POST Request</button>
+    
+    <script>
+        console.log('Test page loaded');
+        
+        // Test manual POST
+        function manualPost() {
+            console.log('Manual POST triggered');
+            
+            const formData = new FormData();
+            formData.append('action', 'manual_test');
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            fetch('/administrativo/test-form/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                console.log('Response:', response);
+                return response.text();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                alert('Manual POST completed - check console');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Manual POST failed - check console');
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded');
+            const jsForm = document.getElementById('jsForm');
+            if (jsForm) {
+                console.log('JS Form found:', jsForm);
+                jsForm.addEventListener('submit', function(e) {
+                    console.log('JS Form submit event triggered');
+                    console.log('Form action:', this.action);
+                    console.log('Form method:', this.method);
+                    alert('JS Form is submitting!');
+                    // Don't prevent default - let it submit normally
+                });
+            }
+        });
+    </script>
+</body>
+</html>

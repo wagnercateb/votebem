@@ -1,0 +1,290 @@
+{% extends "admin/voting/base_administrativo.html" %}
+
+{% block title %}Gerenciar Proposições - VoteBem{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'administrativo:proposicoes_statistics' %}">Estatísticas</a></li>
+<li class="breadcrumb-item active">Gerenciar Proposições</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filters-container {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .filters-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr auto;
+        gap: 15px;
+        align-items: end;
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    .filter-group label {
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #495057;
+    }
+    .filter-group input,
+    .filter-group select {
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 14px;
+        display: inline-block;
+        text-align: center;
+    }
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    .btn-info {
+        background: #17a2b8;
+        color: white;
+    }
+    .proposicoes-table {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 20px 0;
+    }
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+    }
+    .table th,
+    .table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    .table th {
+        background: #f8f9fa;
+        font-weight: bold;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .table tr:hover {
+        background: #f8f9fa;
+    }
+    .proposicao-titulo {
+        font-weight: bold;
+        color: #007bff;
+    }
+    .proposicao-ementa {
+        color: #6c757d;
+        font-size: 0.9em;
+        margin-top: 5px;
+    }
+    .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .badge-primary {
+        background: #007bff;
+        color: white;
+    }
+    .badge-success {
+        background: #28a745;
+        color: white;
+    }
+    .badge-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px 0;
+        gap: 10px;
+    }
+    .pagination a,
+    .pagination span {
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        text-decoration: none;
+        color: #007bff;
+    }
+    .pagination .current {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    .pagination a:hover {
+        background: #f8f9fa;
+    }
+    .results-info {
+        text-align: center;
+        color: #6c757d;
+        margin: 10px 0;
+    }
+    .actions-column {
+        white-space: nowrap;
+    }
+    .actions-column .btn {
+        margin-right: 5px;
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Gerenciar Proposições</h1>
+<p>Lista e gerenciamento de todas as proposições no sistema.</p>
+
+<!-- Filters -->
+<div class="filters-container">
+    <form method="get">
+        <div class="filters-row">
+            <div class="filter-group">
+                <label for="search">Buscar:</label>
+                <input type="text" id="search" name="search" value="{{ search }}" 
+                       placeholder="Título, ementa ou ID da proposição...">
+            </div>
+            <div class="filter-group">
+                <label for="tipo">Tipo:</label>
+                <select id="tipo" name="tipo">
+                    <option value="">Todos os tipos</option>
+                    {% for tipo in tipos_disponiveis %}
+                    <option value="{{ tipo }}" {% if tipo == tipo_filter %}selected{% endif %}>{{ tipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="ano">Ano:</label>
+                <select id="ano" name="ano">
+                    <option value="">Todos os anos</option>
+                    {% for ano in anos_disponiveis %}
+                    <option value="{{ ano }}" {% if ano|stringformat:"s" == ano_filter %}selected{% endif %}>{{ ano }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <a href="{% url 'administrativo:proposicoes_list' %}" class="btn btn-secondary" style="margin-top: 5px;">Limpar</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Results Info -->
+<div class="results-info">
+    Mostrando {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ total_proposicoes }} proposições
+</div>
+
+<!-- Propositions Table -->
+<div class="proposicoes-table">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Proposição</th>
+                <th>Tipo/Número/Ano</th>
+                <th>Estado</th>
+                <th>Votação</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for proposicao in page_obj %}
+            <tr>
+                <td>{{ proposicao.id_proposicao }}</td>
+                <td>
+                    <div class="proposicao-titulo">{{ proposicao.titulo|truncatechars:80 }}</div>
+                    {% if proposicao.ementa %}
+                    <div class="proposicao-ementa">{{ proposicao.ementa|truncatechars:120 }}</div>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge badge-primary">{{ proposicao.tipo }} {{ proposicao.numero }}/{{ proposicao.ano }}</span>
+                </td>
+                <td>{{ proposicao.estado|default:"Não informado" }}</td>
+                <td>
+                    {% if proposicao.votacaodisponivel_set.exists %}
+                        {% for votacao in proposicao.votacaodisponivel_set.all %}
+                            {% if votacao.ativo %}
+                                <span class="badge badge-success">Ativa</span>
+                            {% else %}
+                                <span class="badge badge-warning">Inativa</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <span class="badge badge-warning">Sem votação</span>
+                    {% endif %}
+                </td>
+                <td class="actions-column">
+                    <a href="{% url 'administrativo:proposicao_edit' proposicao.pk %}" class="btn btn-info">Editar</a>
+                    {% if proposicao.votacaodisponivel_set.exists %}
+                        <a href="{% url 'administrativo:votacoes_management' %}" class="btn btn-success">Votações</a>
+                    {% else %}
+                        <a href="{% url 'administrativo:votacoes_management' %}" class="btn btn-secondary">Criar Votação</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: #6c757d;">
+                    Nenhuma proposição encontrada com os filtros aplicados.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}page=1">« Primeira</a>
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}page={{ page_obj.previous_page_number }}">‹ Anterior</a>
+    {% endif %}
+    
+    <span class="current">
+        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+    </span>
+    
+    {% if page_obj.has_next %}
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima ›</a>
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última »</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+<div style="margin: 30px 0; text-align: center;">
+    <a href="{% url 'administrativo:proposicoes_statistics' %}" class="btn btn-secondary">Voltar às Estatísticas</a>
+    <a href="{% url 'administrativo:dashboard' %}" class="btn btn-primary">Voltar ao Painel Principal</a>
+    <a href="{% url 'administrativo:proposicao_add' %}" class="btn btn-success">Adicionar Nova Proposição</a>
+</div>
+
+{% endblock %}

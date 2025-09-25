@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.db.models import Count, Q, Sum, Case, When, IntegerField, F
 from django.db.models.functions import Coalesce
 from django.utils import timezone
+from django.http import JsonResponse, HttpResponse
 from .models import VotacaoDisponivel, Voto, Proposicao, Congressman, CongressmanVote
 from .forms import VotoForm
 from users.models import UserProfile
@@ -36,6 +37,61 @@ class VotacoesDisponiveisView(ListView):
         else:
             context['user_votes'] = []
         return context
+
+
+def api_test_view(request):
+    """Simple API test view that doesn't require authentication"""
+    try:
+        from .services.camara_api import camara_api
+        
+        # Test basic API connection
+        test_data = camara_api._make_request("proposicoes", {"itens": 1})
+        
+        if test_data and 'dados' in test_data:
+            result = {
+                "status": "success",
+                "message": f"✅ API funcionando! Encontradas {len(test_data['dados'])} proposições de teste.",
+                "data": test_data['dados'][0] if test_data['dados'] else None
+            }
+        else:
+            result = {
+                "status": "error", 
+                "message": "❌ API não retornou dados válidos.",
+                "data": None
+            }
+            
+    except Exception as e:
+        result = {
+            "status": "error",
+            "message": f"❌ Erro na conexão: {str(e)}",
+            "data": None
+        }
+    
+    # Return HTML response for easy viewing
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Teste da API da Câmara</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 40px; }}
+            .success {{ color: green; }}
+            .error {{ color: red; }}
+            .data {{ background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }}
+        </style>
+    </head>
+    <body>
+        <h1>🧪 Teste da API da Câmara</h1>
+        <div class="{result['status']}">
+            <h2>{result['message']}</h2>
+        </div>
+        {f'<div class="data"><h3>Dados retornados:</h3><pre>{result["data"]}</pre></div>' if result['data'] else ''}
+        <p><a href="/administrativo/camara-admin/">← Voltar para Admin</a></p>
+    </body>
+    </html>
+    """
+    
+    return HttpResponse(html_content)
 
 class VotacaoDetailView(DetailView):
     """Detail view for a specific voting session"""

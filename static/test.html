@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Static Form Test</title>
+</head>
+<body>
+    <h1>Static HTML Form Test</h1>
+    
+    <form method="post" action="/administrativo/test-form/">
+        <input type="hidden" name="action" value="static_test">
+        <button type="submit">Submit Static Form</button>
+    </form>
+    
+    <script>
+        console.log('Static page loaded');
+        document.querySelector('form').addEventListener('submit', function(e) {
+            console.log('Static form submitting');
+            alert('Static form submit triggered');
+        });
+    </script>
+</body>
+</html>

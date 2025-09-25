@@ -170,7 +170,7 @@
                         {% if votacao.ativo %}Desativar{% else %}Ativar{% endif %}
                     </button>
                 </form>
-                <a href="{% url 'admin:voting_votacaodisponivel_change' votacao.pk %}" class="btn btn-edit">Editar</a>
+                <a href="{% url 'administrativo:votacao_edit' votacao.pk %}" class="btn btn-edit">Editar</a>
             </div>
         </div>
         {% empty %}

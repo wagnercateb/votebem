@@ -194,7 +194,7 @@
     <div class="action-card">
         <h3>Gerenciar Proposições</h3>
         <ul class="action-list">
-            <li><a href="/admin/voting/proposicao/">Listar Todas as Proposições</a></li>
+            <li><a href="{% url 'administrativo:proposicoes_list' %}">Listar Todas as Proposições</a></li>
             <li><a href="/admin/voting/proposicao/add/">Adicionar Nova Proposição</a></li>
             <li><a href="{% url 'administrativo:proposicoes_statistics' %}">Estatísticas de Proposições</a></li>
         </ul>
@@ -271,7 +271,7 @@
             <small>{{ ultima_proposicao.tipo }} {{ ultima_proposicao.numero }}/{{ ultima_proposicao.ano }} - {{ ultima_proposicao.estado }}</small>
         </div>
         <div class="stats-value">
-            <a href="/admin/voting/proposicao/{{ ultima_proposicao.pk }}/change/">Ver Detalhes</a>
+            <a href="{% url 'administrativo:proposicao_edit' ultima_proposicao.pk %}">Ver Detalhes</a>
         </div>
     </div>
 </div>

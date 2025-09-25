@@ -224,14 +224,20 @@
             <div class="tool-info">
                 <h4>{{ option.name }}</h4>
                 <small>Importar registros de {{ option.name|lower }}</small>
+                {% if option.action != 'import_dados_index' %}
                 <div class="file-upload">
                     <input type="file" accept=".csv,.json" disabled>
                 </div>
+                {% endif %}
             </div>
             <form method="post" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="{{ option.action }}">
+                {% if option.action == 'import_dados_index' %}
+                <button type="submit" class="btn btn-import">Importar</button>
+                {% else %}
                 <button type="submit" class="btn btn-import" disabled>Importar</button>
+                {% endif %}
             </form>
         </div>
         {% endfor %}

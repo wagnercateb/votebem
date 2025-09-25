@@ -12,9 +12,10 @@ urlpatterns = [
     
     # Proposições
     path('proposicoes/statistics/', admin_views.proposicoes_statistics, name='proposicoes_statistics'),
-    path('proposicoes/list/', admin_views.proposicoes_statistics, name='proposicoes_list'),  # Placeholder
-    path('proposicao/create/', admin_views.proposicoes_statistics, name='proposicao_create'),  # Placeholder
-    path('proposicao/<int:pk>/', admin_views.proposicoes_statistics, name='proposicao_detail'),  # Placeholder
+    path('proposicoes/list/', admin_views.proposicoes_list, name='proposicoes_list'),
+    path('proposicao/add/', admin_views.proposicao_add, name='proposicao_add'),
+    path('proposicao/<int:pk>/edit/', admin_views.proposicao_edit, name='proposicao_edit'),
+    path('votacao/<int:pk>/edit/', admin_views.votacao_edit, name='votacao_edit'),
     
     # Votações
     path('votacoes/management/', admin_views.votacoes_management, name='votacoes_management'),
@@ -41,5 +42,7 @@ urlpatterns = [
     path('enquete/create/', admin_views.data_import_export, name='enquete_create'),  # Placeholder
     
     # AJAX endpoints
+    path('camara-admin/', admin_views.camara_admin, name='camara_admin'),
+    path('test-form/', admin_views.test_form, name='test_form'),
     path('ajax/proposicao-search/', admin_views.ajax_proposicao_search, name='ajax_proposicao_search'),
 ]

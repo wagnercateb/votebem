@@ -1,0 +1,783 @@
+{% extends "admin/voting/base_administrativo.html" %}
+
+{% block title %}Administração Câmara - VoteBem{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">Câmara Admin</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .admin-header h1 {
+        margin: 0;
+        font-size: 2.5em;
+        font-weight: 300;
+    }
+    
+    .admin-header p {
+        margin: 10px 0 0 0;
+        font-size: 1.1em;
+        opacity: 0.9;
+    }
+    
+    .actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+    }
+    
+    .action-card {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-top: 4px solid #28a745;
+        transition: transform 0.3s ease;
+    }
+    
+    .action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .action-card h3 {
+        margin: 0 0 20px 0;
+        color: #333;
+        font-size: 1.3em;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .btn-action {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 0.9em;
+        font-weight: 500;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background: #1e7e34;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-warning:hover {
+        background: #e0a800;
+        color: #212529;
+        text-decoration: none;
+    }
+    
+    .btn-info {
+        background: #17a2b8;
+        color: white;
+    }
+    
+    .btn-info:hover {
+        background: #138496;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 25px;
+    }
+    
+    .form-section h3 {
+        margin: 0 0 20px 0;
+        color: #333;
+        font-size: 1.3em;
+        font-weight: 600;
+        border-bottom: 2px solid #28a745;
+        padding-bottom: 10px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #555;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 0.9em;
+    }
+    
+    .form-control:focus {
+        border-color: #28a745;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+    }
+    
+    .results-section {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-top: 25px;
+    }
+    
+    .results-section h3 {
+        margin: 0 0 20px 0;
+        color: #333;
+        font-size: 1.3em;
+        font-weight: 600;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        background: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+        padding: 12px;
+    }
+    
+    .table td {
+        padding: 12px;
+        vertical-align: middle;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .icon {
+        font-size: 1.2em;
+    }
+    
+    .text-muted {
+        color: #6c757d !important;
+    }
+    
+    .mb-0 {
+        margin-bottom: 0 !important;
+    }
+    
+    .form-section {
+        margin-bottom: 30px;
+    }
+    
+    .card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .card-header h4 {
+        margin: 0;
+        font-size: 1.2em;
+        font-weight: 600;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        margin-bottom: 5px;
+        display: block;
+    }
+    
+    .form-control {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+    
+    .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .alert {
+        padding: 12px 15px;
+        border-radius: 4px;
+        border: 1px solid transparent;
+    }
+    
+    .alert-info {
+        color: #0c5460;
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+    }
+</style>
+
+<script>
+        function toggleTramitacaoForm() {
+            const form = document.getElementById('tramitacaoForm');
+            if (form.style.display === 'none' || form.style.display === '') {
+                form.style.display = 'block';
+                form.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                form.style.display = 'none';
+            }
+        }
+        
+        // Debug form submissions
+        document.addEventListener('DOMContentLoaded', function() {
+            const forms = document.querySelectorAll('form[method="post"]');
+            console.log('Found ' + forms.length + ' forms');
+            
+            forms.forEach(function(form, index) {
+                console.log('Form ' + index + ':', form);
+                form.addEventListener('submit', function(e) {
+                    alert('Form submission detected! Check console for details.');
+                    console.log('Form submission detected:', form);
+                    console.log('Form action:', form.action);
+                    console.log('Form method:', form.method);
+                    const formData = new FormData(form);
+                    console.log('Form data:');
+                    for (let [key, value] of formData.entries()) {
+                        console.log(key + ': ' + value);
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <h1>🏛️ Administração da Câmara</h1>
+    <p>Gerencie proposições, votações e dados da Câmara dos Deputados</p>
+</div>
+
+<!-- TEST FORM -->
+<div style="background: yellow; padding: 10px; margin: 10px 0;">
+    <h3>TEST FORM</h3>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="test">
+        <button type="submit" style="background: red; color: white; padding: 10px;" onclick="console.log('Test button clicked'); return true;">TEST SUBMIT</button>
+    </form>
+    <br>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="testApiConnection">
+        <button type="submit" style="background: green; color: white; padding: 10px;" onclick="console.log('API Test button clicked'); return true;">🌐 TEST CÂMARA API</button>
+            </form>
+            
+            <!-- Direct API Test Links (bypass form submission) -->
+            <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border: 1px solid #ccc;">
+                <h5>🔧 Testes Diretos (sem formulário):</h5>
+                <a href="?test_api=1" style="background: #17a2b8; color: white; padding: 8px 12px; text-decoration: none; margin-right: 10px; border-radius: 4px;">
+                    🌐 Testar API Diretamente
+                </a>
+                <a href="?test_sync=1&ano=2024" style="background: #ffc107; color: black; padding: 8px 12px; text-decoration: none; border-radius: 4px;">
+                    🔄 Testar Sync 2024
+                </a>
+            </div>
+    <br>
+    <button onclick="alert('Simple button works'); console.log('Simple button clicked');" style="background: blue; color: white; padding: 10px;">SIMPLE BUTTON TEST</button>
+</div>
+
+<!-- Quick Actions Grid -->
+<div class="actions-grid">
+    <!-- Proposições Actions -->
+    <div class="action-card">
+        <h3><span class="icon">📋</span> Proposições</h3>
+        <div class="action-buttons">
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="exibeUltimaProposicao">
+                <button type="submit" class="btn-action btn-primary" onclick="alert('Button clicked!'); console.log('Button clicked - form will submit');">
+                    <span class="icon">🔍</span> Última Proposição
+                </button>
+            </form>
+            
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="exibeEstatisticaProposicoesPriInseridas">
+                <button type="submit" class="btn-action btn-info">
+                    <span class="icon">📊</span> Estatísticas
+                </button>
+            </form>
+            
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="listarProposicoesVotadas">
+                <button type="submit" class="btn-action btn-success">
+                    <span class="icon">✅</span> Proposições Votadas
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Votações Actions -->
+    <div class="action-card">
+        <h3><span class="icon">🗳️</span> Votações</h3>
+        <div class="action-buttons">
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="listarVotacoesDisponiveis">
+                <button type="submit" class="btn-action btn-primary">
+                    <span class="icon">📋</span> Votações Disponíveis
+                </button>
+            </form>
+            
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="loopObterVotacoes">
+                <button type="submit" class="btn-action btn-warning">
+                    <span class="icon">🔄</span> Loop Votações
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Sync Actions -->
+    <div class="action-card">
+        <h3><span class="icon">🔄</span> Sincronização</h3>
+        <div class="action-buttons">
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cadastrarEmentasFaltantes">
+                <button type="submit" class="btn-action btn-warning">
+                    <span class="icon">📝</span> Registrar Ementas
+                </button>
+            </form>
+            
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="atualizarNProposicoes">
+                <button type="submit" class="btn-action btn-success">
+                    <span class="icon">⬆️</span> Atualizar N Proposições
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Tramitação Actions -->
+    <div class="action-card">
+        <h3><span class="icon">📋</span> Tramitação</h3>
+        <div class="action-buttons">
+            <button type="button" class="btn-action btn-info" onclick="toggleTramitacaoForm()">
+                <span class="icon">📅</span> Listar por Período
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Tramitação Form Section -->
+<div id="tramitacaoForm" class="form-section" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            <h4><span class="icon">📅</span> Listar Proposições que Tramitaram entre Datas</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="listarProposicoesTramitacao">
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="dataInicio">Data Início:</label>
+                            <input type="date" class="form-control" id="dataInicio" name="dataInicio" 
+                                   value="{{ date_2_months_ago }}" required>
+                            <small class="form-text text-muted">Formato: AAAA-MM-DD</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="dataFim">Data Fim:</label>
+                            <input type="date" class="form-control" id="dataFim" name="dataFim" 
+                                   value="{{ date_today_iso }}" required>
+                            <small class="form-text text-muted">Formato: AAAA-MM-DD</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="apiType">Tipo de API:</label>
+                            <select class="form-control" id="apiType" name="apiType">
+                                <option value="desenvolvimento">API Desenvolvimento (dadosabertos.camara.leg.br)</option>
+                                <option value="producao">API Produção (www.camara.leg.br)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="icon">🔍</span> Listar Proposições em Tramitação
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="toggleTramitacaoForm()">
+                            <span class="icon">❌</span> Cancelar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <strong>Nota:</strong> O período máximo recomendado é de 60 dias. 
+                    Períodos muito longos podem resultar em muitos dados e lentidão na resposta.
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Sync by Year Form -->
+<div class="form-section">
+    <h3>🗓️ Sincronização por Ano</h3>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="atualizarProposicoesVotadasPlenario">
+        <div class="form-group">
+            <label for="ano">Ano:</label>
+            <input type="number" id="ano" name="ano" class="form-control" min="2000" max="2030" value="2024" required>
+        </div>
+        <button type="submit" class="btn-action btn-primary">
+            <span class="icon">🔄</span> Atualizar Proposições do Ano
+        </button>
+    </form>
+</div>
+
+<!-- Date Range Form -->
+<div class="form-section">
+    <h3>📅 Listar Proposições por Período</h3>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="listarProposicoesTramitacao">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="dataInicio">Data Início:</label>
+                    <input type="date" id="dataInicio" name="dataInicio" class="form-control">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="dataFim">Data Fim:</label>
+                    <input type="date" id="dataFim" name="dataFim" class="form-control">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="tipoApi">Tipo API:</label>
+                    <select id="tipoApi" name="tipoApi" class="form-control">
+                        <option value="proposicoes">Proposições</option>
+                        <option value="votacoes">Votações</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn-action btn-primary">
+            <span class="icon">🔍</span> Listar Proposições
+        </button>
+    </form>
+</div>
+
+<!-- Results Sections -->
+{% if ultima_proposicao %}
+<div class="results-section">
+    <h3>🔍 Última Proposição</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tipo</th>
+                    <th>Número</th>
+                    <th>Ano</th>
+                    <th>Ementa</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ ultima_proposicao.id }}</td>
+                    <td>{{ ultima_proposicao.siglaTipo }}</td>
+                    <td>{{ ultima_proposicao.numero }}</td>
+                    <td>{{ ultima_proposicao.ano }}</td>
+                    <td>{{ ultima_proposicao.ementa|truncatechars:100 }}</td>
+                    <td>{{ ultima_proposicao.statusProposicao.descricaoSituacao }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if estatisticas %}
+<div class="results-section">
+    <h3>📊 Estatísticas das Proposições</h3>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ estatisticas.total_proposicoes }}</div>
+                <div class="stat-label">Total de Proposições</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ estatisticas.proposicoes_votadas }}</div>
+                <div class="stat-label">Proposições Votadas</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ estatisticas.total_votacoes }}</div>
+                <div class="stat-label">Total de Votações</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ estatisticas.proposicoes_sem_ementa }}</div>
+                <div class="stat-label">Sem Ementa</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if action_result == 'api_test' %}
+<div class="results-section">
+    <h3>🌐 Teste de Conexão com API da Câmara</h3>
+    <div class="alert alert-info">
+        <p><strong>Resultado:</strong> {{ api_test_result }}</p>
+        {% if api_test_data %}
+        <h4>Dados de Teste:</h4>
+        <ul>
+            <li><strong>ID:</strong> {{ api_test_data.id }}</li>
+            <li><strong>Tipo:</strong> {{ api_test_data.siglaTipo }}</li>
+            <li><strong>Número:</strong> {{ api_test_data.numero }}</li>
+            <li><strong>Ano:</strong> {{ api_test_data.ano }}</li>
+            <li><strong>Ementa:</strong> {{ api_test_data.ementa|truncatechars:200 }}</li>
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if proposicoes_votadas %}
+<div class="results-section">
+    <h3>✅ Proposições Votadas</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tipo</th>
+                    <th>Número</th>
+                    <th>Ano</th>
+                    <th>Ementa</th>
+                    <th>Votações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for proposicao in proposicoes_votadas %}
+                <tr>
+                    <td>{{ proposicao.id }}</td>
+                    <td>{{ proposicao.siglaTipo }}</td>
+                    <td>{{ proposicao.numero }}</td>
+                    <td>{{ proposicao.ano }}</td>
+                    <td>{{ proposicao.ementa|truncatechars:80 }}</td>
+                    <td>{{ proposicao.total_votacoes }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if votacoes_disponiveis %}
+<div class="results-section">
+    <h3>🗳️ Votações Disponíveis</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Proposição</th>
+                    <th>Data</th>
+                    <th>Descrição</th>
+                    <th>Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for votacao in votacoes_disponiveis %}
+                <tr>
+                    <td>{{ votacao.id }}</td>
+                    <td>{{ votacao.proposicao_id }}</td>
+                    <td>{{ votacao.dataHoraVotacao|date:"d/m/Y H:i" }}</td>
+                    <td>{{ votacao.descricao|truncatechars:80 }}</td>
+                    <td>{{ votacao.aprovacao }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if tramitacao_result %}
+<div class="results-section">
+    <h3>📋 Proposições em Tramitação</h3>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tipo</th>
+                    <th>Número</th>
+                    <th>Ano</th>
+                    <th>Ementa</th>
+                    <th>Status Atual</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for proposicao in tramitacao_result %}
+                <tr>
+                    <td>{{ proposicao.id }}</td>
+                    <td>{{ proposicao.siglaTipo }}</td>
+                    <td>{{ proposicao.numero }}</td>
+                    <td>{{ proposicao.ano }}</td>
+                    <td>{{ proposicao.ementa|truncatechars:100 }}</td>
+                    <td>{{ proposicao.statusProposicao.descricaoSituacao }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Intercept all form submissions and use fetch API instead
+    const forms = document.querySelectorAll('form[method="post"]');
+    
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent default form submission
+            
+            console.log('Form submission intercepted, using fetch API');
+            
+            // Get form data
+            const formData = new FormData(form);
+            
+            // Log form data for debugging
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+            
+            // Submit using fetch API
+            // Get the correct URL - if form has no action, use current page URL
+            let actionUrl = form.getAttribute('action');
+            if (!actionUrl || actionUrl === '') {
+                actionUrl = window.location.pathname;
+            }
+            console.log('Submitting to URL:', actionUrl);
+            
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin', // Include cookies for CSRF
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (response.ok) {
+                    // If successful, reload the page to show results
+                    window.location.reload();
+                } else {
+                    console.error('Form submission failed:', response.status);
+                    alert('Erro na submissão do formulário. Status: ' + response.status);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting form:', error);
+                alert('Erro na submissão do formulário: ' + error.message);
+            });
+        });
+    });
+    
+    console.log('Form submission interceptor loaded for', forms.length, 'forms');
+});
+</script>
+
+{% endblock %}
