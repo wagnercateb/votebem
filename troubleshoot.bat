@@ -53,7 +53,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo [5] Checking database connectivity...
-python manage.py check --database default 2>nul
+python manage.py check --database default --settings=votebem.settings.development 2>nul
 if %errorlevel% neq 0 (
     echo Database check failed
     echo This is normal if using SQLite for the first time

@@ -10,7 +10,7 @@ This documentation is organized to guide you through every aspect of the VoteBem
 
 ## 🚀 Getting Started
 
-### [README.md](./README.md)
+### [OVERVIEW.md](./OVERVIEW.md)
 **Main project overview and feature documentation**
 - **Use Case**: Start here to understand what VoteBem does and its core features
 - **Contains**: Project description, feature list, technology stack, and basic usage instructions
@@ -128,13 +128,13 @@ graph TD
     AH --> AI[🎯 Production Ready]
 
     %% Styling
-    classDef startEnd fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef process fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef decision fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef security fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef docker fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px
-    classDef config fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    classDef success fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    classDef startEnd fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000000
+    classDef process fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000000
+    classDef decision fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000000
+    classDef security fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px,color:#000000
+    classDef docker fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px,color:#000000
+    classDef config fill:#fce4ec,stroke:#880e4f,stroke-width:2px,color:#000000
+    classDef success fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px,color:#000000
     
     class A,AI startEnd
     class B,G,H,L,M,S,U,V,W,X,Y,AB,AC,AD process
@@ -147,44 +147,55 @@ graph TD
 
 ### 📋 Setup Phase Descriptions
 
-1. **🚀 VPS Provisioning** ([SCRIPTS_DETAILED_README.md](./SCRIPTS_DETAILED_README.md))
+1. **💻 Local Development Setup** ([WINDOWS_DEV_SETUP.md](./WINDOWS_DEV_SETUP.md))
+   - Windows 11 development environment configuration
+   - Python virtual environment and dependencies
+   - Docker services for PostgreSQL and Redis
+   - DBeaver and pgAdmin database management setup
+
+2. **🚀 VPS Provisioning** ([SCRIPTS_DETAILED_README.md](./SCRIPTS_DETAILED_README.md))
    - Choose VPS provider (Linode recommended)
    - Basic server setup and security hardening
    - User account creation and SSH configuration
+   - VPS-specific provisioning scripts (`provision_vps.sh`, `setup_votebem.sh`)
 
-2. **🔧 Environment Setup** ([DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md))
-   - Docker installation and configuration
-   - Repository cloning and environment variables
-   - Security configuration and firewall setup
+3. **🔧 Production Deployment** ([SCRIPTS_README.md](./SCRIPTS_README.md))
+   - Production deployment automation scripts
+   - Application deployment with `deploy_production.sh`
+   - Container management and troubleshooting
+   - Environment variable generation and security
 
-3. **🐳 Application Deployment** ([DOCKER_README.md](./DOCKER_README.md))
-   - Docker Compose configuration
+4. **🐳 Docker Configuration** ([DOCKER_README.md](./DOCKER_README.md))
+   - Docker Compose configuration for all environments
+   - Container orchestration and networking
    - Database setup and migrations
    - Static file collection and Nginx configuration
 
-4. **🔒 Security & SSL** ([SCRIPTS_README.md](./SCRIPTS_README.md))
-   - SSL certificate generation (optional)
-   - HTTPS configuration
+5. **🔒 Security & SSL** ([DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) + [SCRIPTS_README.md](./SCRIPTS_README.md))
+   - SSL certificate generation with Let's Encrypt
+   - HTTPS configuration and automatic renewal
    - Security best practices implementation
+   - Firewall and access control setup
 
-5. **👤 User Authentication** ([SOCIAL_AUTH_GUIDE.md](./SOCIAL_AUTH_GUIDE.md))
-   - Social authentication setup
+6. **👤 User Authentication** ([SOCIAL_AUTH_GUIDE.md](./SOCIAL_AUTH_GUIDE.md))
+   - Social authentication setup (Google, Facebook)
    - OAuth provider configuration
-   - User account management
+   - User account management and linking
 
-6. **🏗️ System Architecture** ([ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md))
-   - Understanding system components
-   - Database relationships
-   - Application workflow analysis
+7. **🏗️ System Architecture** ([ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md))
+   - Understanding system components and relationships
+   - Database ERD and application workflows
+   - Deployment architecture visualization
 
 ---
 
 ## 📖 How to Use This Documentation
 
 ### For New Developers
-1. Start with [README.md](./README.md) to understand the project
-2. Follow [WINDOWS_DEV_SETUP.md](./WINDOWS_DEV_SETUP.md) for local development
+1. Start with [OVERVIEW.md](./OVERVIEW.md) to understand the project
+2. Follow [WINDOWS_DEV_SETUP.md](./WINDOWS_DEV_SETUP.md) for Windows development environment
 3. Review [ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md) for system understanding
+4. Use [DOCKER_README.md](./DOCKER_README.md) for containerized development setup
 
 ### For DevOps/Deployment
 1. Begin with [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for overview
@@ -195,7 +206,7 @@ graph TD
 ### For Feature Development
 1. Review [ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md) for system design
 2. Check [SOCIAL_AUTH_GUIDE.md](./SOCIAL_AUTH_GUIDE.md) for authentication features
-3. Use [README.md](./README.md) for feature specifications
+3. Use [OVERVIEW.md](./OVERVIEW.md) for feature specifications
 
 ### For Troubleshooting
 1. Check [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for common issues

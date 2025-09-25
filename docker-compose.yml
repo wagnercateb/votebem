@@ -59,8 +59,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
+      sh -c "python manage.py migrate --settings=votebem.settings.production &&
+             python manage.py collectstatic --noinput --settings=votebem.settings.production &&
              gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 votebem.wsgi:application"
 
   nginx:

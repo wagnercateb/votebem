@@ -61,9 +61,9 @@ services:
         condition: service_healthy
     restart: unless-stopped
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             python manage.py runserver 0.0.0.0:8000"
+      sh -c "python manage.py migrate --settings=votebem.settings.development &&
+             python manage.py collectstatic --noinput --settings=votebem.settings.development &&
+             python manage.py runserver 0.0.0.0:8000 --settings=votebem.settings.development"
 
 volumes:
   postgres_dev_data:

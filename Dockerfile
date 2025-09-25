@@ -59,7 +59,7 @@ RUN mkdir -p /app/staticfiles /app/logs /app/media
 
 # Collect static files using build settings (optimized for Docker build)
 ENV DJANGO_SETTINGS_MODULE=votebem.settings.build
-RUN python manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput --settings=votebem.settings.build
 
 # Set production settings for runtime
 ENV DJANGO_SETTINGS_MODULE=votebem.settings.production

@@ -89,7 +89,7 @@ sudo ./scripts/setup_linode_vps.sh
 
 3. **Create Superuser**:
    ```bash
-   docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+   docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser --settings=votebem.settings.production
    ```
 
 ### Adding SSL (after initial deployment)
@@ -147,7 +147,7 @@ docker-compose -f docker-compose.prod.yml restart
 curl http://your-server-ip/health/
 
 # Create superuser
-docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser --settings=votebem.settings.production
 ```
 
 ## File Locations

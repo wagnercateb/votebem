@@ -82,19 +82,19 @@ deploy:
 	git pull origin main
 	docker-compose build --no-cache
 	docker-compose up -d
-	docker-compose exec web python manage.py migrate
-	docker-compose exec web python manage.py collectstatic --noinput
+	docker-compose exec web python manage.py migrate --settings=votebem.settings.production
+	docker-compose exec web python manage.py collectstatic --noinput --settings=votebem.settings.production
 	@echo "Deployment completed"
 
 # Database Operations
 migrate:
-	docker-compose exec web python manage.py migrate
+	docker-compose exec web python manage.py migrate --settings=votebem.settings.production
 
 makemigrations:
-	docker-compose exec web python manage.py makemigrations
+	docker-compose exec web python manage.py makemigrations --settings=votebem.settings.production
 
 superuser:
-	docker-compose exec web python manage.py createsuperuser
+	docker-compose exec web python manage.py createsuperuser --settings=votebem.settings.production
 
 dbshell:
 	docker-compose exec db psql -U votebem_user -d votebem_db
@@ -111,16 +111,18 @@ restore:
 
 # Testing & Quality
 test:
-	docker-compose -f docker-compose.dev.yml exec web python manage.py test
+	docker-compose -f docker-compose.dev.yml exec web python manage.py test --settings=votebem.settings.development
 
 coverage:
-	docker-compose -f docker-compose.dev.yml exec web coverage run --source='.' manage.py test
+	docker-compose -f docker-compose.dev.yml exec web coverage run --source='.' manage.py test --settings=votebem.settings.development
 	docker-compose -f docker-compose.dev.yml exec web coverage report
 	docker-compose -f docker-compose.dev.yml exec web coverage html
 	@echo "Coverage report generated in htmlcov/"
 
 lint:
 	docker-compose -f docker-compose.dev.yml exec web flake8 .
+	docker-compose -f docker-compose.dev.yml exec web black --check .
+	docker-compose -f docker-compose.dev.yml exec web isort --check-only .
 
 format:
 	docker-compose -f docker-compose.dev.yml exec web black .
@@ -151,7 +153,7 @@ shell:
 	docker-compose exec web bash
 
 collectstatic:
-	docker-compose exec web python manage.py collectstatic --noinput
+	docker-compose exec web python manage.py collectstatic --noinput --settings=votebem.settings.production
 
 # Health Check
 health:
@@ -198,11 +200,11 @@ update:
 
 # Development helpers
 django-shell:
-	docker-compose exec web python manage.py shell
+	docker-compose exec web python manage.py shell --settings=votebem.settings.production
 
 flush-db:
 	@read -p "Are you sure you want to flush the database? [y/N] " confirm && [ "$$confirm" = "y" ]
-	docker-compose exec web python manage.py flush --noinput
+	docker-compose exec web python manage.py flush --noinput --settings=votebem.settings.production
 
 reset-db:
 	@read -p "Are you sure you want to reset the database? [y/N] " confirm && [ "$$confirm" = "y" ]
@@ -233,7 +235,7 @@ load-test:
 # Security scan
 security-scan:
 	@echo "Running security scan..."
-	docker-compose -f docker-compose.dev.yml exec web python manage.py check --deploy
+	docker-compose -f docker-compose.dev.yml exec web python manage.py check --deploy --settings=votebem.settings.development
 
 # Documentation
 docs:

@@ -63,18 +63,18 @@ pip install -r requirements.txt
 
 ### 4. Configure o banco de dados
 ```bash
-python manage.py makemigrations
-python manage.py migrate
+python manage.py makemigrations --settings=votebem.settings.development
+python manage.py migrate --settings=votebem.settings.development
 ```
 
 ### 5. Crie um superusuário
 ```bash
-python manage.py createsuperuser
+python manage.py createsuperuser --settings=votebem.settings.development
 ```
 
 ### 6. Execute o servidor de desenvolvimento
 ```bash
-python manage.py runserver
+python manage.py runserver --settings=votebem.settings.development
 ```
 
 O sistema estará disponível em: http://127.0.0.1:8000/
@@ -86,7 +86,7 @@ django_votebem/
 ├── manage.py
 ├── requirements.txt
 ├── .gitignore
-├── README.md
+├── OVERVIEW.md
 ├── votebem/                 # Configurações principais do Django
 │   ├── settings.py
 │   ├── urls.py

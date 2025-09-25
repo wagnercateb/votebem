@@ -84,19 +84,19 @@ docker-compose -f docker-compose.dev.yml logs -f
 
 ```bash
 # Run migrations
-docker-compose -f docker-compose.dev.yml exec web python manage.py migrate
+docker-compose -f docker-compose.dev.yml exec web python manage.py migrate --settings=votebem.settings.development
 
 # Create superuser
-docker-compose -f docker-compose.dev.yml exec web python manage.py createsuperuser
+docker-compose -f docker-compose.dev.yml exec web python manage.py createsuperuser --settings=votebem.settings.development
 
 # Collect static files
-docker-compose -f docker-compose.dev.yml exec web python manage.py collectstatic
+docker-compose -f docker-compose.dev.yml exec web python manage.py collectstatic --settings=votebem.settings.development
 
 # Run tests
-docker-compose -f docker-compose.dev.yml exec web python manage.py test
+docker-compose -f docker-compose.dev.yml exec web python manage.py test --settings=votebem.settings.development
 
 # Access Django shell
-docker-compose -f docker-compose.dev.yml exec web python manage.py shell
+docker-compose -f docker-compose.dev.yml exec web python manage.py shell --settings=votebem.settings.development
 
 # Access container bash
 docker-compose -f docker-compose.dev.yml exec web bash
@@ -164,9 +164,9 @@ docker-compose ps
 docker-compose logs -f
 
 # Run initial setup
-docker-compose exec web python manage.py migrate
-docker-compose exec web python manage.py collectstatic --noinput
-docker-compose exec web python manage.py createsuperuser
+docker-compose exec web python manage.py migrate --settings=votebem.settings.production
+docker-compose exec web python manage.py collectstatic --noinput --settings=votebem.settings.production
+docker-compose exec web python manage.py createsuperuser --settings=votebem.settings.production
 ```
 
 ### 3. SSL Configuration
@@ -410,7 +410,7 @@ docker stats --no-stream
 docker-compose exec db psql -U votebem_user -d votebem_db -c "VACUUM ANALYZE;"
 
 # Clear cache
-docker-compose exec web python manage.py clear_cache
+docker-compose exec web python manage.py clear_cache --settings=votebem.settings.production
 
 # Restart services
 docker-compose restart
@@ -440,7 +440,7 @@ docker-compose exec db pg_isready -U votebem_user
 # Reset database
 docker-compose down -v
 docker-compose up -d db
-docker-compose exec web python manage.py migrate
+docker-compose exec web python manage.py migrate --settings=votebem.settings.production
 ```
 
 #### Permission Issues
@@ -477,7 +477,7 @@ docker-compose restart web
 docker-compose logs web
 
 # Access Django shell for debugging
-docker-compose exec web python manage.py shell
+docker-compose exec web python manage.py shell --settings=votebem.settings.production
 ```
 
 ### Performance Issues

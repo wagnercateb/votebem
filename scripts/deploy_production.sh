@@ -256,9 +256,9 @@ services:
     networks:
       - votebem_network
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
-             python manage.py createcachetable &&
+      sh -c "python manage.py migrate --settings=votebem.settings.production &&
+             python manage.py collectstatic --noinput --settings=votebem.settings.production &&
+             python manage.py createcachetable --settings=votebem.settings.production &&
              gunicorn --bind 0.0.0.0:8000 --workers 3 --worker-class gthread --threads 2 --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile - votebem.wsgi:application"
 
   nginx:
@@ -331,7 +331,7 @@ fi
 # Wait for web container to be stable and ready
 log "Waiting for web container to be stable..."
 for i in {1..12}; do
-    if docker-compose -f docker-compose.prod.yml exec -T web python manage.py check --deploy > /dev/null 2>&1; then
+    if docker-compose -f docker-compose.prod.yml exec -T web python manage.py check --deploy --settings=votebem.settings.production > /dev/null 2>&1; then
         log "Web container is ready!"
         break
     fi
@@ -350,7 +350,7 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Additional check before creating superuser
     if docker-compose -f docker-compose.prod.yml ps web | grep -q "Up"; then
-        docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+        docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser --settings=votebem.settings.production
     else
         error "Web container is not running. Cannot create superuser."
     fi
