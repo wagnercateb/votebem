@@ -1,0 +1,280 @@
+{% extends "admin/voting/base_administrativo.html" %}
+
+{% block title %}Dashboard Administrativo - VoteBem{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .dashboard-header h1 {
+        margin: 0;
+        font-size: 2.5em;
+        font-weight: 300;
+    }
+    
+    .dashboard-header p {
+        margin: 10px 0 0 0;
+        font-size: 1.1em;
+        opacity: 0.9;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #667eea;
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-number {
+        font-size: 2.5em;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 10px;
+    }
+    
+    .stat-label {
+        font-size: 1.1em;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .admin-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+    }
+    
+    .action-card {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-top: 4px solid #667eea;
+    }
+    
+    .action-card h3 {
+        margin: 0 0 20px 0;
+        color: #333;
+        font-size: 1.3em;
+        font-weight: 600;
+    }
+    
+    .action-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .action-list li {
+        margin-bottom: 12px;
+    }
+    
+    .action-list a {
+        display: block;
+        padding: 12px 15px;
+        background: #f8f9fa;
+        color: #333;
+        text-decoration: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        border-left: 3px solid transparent;
+    }
+    
+    .action-list a:hover {
+        background: #667eea;
+        color: white;
+        border-left-color: #4c63d2;
+        transform: translateX(5px);
+    }
+    
+    .quick-stats {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .quick-stats h2 {
+        margin: 0 0 20px 0;
+        color: #333;
+        font-size: 1.5em;
+    }
+    
+    .stats-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .stats-row:last-child {
+        border-bottom: none;
+    }
+    
+    .stats-label {
+        font-weight: 500;
+        color: #666;
+    }
+    
+    .stats-value {
+        font-size: 1.2em;
+        font-weight: bold;
+        color: #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Dashboard Administrativo</h1>
+    <p>Bem-vindo ao painel de administração do sistema VoteBem. Aqui você pode gerenciar todas as funcionalidades do sistema.</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_proposicoes }}</div>
+        <div class="stat-label">Proposições</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_votacoes_disponiveis }}</div>
+        <div class="stat-label">Votações Criadas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ votacoes_ativas }}</div>
+        <div class="stat-label">Votações Ativas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_votos_populares }}</div>
+        <div class="stat-label">Votos Populares</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_congressistas }}</div>
+        <div class="stat-label">Congressistas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_votos_congressistas }}</div>
+        <div class="stat-label">Votos Oficiais</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_usuarios }}</div>
+        <div class="stat-label">Usuários</div>
+    </div>
+</div>
+
+<div class="admin-actions">
+    <div class="action-card">
+        <h3>Gerenciar Proposições</h3>
+        <ul class="action-list">
+            <li><a href="/admin/voting/proposicao/">Listar Todas as Proposições</a></li>
+            <li><a href="/admin/voting/proposicao/add/">Adicionar Nova Proposição</a></li>
+            <li><a href="{% url 'administrativo:proposicoes_statistics' %}">Estatísticas de Proposições</a></li>
+        </ul>
+    </div>
+    
+    <div class="action-card">
+        <h3>Gerenciar Votações</h3>
+        <ul class="action-list">
+            <li><a href="/admin/voting/votacaodisponivel/">Listar Todas as Votações</a></li>
+            <li><a href="{% url 'administrativo:votacoes_management' %}">Gerenciar Votações Ativas</a></li>
+            <li><a href="/admin/voting/votacaodisponivel/add/">Criar Nova Votação</a></li>
+        </ul>
+    </div>
+    
+    <div class="action-card">
+        <h3>Gerenciar Usuários</h3>
+        <ul class="action-list">
+            <li><a href="/admin/auth/user/">Listar Todos os Usuários</a></li>
+            <li><a href="{% url 'administrativo:users_management' %}">Estatísticas de Usuários</a></li>
+            <li><a href="/admin/users/userprofile/">Perfis de Usuários</a></li>
+        </ul>
+    </div>
+    
+    <div class="action-card">
+        <h3>Congressistas e Votos Oficiais</h3>
+        <ul class="action-list">
+            <li><a href="/admin/voting/congressman/">Gerenciar Congressistas</a></li>
+            <li><a href="/admin/voting/congressmanvote/">Votos Oficiais</a></li>
+            <li><a href="/admin/voting/congressman/add/">Adicionar Congressista</a></li>
+        </ul>
+    </div>
+    
+    <div class="action-card">
+        <h3>Ferramentas de Dados</h3>
+        <ul class="action-list">
+            <li><a href="{% url 'administrativo:data_import_export' %}">Importar/Exportar Dados</a></li>
+            <li><a href="/admin/voting/voto/">Analisar Votos Populares</a></li>
+        </ul>
+    </div>
+    
+    <div class="action-card">
+        <h3>Enquetes</h3>
+        <ul class="action-list">
+            <li><a href="/admin/polls/enquete/">Gerenciar Enquetes</a></li>
+            <li><a href="/admin/polls/respostaenquete/">Respostas de Enquetes</a></li>
+            <li><a href="/admin/polls/enquete/add/">Criar Nova Enquete</a></li>
+        </ul>
+    </div>
+</div>
+
+{% if votacoes_recentes %}
+<div class="quick-stats">
+    <h2>Votações Ativas Recentes</h2>
+    {% for votacao in votacoes_recentes %}
+    <div class="stats-row">
+        <div class="stats-label">
+            <strong>{{ votacao.titulo }}</strong><br>
+            <small>{{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}</small>
+        </div>
+        <div class="stats-value">
+            {% if votacao.ativo %}Ativa{% else %}Inativa{% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if ultima_proposicao %}
+<div class="quick-stats">
+    <h2>Última Proposição Adicionada</h2>
+    <div class="stats-row">
+        <div class="stats-label">
+            <strong>{{ ultima_proposicao.titulo }}</strong><br>
+            <small>{{ ultima_proposicao.tipo }} {{ ultima_proposicao.numero }}/{{ ultima_proposicao.ano }} - {{ ultima_proposicao.estado }}</small>
+        </div>
+        <div class="stats-value">
+            <a href="/admin/voting/proposicao/{{ ultima_proposicao.pk }}/change/">Ver Detalhes</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

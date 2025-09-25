@@ -1,0 +1,247 @@
+{% extends "admin/voting/base_administrativo.html" %}
+
+{% block title %}Gerenciamento de Votações - VoteBem{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">Gerenciamento de Votações</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .management-container {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+        margin: 20px 0;
+    }
+    .votacoes-list {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+    }
+    .create-votacao {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+    }
+    .votacao-item {
+        padding: 15px;
+        border-bottom: 1px solid #f8f9fa;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .votacao-item:last-child {
+        border-bottom: none;
+    }
+    .votacao-info h4 {
+        margin: 0 0 5px 0;
+        color: #495057;
+    }
+    .votacao-info small {
+        color: #6c757d;
+    }
+    .votacao-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .status-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    .status-inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    .btn {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 0.9em;
+        display: inline-block;
+    }
+    .btn-toggle {
+        background: #ffc107;
+        color: #212529;
+    }
+    .btn-edit {
+        background: #007bff;
+        color: white;
+    }
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #495057;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+    .form-group textarea {
+        height: 80px;
+        resize: vertical;
+    }
+    .proposicoes-sem-votacao {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    .proposicao-item {
+        padding: 10px;
+        border-bottom: 1px solid #e9ecef;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+    .proposicao-item:hover {
+        background: #e9ecef;
+    }
+    .proposicao-item:last-child {
+        border-bottom: none;
+    }
+    .search-box {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Gerenciar Votações</h1>
+<p>Controle as votações ativas e crie novas votações para proposições.</p>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" style="padding: 10px; margin: 10px 0; border-radius: 4px; 
+             {% if message.tags == 'success' %}background: #d4edda; color: #155724; border: 1px solid #c3e6cb;{% endif %}
+             {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="management-container">
+    <div class="votacoes-list">
+        <h3>Votações Existentes</h3>
+        {% for votacao in votacoes %}
+        <div class="votacao-item">
+            <div class="votacao-info">
+                <h4>{{ votacao.titulo }}</h4>
+                <small>{{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}</small><br>
+                <small>Criada em: {{ votacao.created_at|date:"d/m/Y H:i" }}</small>
+            </div>
+            <div class="votacao-actions">
+                <span class="status-badge {% if votacao.ativo %}status-active{% else %}status-inactive{% endif %}">
+                    {% if votacao.ativo %}Ativa{% else %}Inativa{% endif %}
+                </span>
+                <form method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="toggle_active">
+                    <input type="hidden" name="votacao_id" value="{{ votacao.id }}">
+                    <button type="submit" class="btn btn-toggle">
+                        {% if votacao.ativo %}Desativar{% else %}Ativar{% endif %}
+                    </button>
+                </form>
+                <a href="{% url 'admin:voting_votacaodisponivel_change' votacao.pk %}" class="btn btn-edit">Editar</a>
+            </div>
+        </div>
+        {% empty %}
+        <p>Nenhuma votação encontrada.</p>
+        {% endfor %}
+    </div>
+
+    <div class="create-votacao">
+        <h3>Criar Nova Votação</h3>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_votacao">
+            
+            <div class="form-group">
+                <label for="proposicao_search">Buscar Proposição:</label>
+                <input type="text" id="proposicao_search" class="search-box" placeholder="Digite para buscar proposições...">
+                <input type="hidden" name="proposicao_id" id="proposicao_id">
+            </div>
+            
+            <div class="form-group">
+                <label for="titulo">Título da Votação:</label>
+                <input type="text" name="titulo" id="titulo" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="resumo">Resumo (opcional):</label>
+                <textarea name="resumo" id="resumo" placeholder="Descrição da votação..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Criar Votação</button>
+        </form>
+    </div>
+</div>
+
+<div class="proposicoes-sem-votacao">
+    <h3>Proposições sem Votação (Últimas 20)</h3>
+    {% for proposicao in proposicoes_sem_votacao %}
+    <div class="proposicao-item" onclick="selectProposicao({{ proposicao.id }}, '{{ proposicao.titulo|escapejs }}')">
+        <strong>{{ proposicao.tipo }} {{ proposicao.numero }}/{{ proposicao.ano }}</strong><br>
+        <small>{{ proposicao.titulo|truncatechars:100 }}</small>
+    </div>
+    {% empty %}
+    <p>Todas as proposições já possuem votação.</p>
+    {% endfor %}
+</div>
+
+<div style="margin: 30px 0; text-align: center;">
+    <a href="/administrativo/dashboard/" class="btn btn-primary">Voltar ao Painel Principal</a>
+</div>
+
+<script>
+function selectProposicao(id, titulo) {
+    document.getElementById('proposicao_id').value = id;
+    document.getElementById('titulo').value = 'Votação: ' + titulo.substring(0, 50);
+    document.getElementById('proposicao_search').value = titulo.substring(0, 60) + '...';
+}
+
+// Simple search functionality
+document.getElementById('proposicao_search').addEventListener('input', function() {
+    const query = this.value.toLowerCase();
+    const items = document.querySelectorAll('.proposicao-item');
+    
+    items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        if (text.includes(query)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+</script>
+
+{% endblock %}

@@ -7,6 +7,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     uf = models.CharField(max_length=2, blank=True, null=True, verbose_name="Estado")
     votos_gravados = models.TextField(blank=True, null=True, verbose_name="Votações Registradas")
+    pontos_ranking = models.IntegerField(default=0, verbose_name="Pontos de Ranking")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

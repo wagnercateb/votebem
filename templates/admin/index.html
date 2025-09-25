@@ -1,0 +1,75 @@
+{% extends "admin/index.html" %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .enhanced-admin-banner {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .enhanced-admin-banner h2 {
+        margin: 0 0 10px 0;
+        font-size: 1.5em;
+    }
+    .enhanced-admin-banner p {
+        margin: 0 0 15px 0;
+        opacity: 0.9;
+    }
+    .dashboard-btn {
+        background: white;
+        color: #007bff;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 4px;
+        font-weight: bold;
+        display: inline-block;
+        transition: all 0.3s;
+    }
+    .dashboard-btn:hover {
+        background: #f8f9fa;
+        color: #0056b3;
+        text-decoration: none;
+    }
+    .quick-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+    }
+    .stat-item {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 15px;
+        text-align: center;
+    }
+    .stat-number {
+        font-size: 1.8em;
+        font-weight: bold;
+        color: #007bff;
+        margin-bottom: 5px;
+    }
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="enhanced-admin-banner">
+    <h2>🗳️ VoteBem - Painel Administrativo Avançado</h2>
+    <p>Acesse o painel administrativo completo com estatísticas detalhadas e ferramentas de gerenciamento.</p>
+    <a href="/administrativo/dashboard/" class="dashboard-btn">
+        Acessar Painel Avançado
+    </a>
+</div>
+
+{{ block.super }}
+{% endblock %}

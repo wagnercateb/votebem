@@ -20,8 +20,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from .health import health_check
-
 urlpatterns = [
+    # Administrative interface with namespace
+    path('administrativo/', include('voting.admin_urls')),
+    # Django admin
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
     path('users/', include('users.urls')),

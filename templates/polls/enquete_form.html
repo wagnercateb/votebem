@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}Editar Enquete{% else %}Nova Enquete{% endif %} - VoteBem
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="bi bi-{% if object %}pencil-square{% else %}plus-circle{% endif %}"></i> 
+        {% if object %}Editar Enquete{% else %}Nova Enquete{% endif %}
+    </h2>
+    <div>
+        <a href="{% url 'polls:minhas_enquetes' %}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Minhas Enquetes
+        </a>
+        <a href="{% url 'polls:enquete_list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-list"></i> Todas as Enquetes
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Informações da Enquete
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    {% crispy form %}
+                </form>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-question-circle"></i> Como criar uma boa enquete?
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-lightbulb"></i> Dicas importantes:</h6>
+                        <ul class="small">
+                            <li>Escolha um <strong>título claro</strong> e objetivo</li>
+                            <li>Formule uma <strong>pergunta específica</strong></li>
+                            <li>Forneça <strong>contexto suficiente</strong> na descrição</li>
+                            <li>Selecione uma proposição relevante</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-gear"></i> Estados da enquete:</h6>
+                        <ul class="small">
+                            <li><span class="badge bg-secondary">Rascunho</span> - Visível apenas para você</li>
+                            <li><span class="badge bg-warning">Em revisão</span> - Aguardando aprovação</li>
+                            <li><span class="badge bg-success">Publicada</span> - Visível para todos</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus on the first form field
+    const firstInput = document.querySelector('form input, form select, form textarea');
+    if (firstInput) {
+        firstInput.focus();
+    }
+    
+    // Character counter for description field
+    const descricaoField = document.querySelector('#id_descricao');
+    if (descricaoField) {
+        const maxLength = 1000;
+        const counter = document.createElement('small');
+        counter.className = 'text-muted';
+        descricaoField.parentNode.appendChild(counter);
+        
+        function updateCounter() {
+            const remaining = maxLength - descricaoField.value.length;
+            counter.textContent = `${descricaoField.value.length}/${maxLength} caracteres`;
+            counter.className = remaining < 50 ? 'text-warning' : 'text-muted';
+        }
+        
+        descricaoField.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+});
+</script>
+{% endblock %}
