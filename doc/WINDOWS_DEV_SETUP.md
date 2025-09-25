@@ -9,6 +9,7 @@ Before starting, ensure you have the following installed:
 1. **Python 3.11+** - Download from [python.org](https://www.python.org/downloads/)
 2. **Docker Desktop** - Download from [docker.com](https://www.docker.com/products/docker-desktop/)
 3. **Git** - Download from [git-scm.com](https://git-scm.com/download/win)
+4. **DBeaver (Optional)** - Download from [dbeaver.io](https://dbeaver.io/download/) for database management
 
 ## Quick Setup (Automated)
 
@@ -16,6 +17,14 @@ For a quick setup, simply run the provided batch scripts:
 
 1. **First-time setup**: Run `setup.bat` (this will install dependencies and configure the environment)
 2. **Start the application**: Run `startup.bat` (this will start all services and the Django app)
+
+## Alternative Quick Start (Using Custom Scripts)
+
+If the batch scripts don't work, you can use the Python-based startup scripts:
+
+1. **Start Docker services**: `docker-compose -f docker-compose.dev-services.yml up -d`
+2. **Run migrations**: `python run_migrations.py`
+3. **Start Django server**: `python run_server.py`
 
 ## Manual Setup Instructions
 
@@ -39,7 +48,10 @@ python -m venv .venv
 
 ```cmd
 pip install -r requirements.txt
+pip install python-decouple django-redis
 ```
+
+**Note**: The application now uses PostgreSQL instead of SQLite and requires additional packages for environment variable management and Redis caching.
 
 ### Step 4: Create Environment Configuration
 
@@ -96,9 +108,16 @@ docker-compose -f docker-compose.dev-services.yml up -d
 
 ### Step 6: Initialize Database
 
-Run Django migrations to set up the database:
+Run Django migrations to set up the PostgreSQL database. You can use either method:
 
+**Method 1 (Recommended)**: Using the migration script
 ```cmd
+python run_migrations.py
+```
+
+**Method 2**: Manual migration with environment variables
+```cmd
+.venv\Scripts\activate
 python manage.py migrate
 ```
 
@@ -116,7 +135,16 @@ python manage.py collectstatic --noinput
 
 ### Step 9: Start Django Development Server
 
+You can use either method:
+
+**Method 1 (Recommended)**: Using the server script
 ```cmd
+python run_server.py
+```
+
+**Method 2**: Manual server start
+```cmd
+.venv\Scripts\activate
 python manage.py runserver 0.0.0.0:8000
 ```
 
@@ -127,12 +155,109 @@ python manage.py runserver 0.0.0.0:8000
 - **PostgreSQL**: localhost:5432
 - **Redis**: localhost:6379
 
+## Database Access with DBeaver
+
+DBeaver is a powerful database management tool that supports both PostgreSQL and Redis connections.
+
+### Setting up PostgreSQL Connection in DBeaver
+
+1. **Open DBeaver** and click "New Database Connection"
+2. **Select PostgreSQL** from the database list
+3. **Configure connection settings**:
+   - **Host**: `localhost`
+   - **Port**: `5432`
+   - **Database**: `votebem_dev`
+   - **Username**: `votebem_user`
+   - **Password**: `votebem_dev_password`
+4. **Test Connection** to verify settings
+5. **Click Finish** to save the connection
+
+### Setting up PostgreSQL Connection in pgAdmin
+
+pgAdmin runs inside Docker and requires different connection parameters than DBeaver. Use the configuration helper script:
+
+```cmd
+python config_postgres_admin.py
+```
+
+This script will provide the exact connection parameters and step-by-step instructions. The key difference is:
+
+- **DBeaver (External)**: Uses `localhost` as host
+- **pgAdmin (Docker)**: Uses `db` as host (Docker service name)
+
+**Manual pgAdmin Configuration**:
+1. **Open pgAdmin** at http://localhost:8080
+2. **Login** with `admin@votebem.dev` / `admin123`
+3. **Right-click 'Servers'** → 'Register' → 'Server'
+4. **General tab**: Name = `VoteBem PostgreSQL (Docker)`
+5. **Connection tab**:
+   - **Host**: `db` (not localhost!)
+   - **Port**: `5432`
+   - **Database**: `votebem_dev`
+   - **Username**: `votebem_user`
+   - **Password**: `votebem_dev_password`
+6. **Click 'Save'**
+
+### Setting up Redis Connection in DBeaver
+
+1. **Open DBeaver** and click "New Database Connection"
+2. **Select Redis** from the NoSQL section
+3. **Configure connection settings**:
+   - **Host**: `localhost`
+   - **Port**: `6379`
+   - **Database**: `0` (default Redis database)
+   - **Password**: Leave empty (no password configured)
+4. **Test Connection** to verify settings
+5. **Click Finish** to save the connection
+
+### Using DBeaver for Database Management
+
+**PostgreSQL Operations**:
+- View all tables and their structure
+- Execute SQL queries
+- Browse table data
+- Export/import data
+- Monitor database performance
+
+**Redis Operations**:
+- View all keys and their values
+- Monitor Redis memory usage
+- Execute Redis commands
+- Browse different Redis databases (0-15)
+
+### Alternative Database Tools
+
+If you prefer other tools:
+
+**For PostgreSQL**:
+- **pgAdmin**: Web-based PostgreSQL administration (included in Docker setup)
+- **TablePlus**: Modern database management tool
+- **DataGrip**: JetBrains database IDE
+
+**For Redis**:
+- **Redis Commander**: Web-based Redis management (included in Docker setup)
+- **RedisInsight**: Official Redis GUI tool
+- **Redis Desktop Manager**: Cross-platform Redis GUI
+
 ## Development Workflow
 
 ### Starting the Application Daily
 
-1. Ensure Docker Desktop is running
-2. Run `startup.bat` or manually:
+1. **Ensure Docker Desktop is running**
+2. **Choose one of these startup methods**:
+
+   **Option A**: Using batch script
+   ```cmd
+   startup.bat
+   ```
+
+   **Option B**: Using Python scripts (recommended)
+   ```cmd
+   docker-compose -f docker-compose.dev-services.yml up -d
+   python run_server.py
+   ```
+
+   **Option C**: Manual startup
    ```cmd
    docker-compose -f docker-compose.dev-services.yml up -d
    .venv\Scripts\activate
@@ -141,11 +266,18 @@ python manage.py runserver 0.0.0.0:8000
 
 ### Stopping the Application
 
-1. Stop Django server: `Ctrl+C`
-2. Stop Docker services:
+1. **Stop Django server**: `Ctrl+C` (in the terminal running the server)
+2. **Stop Docker services**:
    ```cmd
    docker-compose -f docker-compose.dev-services.yml down
    ```
+
+### Restarting After Code Changes
+
+- **Python/Django code**: Server auto-reloads, no restart needed
+- **Environment variables**: Restart Django server (`Ctrl+C` then `python run_server.py`)
+- **Database schema changes**: Run migrations first, then restart
+- **Docker services**: Only restart if Docker configuration changed
 
 ### Database Management
 
@@ -170,18 +302,48 @@ python manage.py runserver 0.0.0.0:8000
 1. **Port already in use**: 
    - Check if another application is using ports 8000, 5432, or 6379
    - Stop conflicting services or change ports in configuration
+   - Use `netstat -ano | findstr :8000` to find processes using port 8000
 
 2. **Docker not starting**:
-   - Ensure Docker Desktop is running
+   - Ensure Docker Desktop is running and fully started
    - Check Docker Desktop settings and restart if necessary
+   - Verify Docker services are healthy: `docker-compose -f docker-compose.dev-services.yml ps`
 
 3. **Database connection errors**:
    - Verify PostgreSQL container is running: `docker ps`
-   - Check database credentials in `.env.dev`
+   - Check database credentials in `.env.dev` match Docker configuration
+   - Ensure PostgreSQL container is healthy: `docker logs <postgres_container_name>`
+   - Try connecting manually: `docker exec -it <postgres_container> psql -U votebem_user -d votebem_dev`
 
 4. **Python module not found**:
    - Ensure virtual environment is activated: `.venv\Scripts\activate`
    - Reinstall requirements: `pip install -r requirements.txt`
+   - Install missing packages: `pip install python-decouple django-redis`
+
+5. **Environment variable issues**:
+   - Verify `.env.dev` file exists and has correct values
+   - Check if `python-decouple` is installed: `pip show python-decouple`
+   - Use `run_server.py` script which handles environment loading automatically
+
+6. **Migration errors**:
+   - Ensure PostgreSQL is running before migrations
+   - Use `python run_migrations.py` for automatic environment setup
+   - Clear migration history if needed: `docker-compose -f docker-compose.dev-services.yml down -v`
+
+7. **Redis connection issues**:
+   - Verify Redis container is running: `docker ps | grep redis`
+   - Test Redis connection: `docker exec -it <redis_container> redis-cli ping`
+   - Check Redis URL in `.env.dev`: should be `redis://localhost:6379/0`
+
+8. **Static files not loading**:
+   - Run `python manage.py collectstatic --noinput`
+   - Check if `static/` directory exists
+   - Verify `STATIC_ROOT` and `STATICFILES_DIRS` in settings
+
+9. **Permission errors on Windows**:
+   - Run terminal as Administrator if needed
+   - Check file permissions in project directory
+   - Ensure Docker Desktop has proper permissions
 
 ### Useful Commands
 
@@ -189,11 +351,32 @@ python manage.py runserver 0.0.0.0:8000
 # Check running Docker containers
 docker ps
 
-# View Django logs
+# Check Docker services status
+docker-compose -f docker-compose.dev-services.yml ps
+
+# View Docker service logs
+docker-compose -f docker-compose.dev-services.yml logs
+
+# Start Django server with environment loading
+python run_server.py
+
+# Run migrations with environment loading
+python run_migrations.py
+
+# Get pgAdmin connection instructions
+python config_postgres_admin.py
+
+# View Django logs with verbosity
 python manage.py runserver --verbosity=2
 
-# Check database connection
+# Check database connection (PostgreSQL)
 python manage.py dbshell
+
+# Connect to PostgreSQL directly
+docker exec -it <postgres_container> psql -U votebem_user -d votebem_dev
+
+# Connect to Redis directly
+docker exec -it <redis_container> redis-cli
 
 # Run tests
 python manage.py test
@@ -204,6 +387,23 @@ python manage.py startapp <app_name>
 # Make migrations after model changes
 python manage.py makemigrations
 python manage.py migrate
+
+# Collect static files
+python manage.py collectstatic --noinput
+
+# Create superuser
+python manage.py createsuperuser
+
+# Check installed packages
+pip list
+
+# Check environment variables (in Python shell)
+python -c "from decouple import Config, RepositoryEnv; config = Config(RepositoryEnv('.env.dev')); print(config('DB_NAME'))"
+
+# Reset database (WARNING: destroys all data)
+docker-compose -f docker-compose.dev-services.yml down -v
+docker-compose -f docker-compose.dev-services.yml up -d
+python run_migrations.py
 ```
 
 ## File Structure
@@ -212,15 +412,41 @@ python manage.py migrate
 django_votebem/
 ├── setup.bat                 # Automated setup script
 ├── startup.bat               # Automated startup script
+├── stop.bat                  # Stop services script
+├── troubleshoot.bat          # Troubleshooting script
 ├── .env.dev                  # Development environment variables
+├── .env.example              # Environment variables template
 ├── docker-compose.dev-services.yml  # Docker services only
+├── docker-compose.dev.yml    # Full development stack
+├── docker-compose.yml        # Production stack
 ├── manage.py                 # Django management script
+├── run_migrations.py         # Custom migration script with env loading
+├── run_server.py             # Custom server startup script with env loading
 ├── requirements.txt          # Python dependencies
+├── requirements-minimal.txt  # Minimal dependencies
+├── Dockerfile                # Production Docker image
+├── Dockerfile.dev            # Development Docker image
+├── Makefile                  # Build automation commands
 ├── votebem/                  # Main Django project
+│   ├── settings/             # Settings modules
+│   │   ├── base.py           # Base settings
+│   │   ├── development.py    # Development settings (PostgreSQL + Redis)
+│   │   └── production.py     # Production settings
+│   ├── urls.py               # URL routing
+│   └── wsgi.py               # WSGI application
+├── home/                     # Home page application
 ├── polls/                    # Polls application
 ├── users/                    # Users application
 ├── voting/                   # Voting application
-└── templates/                # HTML templates
+├── templates/                # HTML templates
+├── static/                   # Static files (CSS, JS, images)
+├── nginx/                    # Nginx configuration files
+├── scripts/                  # Deployment and setup scripts
+└── doc/                      # Documentation
+    ├── WINDOWS_DEV_SETUP.md  # This file
+    ├── DEPLOYMENT_GUIDE.md   # Production deployment guide
+    ├── DOCKER_README.md      # Docker-specific documentation
+    └── SOCIAL_AUTH_GUIDE.md  # Social authentication setup
 ```
 
 ## Next Steps

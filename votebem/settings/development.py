@@ -1,20 +1,41 @@
 from .base import *
 import os
+from decouple import config
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-dev-key-change-me'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-me')
 
 # Allowed hosts for development
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0').split(',')
 
-# Database for development (SQLite)
+# Database for development (PostgreSQL in Docker)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME', default='votebem_dev'),
+        'USER': config('DB_USER', default='votebem_user'),
+        'PASSWORD': config('DB_PASSWORD', default='votebem_dev_password'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
+        'OPTIONS': {
+            'connect_timeout': 60,
+        },
+    }
+}
+
+# Cache configuration (Redis in Docker)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://localhost:6379/0'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'KEY_PREFIX': 'votebem_dev',
+        'TIMEOUT': 300,
     }
 }
 
