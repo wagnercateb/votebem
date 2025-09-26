@@ -726,58 +726,56 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Intercept all form submissions and use fetch API instead
+    // Add loading state management for form submissions
     const forms = document.querySelectorAll('form[method="post"]');
     
     forms.forEach(form => {
         form.addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevent default form submission
+            const submitButton = form.querySelector('button[type="submit"]');
+            const action = form.querySelector('input[name="action"]')?.value;
             
-            console.log('Form submission intercepted, using fetch API');
+            console.log('Form submission started for action:', action);
             
-            // Get form data
-            const formData = new FormData(form);
-            
-            // Log form data for debugging
-            for (let [key, value] of formData.entries()) {
-                console.log(`${key}: ${value}`);
+            // Add loading state to button
+            if (submitButton) {
+                const originalText = submitButton.innerHTML;
+                submitButton.innerHTML = '<span class="icon">⏳</span> Processando...';
+                submitButton.disabled = true;
+                
+                // Restore button after 30 seconds as fallback
+                setTimeout(() => {
+                    submitButton.innerHTML = originalText;
+                    submitButton.disabled = false;
+                }, 30000);
             }
             
-            // Submit using fetch API
-            // Get the correct URL - if form has no action, use current page URL
-            let actionUrl = form.getAttribute('action');
-            if (!actionUrl || actionUrl === '') {
-                actionUrl = window.location.pathname;
+            // For long-running operations, show a progress message
+            if (action === 'atualizarProposicoesVotadasPlenario') {
+                const progressDiv = document.createElement('div');
+                progressDiv.id = 'progress-message';
+                progressDiv.className = 'alert alert-info mt-3';
+                progressDiv.innerHTML = '<strong>⏳ Processando...</strong> Esta operação pode demorar alguns minutos. Por favor, aguarde...';
+                form.appendChild(progressDiv);
             }
-            console.log('Submitting to URL:', actionUrl);
             
-            fetch(actionUrl, {
-                method: 'POST',
-                body: formData,
-                credentials: 'same-origin', // Include cookies for CSRF
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => {
-                console.log('Response status:', response.status);
-                if (response.ok) {
-                    // If successful, reload the page to show results
-                    window.location.reload();
-                } else {
-                    console.error('Form submission failed:', response.status);
-                    alert('Erro na submissão do formulário. Status: ' + response.status);
-                }
-            })
-            .catch(error => {
-                console.error('Error submitting form:', error);
-                alert('Erro na submissão do formulário: ' + error.message);
-            });
+            // Allow normal form submission - remove the preventDefault
+            // The Django view will handle the response properly
+            console.log('Form will submit normally to Django backend');
         });
     });
     
-    console.log('Form submission interceptor loaded for', forms.length, 'forms');
+    console.log('Form submission handlers loaded for', forms.length, 'forms');
 });
+
+// Function to toggle tramitacao form visibility
+function toggleTramitacaoForm() {
+    const form = document.getElementById('tramitacaoForm');
+    if (form.style.display === 'none' || form.style.display === '') {
+        form.style.display = 'block';
+    } else {
+        form.style.display = 'none';
+    }
+}
 </script>
 
 {% endblock %}

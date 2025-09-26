@@ -11,33 +11,86 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-me')
 # Allowed hosts for development
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0').split(',')
 
-# Database for development (PostgreSQL in Docker)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='votebem_dev'),
-        'USER': config('DB_USER', default='votebem_user'),
-        'PASSWORD': config('DB_PASSWORD', default='votebem_dev_password'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-        'OPTIONS': {
-            'connect_timeout': 60,
-        },
-    }
-}
+# Database for development (PostgreSQL in Docker with SQLite fallback)
+import psycopg2
+from django.core.exceptions import ImproperlyConfigured
 
-# Cache configuration (Redis in Docker)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': config('REDIS_URL', default='redis://localhost:6379/0'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'KEY_PREFIX': 'votebem_dev',
-        'TIMEOUT': 300,
-    }
-}
+def get_database_config():
+    """
+    Try to connect to PostgreSQL first, fallback to SQLite if not available.
+    """
+    try:
+        # Test PostgreSQL connection
+        conn = psycopg2.connect(
+            host=config('DB_HOST', default='localhost'),
+            port=config('DB_PORT', default='5432'),
+            user=config('DB_USER', default='votebem_user'),
+            password=config('DB_PASSWORD', default='votebem_dev_password'),
+            database=config('DB_NAME', default='votebem_dev'),
+            connect_timeout=5
+        )
+        conn.close()
+        
+        # PostgreSQL is available
+        return {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': config('DB_NAME', default='votebem_dev'),
+                'USER': config('DB_USER', default='votebem_user'),
+                'PASSWORD': config('DB_PASSWORD', default='votebem_dev_password'),
+                'HOST': config('DB_HOST', default='localhost'),
+                'PORT': config('DB_PORT', default='5432'),
+                'OPTIONS': {
+                    'connect_timeout': 60,
+                },
+            }
+        }
+    except (psycopg2.OperationalError, ImportError):
+        # PostgreSQL not available, use SQLite
+        print("PostgreSQL not available, using SQLite database")
+        return {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
+
+DATABASES = get_database_config()
+
+# Cache configuration (Redis in Docker with local memory fallback)
+def get_cache_config():
+    """
+    Try to connect to Redis first, fallback to local memory cache if not available.
+    """
+    try:
+        import redis
+        r = redis.Redis.from_url(config('REDIS_URL', default='redis://localhost:6379/0'))
+        r.ping()
+        
+        # Redis is available
+        return {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                'LOCATION': config('REDIS_URL', default='redis://localhost:6379/0'),
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                },
+                'KEY_PREFIX': 'votebem_dev',
+                'TIMEOUT': 300,
+            }
+        }
+    except (ImportError, Exception):
+        # Redis not available, use local memory cache
+        print("Redis not available, using local memory cache")
+        return {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'votebem_dev_cache',
+                'TIMEOUT': 300,
+            }
+        }
+
+CACHES = get_cache_config()
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
