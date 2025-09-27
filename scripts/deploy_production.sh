@@ -2,7 +2,7 @@
 
 # VoteBem - Production Deployment Script
 # This script deploys the Django VoteBem application in production mode
-# Run as votebem user: ./scripts/deploy_production.sh
+# Run as votebem user from project root: ./scripts/deploy_production.sh
 
 set -e  # Exit on any error
 

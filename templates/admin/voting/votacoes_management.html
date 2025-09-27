@@ -11,23 +11,23 @@
     .management-container {
         display: grid;
         grid-template-columns: 2fr 1fr;
-        gap: 20px;
-        margin: 20px 0;
+        gap: 12px;
+        margin: 10px 0;
     }
     .votacoes-list {
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 20px;
+        border-radius: 6px;
+        padding: 12px;
     }
     .create-votacao {
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 20px;
+        border-radius: 6px;
+        padding: 12px;
     }
     .votacao-item {
-        padding: 15px;
+        padding: 10px;
         border-bottom: 1px solid #f8f9fa;
         display: flex;
         justify-content: space-between;
@@ -37,15 +37,17 @@
         border-bottom: none;
     }
     .votacao-info h4 {
-        margin: 0 0 5px 0;
+        margin: 0 0 3px 0;
         color: #495057;
+        font-size: 1em;
     }
     .votacao-info small {
         color: #6c757d;
+        font-size: 0.8em;
     }
     .votacao-actions {
         display: flex;
-        gap: 10px;
+        gap: 6px;
         align-items: center;
     }
     .status-badge {
@@ -63,12 +65,12 @@
         color: #721c24;
     }
     .btn {
-        padding: 6px 12px;
+        padding: 4px 8px;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         text-decoration: none;
-        font-size: 0.9em;
+        font-size: 0.8em;
         display: inline-block;
     }
     .btn-toggle {
@@ -84,19 +86,20 @@
         color: white;
     }
     .form-group {
-        margin-bottom: 15px;
+        margin-bottom: 10px;
     }
     .form-group label {
         display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
+        margin-bottom: 3px;
+        font-weight: 600;
         color: #495057;
+        font-size: 0.9em;
     }
     .form-group input,
     .form-group select,
     .form-group textarea {
         width: 100%;
-        padding: 8px;
+        padding: 6px;
         border: 1px solid #ced4da;
         border-radius: 4px;
         font-size: 0.9em;
@@ -108,15 +111,16 @@
     .proposicoes-sem-votacao {
         background: #f8f9fa;
         border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 20px;
-        margin-top: 20px;
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 12px;
     }
     .proposicao-item {
-        padding: 10px;
+        padding: 8px;
         border-bottom: 1px solid #e9ecef;
         cursor: pointer;
         transition: background 0.3s;
+        font-size: 0.9em;
     }
     .proposicao-item:hover {
         background: #e9ecef;
@@ -126,17 +130,20 @@
     }
     .search-box {
         width: 100%;
-        padding: 10px;
+        padding: 6px;
         border: 1px solid #ced4da;
         border-radius: 4px;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
+        font-size: 0.9em;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<h1>Gerenciar Votações</h1>
-<p>Controle as votações ativas e crie novas votações para proposições.</p>
+<div style="margin-bottom: 10px;">
+    <h1 style="margin-bottom: 3px; font-size: 1.8em;">Gerenciar Votações</h1>
+    <p style="margin-bottom: 0; color: #6c757d; font-size: 0.9em;">Controle as votações ativas e crie novas votações para proposições.</p>
+</div>
 
 {% if messages %}
     {% for message in messages %}

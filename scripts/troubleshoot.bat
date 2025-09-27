@@ -1,4 +1,8 @@
 @echo off
+
+REM Change to project root directory (parent of scripts folder)
+cd /d "%~dp0\.."
+
 echo ========================================
 echo VoteBem Django Troubleshooting
 echo ========================================

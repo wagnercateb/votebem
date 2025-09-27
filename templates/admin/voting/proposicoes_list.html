@@ -12,14 +12,14 @@
     .filters-container {
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 20px;
-        margin: 20px 0;
+        border-radius: 6px;
+        padding: 12px;
+        margin: 10px 0;
     }
     .filters-row {
         display: grid;
         grid-template-columns: 2fr 1fr 1fr auto;
-        gap: 15px;
+        gap: 10px;
         align-items: end;
     }
     .filter-group {
@@ -27,24 +27,25 @@
         flex-direction: column;
     }
     .filter-group label {
-        margin-bottom: 5px;
-        font-weight: bold;
+        margin-bottom: 3px;
+        font-weight: 600;
         color: #495057;
+        font-size: 0.9em;
     }
     .filter-group input,
     .filter-group select {
-        padding: 8px 12px;
+        padding: 6px 10px;
         border: 1px solid #ced4da;
         border-radius: 4px;
-        font-size: 14px;
+        font-size: 0.9em;
     }
     .btn {
-        padding: 8px 16px;
+        padding: 6px 12px;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         text-decoration: none;
-        font-size: 14px;
+        font-size: 0.9em;
         display: inline-block;
         text-align: center;
     }
@@ -67,9 +68,9 @@
     .proposicoes-table {
         background: white;
         border: 1px solid #dee2e6;
-        border-radius: 8px;
+        border-radius: 6px;
         overflow: hidden;
-        margin: 20px 0;
+        margin: 10px 0;
     }
     .table {
         width: 100%;
@@ -78,15 +79,16 @@
     }
     .table th,
     .table td {
-        padding: 12px;
+        padding: 8px 10px;
         text-align: left;
         border-bottom: 1px solid #f8f9fa;
+        font-size: 0.9em;
     }
     .table th {
         background: #f8f9fa;
         font-weight: bold;
         color: #495057;
-        border-bottom: 2px solid #dee2e6;
+        border-bottom: 1px solid #dee2e6;
     }
     .table tr:hover {
         background: #f8f9fa;
@@ -122,16 +124,17 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        margin: 20px 0;
-        gap: 10px;
+        margin: 15px 0;
+        gap: 5px;
     }
     .pagination a,
     .pagination span {
-        padding: 8px 12px;
+        padding: 6px 10px;
         border: 1px solid #dee2e6;
         border-radius: 4px;
         text-decoration: none;
         color: #007bff;
+        font-size: 0.9em;
     }
     .pagination .current {
         background: #007bff;
@@ -144,22 +147,25 @@
     .results-info {
         text-align: center;
         color: #6c757d;
-        margin: 10px 0;
+        margin: 8px 0;
+        font-size: 0.9em;
     }
     .actions-column {
         white-space: nowrap;
     }
     .actions-column .btn {
-        margin-right: 5px;
-        padding: 4px 8px;
-        font-size: 12px;
+        margin-right: 3px;
+        padding: 3px 6px;
+        font-size: 0.8em;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<h1>Gerenciar Proposições</h1>
-<p>Lista e gerenciamento de todas as proposições no sistema.</p>
+<div style="margin-bottom: 10px;">
+    <h1 style="margin-bottom: 3px; font-size: 1.8em;">Gerenciar Proposições</h1>
+    <p style="margin-bottom: 0; color: #6c757d; font-size: 0.9em;">Lista e gerenciamento de todas as proposições no sistema.</p>
+</div>
 
 <!-- Filters -->
 <div class="filters-container">
@@ -190,7 +196,7 @@
             </div>
             <div class="filter-group">
                 <button type="submit" class="btn btn-primary">Filtrar</button>
-                <a href="{% url 'administrativo:proposicoes_list' %}" class="btn btn-secondary" style="margin-top: 5px;">Limpar</a>
+                <a href="{% url 'gerencial:proposicoes_list' %}" class="btn btn-secondary" style="margin-top: 5px;">Limpar</a>
             </div>
         </div>
     </form>
@@ -282,9 +288,9 @@
 
 <!-- Action Buttons -->
 <div style="margin: 30px 0; text-align: center;">
-    <a href="{% url 'administrativo:proposicoes_statistics' %}" class="btn btn-secondary">Voltar às Estatísticas</a>
-    <a href="{% url 'administrativo:dashboard' %}" class="btn btn-primary">Voltar ao Painel Principal</a>
-    <a href="{% url 'administrativo:proposicao_add' %}" class="btn btn-success">Adicionar Nova Proposição</a>
+    <a href="{% url 'gerencial:proposicoes_statistics' %}" class="btn btn-secondary">Voltar às Estatísticas</a>
+    <a href="{% url 'gerencial:dashboard' %}" class="btn btn-primary">Voltar ao Painel Principal</a>
+    <a href="{% url 'gerencial:proposicao_add' %}" class="btn btn-success">Adicionar Nova Proposição</a>
 </div>
 
 {% endblock %}

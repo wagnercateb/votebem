@@ -2,7 +2,7 @@
 
 # VoteBem - SSL Setup Script with Let's Encrypt
 # This script sets up SSL certificates using Let's Encrypt and configures nginx for HTTPS
-# Run as votebem user: ./scripts/setup_ssl.sh
+# Run as votebem user from project root: ./scripts/setup_ssl.sh
 
 set -e  # Exit on any error
 

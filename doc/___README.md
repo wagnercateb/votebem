@@ -22,6 +22,12 @@ This documentation is organized to guide you through every aspect of the VoteBem
 - **Contains**: Step-by-step Windows setup, automated scripts, manual configuration
 - **When to Use**: Developers setting up local development on Windows machines
 
+### [DEV_QUICK_START.md](./DEV_QUICK_START.md)
+**Quick development environment setup guide**
+- **Use Case**: Fast setup for developers who want to get started quickly
+- **Contains**: Streamlined setup instructions, essential commands, rapid deployment
+- **When to Use**: Quick prototyping, fast development setup, minimal configuration
+
 ---
 
 ## 🐳 Docker & Deployment
@@ -37,6 +43,12 @@ This documentation is organized to guide you through every aspect of the VoteBem
 - **Use Case**: Production deployment on VPS with detailed configuration
 - **Contains**: SSH setup, Git configuration, Docker deployment, troubleshooting
 - **When to Use**: Production deployments, VPS configuration, deployment troubleshooting
+
+### [ENVIRONMENTS.md](./ENVIRONMENTS.md)
+**Docker Compose environments and configurations**
+- **Use Case**: Understanding different deployment environments and their configurations
+- **Contains**: Production, development, and services-only Docker setups, environment comparison
+- **When to Use**: Choosing deployment strategy, environment configuration, Docker setup
 
 ---
 
@@ -193,15 +205,16 @@ graph TD
 
 ### For New Developers
 1. Start with [OVERVIEW.md](./OVERVIEW.md) to understand the project
-2. Follow [WINDOWS_DEV_SETUP.md](./WINDOWS_DEV_SETUP.md) for Windows development environment
+2. Use [DEV_QUICK_START.md](./DEV_QUICK_START.md) for rapid setup or [WINDOWS_DEV_SETUP.md](./WINDOWS_DEV_SETUP.md) for detailed Windows setup
 3. Review [ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md) for system understanding
 4. Use [DOCKER_README.md](./DOCKER_README.md) for containerized development setup
 
 ### For DevOps/Deployment
 1. Begin with [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for overview
-2. Use [SCRIPTS_DETAILED_README.md](./SCRIPTS_DETAILED_README.md) for VPS setup
-3. Follow [DOCKER_README.md](./DOCKER_README.md) for containerized deployment
-4. Reference [SCRIPTS_README.md](./SCRIPTS_README.md) for automation
+2. Review [ENVIRONMENTS.md](./ENVIRONMENTS.md) to understand Docker configurations
+3. Use [SCRIPTS_DETAILED_README.md](./SCRIPTS_DETAILED_README.md) for VPS setup
+4. Follow [DOCKER_README.md](./DOCKER_README.md) for containerized deployment
+5. Reference [SCRIPTS_README.md](./SCRIPTS_README.md) for automation
 
 ### For Feature Development
 1. Review [ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md) for system design
