@@ -3,8 +3,8 @@
 {% block title %}{{ title }} - VoteBem{% endblock %}
 
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'administrativo:proposicoes_statistics' %}">Estatísticas</a></li>
-<li class="breadcrumb-item"><a href="{% url 'administrativo:proposicoes_list' %}">Gerenciar Proposições</a></li>
+<li class="breadcrumb-item"><a href="{% url 'gerencial:proposicoes_statistics' %}">Estatísticas</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'gerencial:proposicoes_list' %}">Gerenciar Proposições</a></li>
 <li class="breadcrumb-item active">Editar Proposição</li>
 {% endblock %}
 
@@ -189,7 +189,7 @@
         
         <div class="actions-section">
             <button type="submit" class="btn btn-success">Salvar Alterações</button>
-            <a href="{% url 'administrativo:proposicoes_list' %}" class="btn btn-secondary">Cancelar</a>
+            <a href="{% url 'gerencial:proposicoes_list' %}" class="btn btn-secondary">Cancelar</a>
         </div>
     </form>
 </div>

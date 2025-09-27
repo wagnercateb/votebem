@@ -161,8 +161,8 @@
                 <h1>{{ title }}</h1>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="{% url 'administrativo:dashboard' %}">Dashboard</a></li>
-                        <li class="breadcrumb-item"><a href="{% url 'administrativo:votacoes_management' %}">Votações</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'gerencial:dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'gerencial:votacoes_management' %}">Votações</a></li>
                         <li class="breadcrumb-item active">Editar Votação</li>
                     </ol>
                 </nav>
@@ -243,7 +243,7 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> Salvar Alterações
                     </button>
-                    <a href="{% url 'administrativo:votacoes_management' %}" class="btn btn-secondary">
+                    <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-secondary">
                         <i class="fas fa-times"></i> Cancelar
                     </a>
                 </div>
@@ -255,7 +255,7 @@
                 <div class="info-grid">
                     <div class="info-item">
                         <strong>Proposição Relacionada:</strong>
-                        <a href="{% url 'administrativo:proposicao_edit' votacao.proposicao.pk %}">
+                        <a href="{% url 'gerencial:proposicao_edit' votacao.proposicao.pk %}">
                             {{ votacao.proposicao.titulo|truncatechars:50 }}
                         </a>
                     </div>

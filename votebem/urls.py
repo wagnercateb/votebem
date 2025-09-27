@@ -22,7 +22,7 @@ from django.views.generic import RedirectView
 from .health import health_check
 urlpatterns = [
     # Administrative interface with namespace
-    path('administrativo/', include('voting.admin_urls')),
+    path('gerencial/', include('voting.admin_urls')),
     # Django admin
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),

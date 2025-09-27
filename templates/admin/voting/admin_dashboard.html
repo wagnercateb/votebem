@@ -194,9 +194,9 @@
     <div class="action-card">
         <h3>Gerenciar Proposições</h3>
         <ul class="action-list">
-            <li><a href="{% url 'administrativo:proposicoes_list' %}">Listar Todas as Proposições</a></li>
+            <li><a href="{% url 'gerencial:proposicoes_list' %}">Listar Todas as Proposições</a></li>
             <li><a href="/admin/voting/proposicao/add/">Adicionar Nova Proposição</a></li>
-            <li><a href="{% url 'administrativo:proposicoes_statistics' %}">Estatísticas de Proposições</a></li>
+            <li><a href="{% url 'gerencial:proposicoes_statistics' %}">Estatísticas de Proposições</a></li>
         </ul>
     </div>
     
@@ -204,7 +204,7 @@
         <h3>Gerenciar Votações</h3>
         <ul class="action-list">
             <li><a href="/admin/voting/votacaodisponivel/">Listar Todas as Votações</a></li>
-            <li><a href="{% url 'administrativo:votacoes_management' %}">Gerenciar Votações Ativas</a></li>
+            <li><a href="{% url 'gerencial:votacoes_management' %}">Gerenciar Votações Ativas</a></li>
             <li><a href="/admin/voting/votacaodisponivel/add/">Criar Nova Votação</a></li>
         </ul>
     </div>
@@ -213,7 +213,7 @@
         <h3>Gerenciar Usuários</h3>
         <ul class="action-list">
             <li><a href="/admin/auth/user/">Listar Todos os Usuários</a></li>
-            <li><a href="{% url 'administrativo:users_management' %}">Estatísticas de Usuários</a></li>
+            <li><a href="{% url 'gerencial:users_management' %}">Estatísticas de Usuários</a></li>
             <li><a href="/admin/users/userprofile/">Perfis de Usuários</a></li>
         </ul>
     </div>
@@ -230,7 +230,7 @@
     <div class="action-card">
         <h3>Ferramentas de Dados</h3>
         <ul class="action-list">
-            <li><a href="{% url 'administrativo:data_import_export' %}">Importar/Exportar Dados</a></li>
+            <li><a href="{% url 'gerencial:data_import_export' %}">Importar/Exportar Dados</a></li>
             <li><a href="/admin/voting/voto/">Analisar Votos Populares</a></li>
         </ul>
     </div>
@@ -271,7 +271,7 @@
             <small>{{ ultima_proposicao.tipo }} {{ ultima_proposicao.numero }}/{{ ultima_proposicao.ano }} - {{ ultima_proposicao.estado }}</small>
         </div>
         <div class="stats-value">
-            <a href="{% url 'administrativo:proposicao_edit' ultima_proposicao.pk %}">Ver Detalhes</a>
+            <a href="{% url 'gerencial:proposicao_edit' ultima_proposicao.pk %}">Ver Detalhes</a>
         </div>
     </div>
 </div>

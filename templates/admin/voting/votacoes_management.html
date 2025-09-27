@@ -170,7 +170,7 @@
                         {% if votacao.ativo %}Desativar{% else %}Ativar{% endif %}
                     </button>
                 </form>
-                <a href="{% url 'administrativo:votacao_edit' votacao.pk %}" class="btn btn-edit">Editar</a>
+                <a href="{% url 'gerencial:votacao_edit' votacao.pk %}" class="btn btn-edit">Editar</a>
             </div>
         </div>
         {% empty %}
@@ -218,7 +218,7 @@
 </div>
 
 <div style="margin: 30px 0; text-align: center;">
-    <a href="/administrativo/dashboard/" class="btn btn-primary">Voltar ao Painel Principal</a>
+    <a href="/gerencial/dashboard/" class="btn btn-primary">Voltar ao Painel Principal</a>
 </div>
 
 <script>

@@ -4,7 +4,7 @@ URLs for the administrative interface (administrativo namespace)
 from django.urls import path
 from . import admin_views
 
-app_name = 'administrativo'
+app_name = 'gerencial'
 
 urlpatterns = [
     # Dashboard
@@ -43,6 +43,5 @@ urlpatterns = [
     
     # AJAX endpoints
     path('camara-admin/', admin_views.camara_admin, name='camara_admin'),
-    path('test-form/', admin_views.test_form, name='test_form'),
-    path('ajax/proposicao-search/', admin_views.ajax_proposicao_search, name='ajax_proposicao_search'),
+    path('ajax/proposicao-search/', admin_views.ajax_proposicao_search, name='ajax_proposicao_search')
 ]

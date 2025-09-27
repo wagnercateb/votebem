@@ -56,11 +56,11 @@ class CamaraAPIService:
         except requests.exceptions.RequestException as e:
             print(f"DEBUG: Request error: {e}")
             logger.error(f"Error making request to {url}: {e}")
-            return None
+            raise Exception(f"Erro na comunicação com a API da Câmara: {str(e)}")
         except json.JSONDecodeError as e:
             print(f"DEBUG: JSON decode error: {e}")
             logger.error(f"Error decoding JSON response: {e}")
-            return None
+            raise Exception(f"Erro ao processar resposta da API: {str(e)}")
     
     def get_proposicoes_by_date_range(self, data_inicio: str, data_fim: str, 
                                     ordem: str = "ASC", ordenar_por: str = "id") -> List[Dict]:
@@ -89,29 +89,33 @@ class CamaraAPIService:
         
         while True:
             params['pagina'] = page
-            data = self._make_request("proposicoes", params)
-            
-            if not data or 'dados' not in data:
-                break
+            try:
+                data = self._make_request("proposicoes", params)
                 
-            proposicoes = data['dados']
-            if not proposicoes:
-                break
+                if not data or 'dados' not in data:
+                    break
+                    
+                proposicoes = data['dados']
+                if not proposicoes:
+                    break
+                    
+                all_proposicoes.extend(proposicoes)
                 
-            all_proposicoes.extend(proposicoes)
-            
-            # Check if there are more pages
-            links = data.get('links', [])
-            has_next = any(link.get('rel') == 'next' for link in links)
-            if not has_next:
-                break
+                # Check if there are more pages
+                links = data.get('links', [])
+                has_next = any(link.get('rel') == 'next' for link in links)
+                if not has_next:
+                    break
+                    
+                page += 1
                 
-            page += 1
-            
-            # Safety limit to avoid infinite loops
-            if page > 50:
-                logger.warning("Reached maximum page limit (50) for API request")
-                break
+                # Safety limit to avoid infinite loops
+                if page > 50:
+                    logger.warning("Reached maximum page limit (50) for API request")
+                    break
+            except Exception as e:
+                # Re-raise the exception to bubble up to the calling method
+                raise e
         
         return all_proposicoes
     
@@ -146,7 +150,7 @@ class CamaraAPIService:
         Synchronize propositions for a specific year
         """
         data_inicio = f"{year}-01-01"
-        data_fim = f"{year}-12-31"
+        data_fim = f"{year}-03-31"
         
         proposicoes_api = self.get_proposicoes_by_date_range(data_inicio, data_fim)
         
@@ -312,6 +316,87 @@ class CamaraAPIService:
                 logger.error(f"Error updating ementa for proposition {proposicao.id}: {e}")
         
         return updated_count
+    
+    def sync_proposicoes_by_date_range(self, data_inicio: str, data_fim: str) -> Dict[str, int]:
+        """
+        Synchronize propositions for a specific date range
+        
+        Args:
+            data_inicio: Start date in YYYY-MM-DD format
+            data_fim: End date in YYYY-MM-DD format
+            
+        Returns:
+            Dictionary with sync statistics
+        """
+        # Validate date format and range
+        try:
+            inicio = datetime.strptime(data_inicio, '%Y-%m-%d')
+            fim = datetime.strptime(data_fim, '%Y-%m-%d')
+            
+            # Check if the range is not more than 3 months
+            max_days = 93  # Approximately 3 months
+            if (fim - inicio).days > max_days:
+                raise ValueError(f"O período não pode ser superior a {max_days} dias (aproximadamente 3 meses)")
+                
+            if inicio > fim:
+                raise ValueError("A data inicial não pode ser posterior à data final")
+                
+        except ValueError as e:
+            raise ValueError(f"Formato de data inválido ou período inválido: {str(e)}")
+        
+        proposicoes_api = self.get_proposicoes_by_date_range(data_inicio, data_fim)
+        
+        stats = {
+            'total_api': len(proposicoes_api),
+            'created': 0,
+            'updated': 0,
+            'errors': 0,
+            'data_inicio': data_inicio,
+            'data_fim': data_fim
+        }
+        
+        for prop_data in proposicoes_api:
+            try:
+                with transaction.atomic():
+                    proposicao, created = self._sync_single_proposicao_with_update_check(prop_data)
+                    if created:
+                        stats['created'] += 1
+                    else:
+                        stats['updated'] += 1
+            except Exception as e:
+                logger.error(f"Error syncing proposition {prop_data.get('id')}: {e}")
+                stats['errors'] += 1
+        
+        return stats
+    
+    def _sync_single_proposicao_with_update_check(self, prop_data: Dict) -> tuple[Proposicao, bool]:
+        """
+        Sync a single proposition from API data with update check
+        """
+        # Get detailed information
+        detailed_data = self.get_proposicao_details(prop_data['id'])
+        if detailed_data and 'dados' in detailed_data:
+            prop_data.update(detailed_data['dados'])
+        
+        # Extract fields
+        proposicao_data = {
+            'id_proposicao': prop_data['id'],
+            'titulo': prop_data.get('ementa', '')[:500],  # Limit title length
+            'ementa': prop_data.get('ementa', ''),
+            'tipo': prop_data.get('siglaTipo', ''),
+            'numero': prop_data.get('numero', 0),
+            'ano': prop_data.get('ano', 0),
+            'autor': self._extract_authors(prop_data.get('autores', [])),
+            'estado': prop_data.get('statusProposicao', {}).get('descricaoSituacao', ''),
+        }
+        
+        # Create or update proposition
+        proposicao, created = Proposicao.objects.update_or_create(
+            id_proposicao=proposicao_data['id_proposicao'],
+            defaults=proposicao_data
+        )
+        
+        return proposicao, created
 
 
 # Global instance

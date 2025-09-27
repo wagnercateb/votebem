@@ -111,7 +111,7 @@ def proposicao_edit(request, pk):
         proposicao = get_object_or_404(Proposicao, pk=pk)
     except:
         messages.error(request, 'Proposição não encontrada.')
-        return redirect('administrativo:proposicoes_list')
+        return redirect('gerencial:proposicoes_list')
     
     if request.method == 'POST':
         # Processar formulário de edição
@@ -143,7 +143,7 @@ def proposicao_edit(request, pk):
                 proposicao.save()
                 
                 messages.success(request, f'Proposição "{proposicao.titulo}" atualizada com sucesso!')
-                return redirect('administrativo:proposicoes_list')
+                return redirect('gerencial:proposicoes_list')
                 
             except ValueError:
                 messages.error(request, 'Número e ano devem ser valores numéricos.')
@@ -208,7 +208,7 @@ def votacao_edit(request, pk):
         try:
             votacao.save()
             messages.success(request, 'Votação atualizada com sucesso!')
-            return redirect('administrativo:votacao_edit', pk=pk)
+            return redirect('gerencial:votacao_edit', pk=pk)
         except Exception as e:
             messages.error(request, f'Erro ao salvar votação: {str(e)}')
     
@@ -537,7 +537,7 @@ def data_import_export(request):
             messages.error(request, error_message)
             
         if not is_ajax:
-            return redirect('administrativo:data_import_export')
+            return redirect('gerencial:data_import_export')
     
     context = {
         'export_options': [
@@ -595,7 +595,7 @@ def proposicao_add(request):
                     )
                     
                     messages.success(request, f'Proposição {tipo} {numero}/{ano} criada com sucesso!')
-                    return redirect('administrativo:proposicao_edit', pk=proposicao.pk)
+                    return redirect('gerencial:proposicao_edit', pk=proposicao.pk)
                     
             except ValueError:
                 messages.error(request, 'Número e ano devem ser valores numéricos válidos.')
@@ -631,73 +631,18 @@ def camara_admin(request):
         'date_today': datetime.now().strftime('%d/%m/%Y'),
         'date_2_months_ago': (datetime.now() - timedelta(days=60)).strftime('%Y-%m-%d'),
         'date_today_iso': datetime.now().strftime('%Y-%m-%d'),
+        # Default dates for "Listar Proposições por Período" form
+        'default_data_inicio': (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d'),  # One year ago
+        'default_data_fim': datetime.now().strftime('%Y-%m-%d'),  # Today
     }
     
-    # Handle GET parameter for direct API testing
-    if request.GET.get('test_api') == '1':
-        try:
-            from .services.camara_api import camara_api
-            print("DEBUG: Testing API connection...")
-            test_data = camara_api._make_request("proposicoes", {"itens": 1})
-            if test_data and 'dados' in test_data:
-                context['api_test_result'] = f"✅ API funcionando! Encontradas {len(test_data['dados'])} proposições de teste."
-                context['api_test_data'] = test_data['dados'][0] if test_data['dados'] else None
-                print(f"DEBUG: API test successful: {context['api_test_result']}")
-            else:
-                context['api_test_result'] = "❌ API não retornou dados válidos."
-                print("DEBUG: API test failed - no valid data")
-            context['action_result'] = 'api_test'
-            messages.success(request, "Teste de API concluído via GET!")
-        except Exception as e:
-            context['error'] = f'Erro no teste de API: {str(e)}'
-            context['api_test_result'] = f"❌ Erro na conexão: {str(e)}"
-            context['action_result'] = 'api_test'
-            print(f"DEBUG: API test error: {str(e)}")
-    
-    # Handle GET parameter for direct year sync testing
-    if request.GET.get('test_sync') == '1':
-        ano = request.GET.get('ano', datetime.now().year)
-        try:
-            ano = int(ano)
-            from .services.camara_api import camara_api
-            print(f"DEBUG: Testing sync for year {ano}...")
-            stats = camara_api.sync_proposicoes_by_year(ano)
-            context['update_result'] = f'Sincronização do ano {ano}: {stats["created"]} criadas, {stats["updated"]} atualizadas, {stats["errors"]} erros.'
-            context['action_result'] = 'update_result'
-            messages.success(request, f'Sincronização concluída via GET: {stats["created"]} proposições criadas')
-            print(f"DEBUG: Sync test successful: {context['update_result']}")
-        except Exception as e:
-            context['error'] = f'Erro na sincronização: {str(e)}'
-            print(f"DEBUG: Sync test error: {str(e)}")
+
     
     # Handle POST actions
     if request.method == 'POST':
         action = request.POST.get('action')
         print(f"DEBUG: POST request received with action: {action}")
         print(f"DEBUG: All POST data: {dict(request.POST)}")
-        
-        if action == 'test':
-            print("TEST ACTION RECEIVED!")
-            messages.success(request, "Test form submission successful!")
-            return redirect('administrativo:camara_admin')
-            
-        elif action == 'testApiConnection':
-            # Test API connection
-            try:
-                from .services.camara_api import camara_api
-                # Test with a simple API call
-                test_data = camara_api._make_request("proposicoes", {"itens": 1})
-                if test_data and 'dados' in test_data:
-                    context['api_test_result'] = f"✅ API funcionando! Encontradas {len(test_data['dados'])} proposições de teste."
-                    context['api_test_data'] = test_data['dados'][0] if test_data['dados'] else None
-                else:
-                    context['api_test_result'] = "❌ API não retornou dados válidos."
-                context['action_result'] = 'api_test'
-                messages.success(request, "Teste de API concluído!")
-            except Exception as e:
-                context['error'] = f'Erro no teste de API: {str(e)}'
-                context['api_test_result'] = f"❌ Erro na conexão: {str(e)}"
-                context['action_result'] = 'api_test'
         
         if action == 'exibeUltimaProposicao':
             # Show last proposition inserted
@@ -735,17 +680,20 @@ def camara_admin(request):
             context['action_result'] = 'votacoes_disponiveis'
             
         elif action == 'atualizarProposicoesVotadasPlenario':
-            # Update propositions voted in plenary for specific year
-            ano = request.POST.get('ano', datetime.now().year)
+            # Update propositions voted in plenary for specific date range
+            data_inicial = request.POST.get('dataInicial')
+            data_final = request.POST.get('dataFinal')
             try:
-                ano = int(ano)
+                if not data_inicial or not data_final:
+                    raise ValueError("Data inicial e final são obrigatórias")
+                
                 from .services.camara_api import camara_api
-                stats = camara_api.sync_proposicoes_by_year(ano)
-                context['update_result'] = f'Sincronização do ano {ano}: {stats["created"]} criadas, {stats["updated"]} atualizadas, {stats["errors"]} erros.'
+                stats = camara_api.sync_proposicoes_by_date_range(data_inicial, data_final)
+                context['update_result'] = f'Sincronização do período {data_inicial} a {data_final}: {stats["created"]} criadas, {stats["updated"]} atualizadas, {stats["errors"]} erros.'
                 context['action_result'] = 'update_result'
                 messages.success(request, f'Sincronização concluída: {stats["created"]} proposições criadas')
-            except ValueError:
-                context['error'] = 'Ano inválido fornecido.'
+            except ValueError as e:
+                context['error'] = f'Erro de validação: {str(e)}'
             except Exception as e:
                 context['error'] = f'Erro na sincronização: {str(e)}'
                 
@@ -877,20 +825,3 @@ def ajax_proposicao_search(request):
     ]
     
     return JsonResponse({'results': results})
-
-@staff_member_required
-def test_form(request):
-    """
-    Simple test view for form submission debugging
-    """
-    if request.method == 'POST':
-        print("TEST FORM: POST request received!")
-        print(f"POST data: {dict(request.POST)}")
-        action = request.POST.get('action')
-        print(f"Action: {action}")
-        
-        if action == 'test':
-            messages.success(request, "Test form submission successful!")
-            return redirect('administrativo:test_form')
-    
-    return render(request, 'admin/voting/test_form.html')

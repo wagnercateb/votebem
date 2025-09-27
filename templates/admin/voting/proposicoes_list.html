@@ -3,7 +3,7 @@
 {% block title %}Gerenciar Proposições - VoteBem{% endblock %}
 
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="{% url 'administrativo:proposicoes_statistics' %}">Estatísticas</a></li>
+<li class="breadcrumb-item"><a href="{% url 'gerencial:proposicoes_statistics' %}">Estatísticas</a></li>
 <li class="breadcrumb-item active">Gerenciar Proposições</li>
 {% endblock %}
 
@@ -242,11 +242,11 @@
                     {% endif %}
                 </td>
                 <td class="actions-column">
-                    <a href="{% url 'administrativo:proposicao_edit' proposicao.pk %}" class="btn btn-info">Editar</a>
+                    <a href="{% url 'gerencial:proposicao_edit' proposicao.pk %}" class="btn btn-edit">Editar</a>
                     {% if proposicao.votacaodisponivel_set.exists %}
-                        <a href="{% url 'administrativo:votacoes_management' %}" class="btn btn-success">Votações</a>
+                        <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-success">Votações</a>
                     {% else %}
-                        <a href="{% url 'administrativo:votacoes_management' %}" class="btn btn-secondary">Criar Votação</a>
+                        <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-secondary">Criar Votação</a>
                     {% endif %}
                 </td>
             </tr>

@@ -293,26 +293,9 @@
             }
         }
         
-        // Debug form submissions
-        document.addEventListener('DOMContentLoaded', function() {
-            const forms = document.querySelectorAll('form[method="post"]');
-            console.log('Found ' + forms.length + ' forms');
-            
-            forms.forEach(function(form, index) {
-                console.log('Form ' + index + ':', form);
-                form.addEventListener('submit', function(e) {
-                    alert('Form submission detected! Check console for details.');
-                    console.log('Form submission detected:', form);
-                    console.log('Form action:', form.action);
-                    console.log('Form method:', form.method);
-                    const formData = new FormData(form);
-                    console.log('Form data:');
-                    for (let [key, value] of formData.entries()) {
-                        console.log(key + ': ' + value);
-                    }
-                });
-            });
-        });
+        // Date initialization is now handled directly in HTML template with Django context variables
+        
+
     </script>
 {% endblock %}
 
@@ -322,34 +305,7 @@
     <p>Gerencie proposições, votações e dados da Câmara dos Deputados</p>
 </div>
 
-<!-- TEST FORM -->
-<div style="background: yellow; padding: 10px; margin: 10px 0;">
-    <h3>TEST FORM</h3>
-    <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="test">
-        <button type="submit" style="background: red; color: white; padding: 10px;" onclick="console.log('Test button clicked'); return true;">TEST SUBMIT</button>
-    </form>
-    <br>
-    <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="testApiConnection">
-        <button type="submit" style="background: green; color: white; padding: 10px;" onclick="console.log('API Test button clicked'); return true;">🌐 TEST CÂMARA API</button>
-            </form>
-            
-            <!-- Direct API Test Links (bypass form submission) -->
-            <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border: 1px solid #ccc;">
-                <h5>🔧 Testes Diretos (sem formulário):</h5>
-                <a href="?test_api=1" style="background: #17a2b8; color: white; padding: 8px 12px; text-decoration: none; margin-right: 10px; border-radius: 4px;">
-                    🌐 Testar API Diretamente
-                </a>
-                <a href="?test_sync=1&ano=2024" style="background: #ffc107; color: black; padding: 8px 12px; text-decoration: none; border-radius: 4px;">
-                    🔄 Testar Sync 2024
-                </a>
-            </div>
-    <br>
-    <button onclick="alert('Simple button works'); console.log('Simple button clicked');" style="background: blue; color: white; padding: 10px;">SIMPLE BUTTON TEST</button>
-</div>
+
 
 <!-- Quick Actions Grid -->
 <div class="actions-grid">
@@ -360,7 +316,7 @@
             <form method="post" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="exibeUltimaProposicao">
-                <button type="submit" class="btn-action btn-primary" onclick="alert('Button clicked!'); console.log('Button clicked - form will submit');">
+                <button type="submit" class="btn-action btn-primary">
                     <span class="icon">🔍</span> Última Proposição
                 </button>
             </form>
@@ -497,25 +453,60 @@
     </div>
 </div>
 
-<!-- Sync by Year Form -->
+<!-- Sync by Date Range Form -->
 <div class="form-section">
-    <h3>🗓️ Sincronização por Ano</h3>
-    <form method="post">
+    <h3>🗓️ Sincronização por até 3 meses (buscar online)</h3>
+    <form method="post" id="syncDateRangeForm">
         {% csrf_token %}
         <input type="hidden" name="action" value="atualizarProposicoesVotadasPlenario">
-        <div class="form-group">
-            <label for="ano">Ano:</label>
-            <input type="number" id="ano" name="ano" class="form-control" min="2000" max="2030" value="2024" required>
+        
+        {% if sync_error %}
+        <div class="alert alert-danger">
+            <strong>Erro:</strong> {{ sync_error }}
         </div>
+        {% endif %}
+        
+        {% if error %}
+        <div class="alert alert-danger">
+            <strong>Erro:</strong> {{ error }}
+        </div>
+        {% endif %}
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="dataInicial">Data Inicial:</label>
+                    <input type="date" id="dataInicial" name="dataInicial" class="form-control" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="dataFinal">Data Final:</label>
+                    <input type="date" id="dataFinal" name="dataFinal" class="form-control" required readonly>
+                </div>
+            </div>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+            <strong>Nota:</strong> A data final será automaticamente definida como 3 meses após a data inicial. 
+            O período máximo permitido é de 3 meses para evitar sobrecarga do sistema.
+        </div>
+        
         <button type="submit" class="btn-action btn-primary">
-            <span class="icon">🔄</span> Atualizar Proposições do Ano
+            <span class="icon">🔄</span> Atualizar Proposições do Período
         </button>
     </form>
 </div>
 
 <!-- Date Range Form -->
 <div class="form-section">
-    <h3>📅 Listar Proposições por Período</h3>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="mb-0">📅 Listar Proposições por Período (buscar online)</h3>
+        <a href="http://localhost:8000/gerencial/proposicoes/list/" class="btn btn-info btn-sm" target="_user">
+            📋 Listar proposições carregadas
+        </a>
+    </div>
+    
     <form method="post">
         {% csrf_token %}
         <input type="hidden" name="action" value="listarProposicoesTramitacao">
@@ -523,13 +514,13 @@
             <div class="col-md-4">
                 <div class="form-group">
                     <label for="dataInicio">Data Início:</label>
-                    <input type="date" id="dataInicio" name="dataInicio" class="form-control">
+                    <input type="date" id="dataInicio" name="dataInicio" class="form-control" value="{{ default_data_inicio }}">
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="form-group">
                     <label for="dataFim">Data Fim:</label>
-                    <input type="date" id="dataFim" name="dataFim" class="form-control">
+                    <input type="date" id="dataFim" name="dataFim" class="form-control" value="{{ default_data_fim }}">
                 </div>
             </div>
             <div class="col-md-4">
@@ -726,6 +717,39 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Date range calculation for sync form
+    const dataInicialInput = document.getElementById('dataInicial');
+    const dataFinalInput = document.getElementById('dataFinal');
+    
+    if (dataInicialInput && dataFinalInput) {
+        dataInicialInput.addEventListener('change', function() {
+            const dataInicial = new Date(this.value);
+            if (dataInicial) {
+                // Add 3 months to the initial date
+                const dataFinal = new Date(dataInicial);
+                dataFinal.setMonth(dataFinal.getMonth() + 3);
+                
+                // Format the date as YYYY-MM-DD for the input
+                const year = dataFinal.getFullYear();
+                const month = String(dataFinal.getMonth() + 1).padStart(2, '0');
+                const day = String(dataFinal.getDate()).padStart(2, '0');
+                const formattedDate = `${year}-${month}-${day}`;
+                
+                dataFinalInput.value = formattedDate;
+                
+                console.log('Data inicial:', this.value, 'Data final calculada:', formattedDate);
+            }
+        });
+        
+        // Set default dates (current date and +3 months)
+        const today = new Date();
+        const todayFormatted = today.toISOString().split('T')[0];
+        dataInicialInput.value = todayFormatted;
+        
+        // Trigger the change event to set the final date
+        dataInicialInput.dispatchEvent(new Event('change'));
+    }
+    
     // Add loading state management for form submissions
     const forms = document.querySelectorAll('form[method="post"]');
     
