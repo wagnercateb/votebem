@@ -17,10 +17,10 @@
                         </span>
                         {% if user == enquete.autor %}
                             <div class="btn-group" role="group">
-                                <a href="{% url 'polls:editar_enquete' enquete.id %}" class="btn btn-outline-primary btn-sm">
+                                <a href="{% url 'polls:enquete_edit' enquete.id %}" class="btn btn-outline-primary btn-sm">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <a href="{% url 'polls:deletar_enquete' enquete.id %}" class="btn btn-outline-danger btn-sm">
+                                <a href="{% url 'polls:enquete_delete' enquete.id %}" class="btn btn-outline-danger btn-sm">
                                     <i class="bi bi-trash"></i>
                                 </a>
                             </div>
@@ -52,14 +52,34 @@
                 
                 {% if enquete.proposicao %}
                     <div class="alert alert-info">
-                        <h6><i class="bi bi-link"></i> Proposição Relacionada</h6>
+                        <h6>
+                            {% if proposicao_url %}
+                                <a href="{{ proposicao_url }}" target="_blank" class="text-decoration-none">
+                                    <i class="bi bi-link"></i> Proposição Relacionada
+                                </a>
+                            {% else %}
+                                <i class="bi bi-link"></i> Proposição Relacionada
+                            {% endif %}
+                        </h6>
                         <p class="mb-1">
-                            <strong>{{ enquete.proposicao.tipo }} {{ enquete.proposicao.numero }}/{{ enquete.proposicao.ano }}</strong>
+                            {% if proposicao_url %}
+                                <a href="{{ proposicao_url }}" target="_blank" class="text-decoration-none">
+                                    <strong>{{ enquete.proposicao.tipo }} {{ enquete.proposicao.numero }}/{{ enquete.proposicao.ano }}</strong>
+                                </a>
+                            {% else %}
+                                <strong>{{ enquete.proposicao.tipo }} {{ enquete.proposicao.numero }}/{{ enquete.proposicao.ano }}</strong>
+                            {% endif %}
                         </p>
                         <p class="mb-1">{{ enquete.proposicao.ementa }}</p>
-                        <a href="{% url 'voting:votacao_detail' enquete.proposicao.id %}" class="btn btn-sm btn-outline-primary">
-                            Ver Votação
-                        </a>
+                        {% if votacao_relacionada %}
+                            <a href="{% url 'voting:votacao_detail' votacao_relacionada.id %}" class="btn btn-sm btn-outline-primary">
+                                Ver Votação
+                            </a>
+                        {% else %}
+                            <button class="btn btn-sm btn-outline-secondary" disabled title="Nenhuma votação disponível">
+                                Ver Votação
+                            </button>
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>
@@ -72,7 +92,7 @@
                     <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Sua Resposta</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post">
+                    <form method="post" action="{% url 'polls:responder_enquete' enquete.id %}">
                         {% csrf_token %}
                         {{ form|crispy }}
                         <button type="submit" class="btn btn-primary">

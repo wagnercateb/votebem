@@ -225,7 +225,7 @@
 <div class="info-section">
     <h3>Votações Relacionadas</h3>
     <p>Esta proposição ainda não possui votações criadas.</p>
-    <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-primary">Criar Votação</a>
+    <a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ proposicao.id }}" class="btn btn-primary">Criar Votação</a>
 </div>
 {% endif %}
 

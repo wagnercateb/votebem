@@ -225,13 +225,27 @@
             <tr>
                 <td>{{ proposicao.id_proposicao }}</td>
                 <td>
-                    <div class="proposicao-titulo">{{ proposicao.titulo|truncatechars:80 }}</div>
+                    <div class="proposicao-titulo">
+                        {% if proposicao.id_proposicao %}
+                            <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+                                {{ proposicao.titulo|truncatechars:80 }}
+                            </a>
+                        {% else %}
+                            {{ proposicao.titulo|truncatechars:80 }}
+                        {% endif %}
+                    </div>
                     {% if proposicao.ementa %}
-                    <div class="proposicao-ementa">{{ proposicao.ementa|truncatechars:120 }}</div>
+                        <div class="proposicao-ementa">{{ proposicao.ementa|truncatechars:120 }}</div>
                     {% endif %}
                 </td>
                 <td>
-                    <span class="badge badge-primary">{{ proposicao.tipo }} {{ proposicao.numero }}/{{ proposicao.ano }}</span>
+                    {% if proposicao.id_proposicao %}
+                        <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+                            <span class="badge badge-primary">{{ proposicao.tipo }} {{ proposicao.numero }}/{{ proposicao.ano }}</span>
+                        </a>
+                    {% else %}
+                        <span class="badge badge-primary">{{ proposicao.tipo }} {{ proposicao.numero }}/{{ proposicao.ano }}</span>
+                    {% endif %}
                 </td>
                 <td>{{ proposicao.estado|default:"Não informado" }}</td>
                 <td>
@@ -252,7 +266,7 @@
                     {% if proposicao.votacaodisponivel_set.exists %}
                         <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-success">Votações</a>
                     {% else %}
-                        <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-secondary">Criar Votação</a>
+                        <a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ proposicao.id }}" class="btn btn-secondary">Criar Votação</a>
                     {% endif %}
                 </td>
             </tr>

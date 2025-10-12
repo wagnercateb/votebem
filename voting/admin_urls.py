@@ -14,13 +14,14 @@ urlpatterns = [
     path('proposicoes/statistics/', admin_views.proposicoes_statistics, name='proposicoes_statistics'),
     path('proposicoes/list/', admin_views.proposicoes_list, name='proposicoes_list'),
     path('proposicao/add/', admin_views.proposicao_add, name='proposicao_add'),
+    path('proposicao/import/', admin_views.proposicao_import, name='proposicao_import'),
     path('proposicao/<int:pk>/edit/', admin_views.proposicao_edit, name='proposicao_edit'),
     path('votacao/<int:pk>/edit/', admin_views.votacao_edit, name='votacao_edit'),
     
     # Votações
     path('votacoes/management/', admin_views.votacoes_management, name='votacoes_management'),
     path('votacoes/list/', admin_views.votacoes_management, name='votacoes_list'),  # Placeholder
-    path('votacao/create/', admin_views.votacoes_management, name='votacao_create'),  # Placeholder
+    path('votacao/create/', admin_views.votacao_create, name='votacao_create'),
     
     # Usuários
     path('users/management/', admin_views.users_management, name='users_management'),

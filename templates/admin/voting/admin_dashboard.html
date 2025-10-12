@@ -196,7 +196,9 @@
         <h3>Gerenciar Proposições</h3>
         <ul class="action-list">
             <li><a href="{% url 'gerencial:proposicoes_list' %}">Listar Todas as Proposições</a></li>
-            <li><a href="/admin/voting/proposicao/add/">Adicionar Nova Proposição</a></li>
+            <li><a href="/admin/voting/proposicao/add/">Adicionar via Django</a></li>
+            <li><a href="{% url 'gerencial:proposicao_add' %}">Adicionar via App</a></li>
+            <li><a href="{% url 'gerencial:proposicao_import' %}">Adicionar via ID</a></li>
             <li><a href="{% url 'gerencial:proposicoes_statistics' %}">Estatísticas de Proposições</a></li>
         </ul>
     </div>

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% block title %}Pesquisar Votações - VoteBem{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1><i class="bi bi-search"></i> Pesquisar Votações</h1>
+      <a href="{% url 'voting:votacoes_disponiveis' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar às Votações
+      </a>
+    </div>
+
+    <form method="get" class="card mb-4">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Pesquisa</label>
+            <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Título, resumo, ementa...">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Tipo</label>
+            <select name="tipo" class="form-select">
+              <option value="">Todos</option>
+              {% for t in tipos %}
+                <option value="{{ t }}" {% if t == tipo_sel %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Ano</label>
+            <select name="ano" class="form-select">
+              <option value="">Todos</option>
+              {% for a in anos %}
+                <option value="{{ a }}" {% if a|stringformat:'s' == ano_sel %}selected{% endif %}>{{ a }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Ativa</label>
+            <select name="ativo" class="form-select">
+              <option value="">Todas</option>
+              <option value="sim" {% if ativo_sel == 'sim' %}selected{% endif %}>Sim</option>
+              <option value="nao" {% if ativo_sel == 'nao' %}selected{% endif %}>Não</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer d-flex justify-content-between">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-filter"></i> Filtrar</button>
+        <a href="{% url 'voting:votacoes_pesquisa' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> Limpar</a>
+      </div>
+    </form>
+
+    {% if votacoes %}
+      <div class="card">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Proposição</th>
+                <th>Ativa</th>
+                <th>No ar desde</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in votacoes %}
+              <tr>
+                <td>{{ v.id }}</td>
+                <td>
+                  {% if v.proposicao.id_proposicao %}
+                    <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+                      {{ v.titulo|truncatechars:80 }}
+                    </a>
+                  {% else %}
+                    {{ v.titulo|truncatechars:80 }}
+                  {% endif %}
+                  <div class="text-muted small">{{ v.resumo|truncatechars:120 }}</div>
+                </td>
+                <td>
+                  {% if v.proposicao.id_proposicao %}
+                    <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+                      <span class="badge bg-primary">{{ v.proposicao.tipo }} {{ v.proposicao.numero }}/{{ v.proposicao.ano }}</span>
+                    </a>
+                  {% else %}
+                    <span class="badge bg-primary">{{ v.proposicao.tipo }} {{ v.proposicao.numero }}/{{ v.proposicao.ano }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if v.ativo %}
+                    <span class="badge bg-success">Sim</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Não</span>
+                  {% endif %}
+                </td>
+                <td>{{ v.no_ar_desde|date:"d/m/Y H:i" }}</td>
+                <td>
+                  <a href="{% url 'voting:votacao_detail' v.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-eye"></i> Detalhes
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if is_paginated %}
+        <div class="card-footer">
+          <nav aria-label="Navegação">
+            <ul class="pagination justify-content-center mb-0">
+              {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">&laquo; Primeira</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">Anterior</a></li>
+              {% endif %}
+              <li class="page-item active"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+              {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">Próxima</a></li>
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">Última &raquo;</a></li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="text-center py-5">
+        <i class="bi bi-inbox display-1 text-muted"></i>
+        <h3 class="text-muted mt-3">Nenhuma votação encontrada</h3>
+        <p class="text-muted">Ajuste os filtros para encontrar outras votações.</p>
+      </div>
+    {% endif %}
+  </div>
+ </div>
+{% endblock %}

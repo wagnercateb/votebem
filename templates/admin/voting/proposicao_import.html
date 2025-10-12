@@ -1,0 +1,45 @@
+{% extends 'admin/voting/base_administrativo.html' %}
+{% block title %}Importar Proposição - VoteBem{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'gerencial:dashboard' %}">Painel Administrativo</a></li>
+<li class="breadcrumb-item"><a href="{% url 'gerencial:proposicoes_list' %}">Gerenciar Proposições</a></li>
+<li class="breadcrumb-item active">Importar por ID</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12 col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1><i class="bi bi-upload"></i> {{ title }}</h1>
+      <div>
+        <a href="{% url 'gerencial:proposicoes_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-list"></i> Lista de Proposições
+        </a>
+        <a href="{% url 'gerencial:proposicao_add' %}" class="btn btn-outline-primary ms-2">
+          <i class="bi bi-plus-circle"></i> Adicionar Manualmente
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <p class="text-muted">Informe o <strong>ID da proposição</strong> da Câmara (campo <code>idProposicao</code>), por exemplo: <code>2270800</code>. Vamos buscar os dados na API oficial e criar/atualizar a proposição no sistema.</p>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="id_proposicao" class="form-label">ID da Proposição (idProposicao)</label>
+            <input type="text" class="form-control" id="id_proposicao" name="id_proposicao" placeholder="Ex.: 2270800">
+            <div class="form-text">
+              Exemplo de página oficial: <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=2270800" target="camara">Abrir no site da Câmara</a>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-right-circle"></i> Importar e Editar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

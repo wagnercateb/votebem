@@ -25,6 +25,9 @@
         border: 1px solid #dee2e6;
         border-radius: 6px;
         padding: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
     .votacao-item {
         padding: 10px;
@@ -136,6 +139,37 @@
         margin-bottom: 10px;
         font-size: 0.9em;
     }
+    .results-container {
+        position: relative;
+    }
+    .results-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        z-index: 10;
+        max-height: 220px;
+        overflow-y: auto;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .result-item {
+        padding: 8px;
+        border-bottom: 1px solid #e9ecef;
+        cursor: pointer;
+        font-size: 0.9em;
+    }
+    .result-item:hover {
+        background: #f8f9fa;
+    }
+    .result-empty,
+    .result-hint {
+        padding: 8px;
+        color: #6c757d;
+        font-size: 0.85em;
+    }
 </style>
 {% endblock %}
 
@@ -186,29 +220,13 @@
     </div>
 
     <div class="create-votacao">
-        <h3>Criar Nova Votação</h3>
-        <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="create_votacao">
-            
-            <div class="form-group">
-                <label for="proposicao_search">Buscar Proposição:</label>
-                <input type="text" id="proposicao_search" class="search-box" placeholder="Digite para buscar proposições...">
-                <input type="hidden" name="proposicao_id" id="proposicao_id">
-            </div>
-            
-            <div class="form-group">
-                <label for="titulo">Título da Votação:</label>
-                <input type="text" name="titulo" id="titulo" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="resumo">Resumo (opcional):</label>
-                <textarea name="resumo" id="resumo" placeholder="Descrição da votação..."></textarea>
-            </div>
-            
-            <button type="submit" class="btn btn-primary">Criar Votação</button>
-        </form>
+        <div>
+            <h3>Criar Nova Votação</h3>
+            <p style="margin:0; color:#6c757d;">Use a página dedicada para criar novas votações.</p>
+        </div>
+        <div>
+            <a href="{% url 'gerencial:votacao_create' %}" class="btn btn-primary">Ir para Criar Votação</a>
+        </div>
     </div>
 </div>
 
@@ -229,26 +247,7 @@
 </div>
 
 <script>
-function selectProposicao(id, titulo) {
-    document.getElementById('proposicao_id').value = id;
-    document.getElementById('titulo').value = 'Votação: ' + titulo.substring(0, 50);
-    document.getElementById('proposicao_search').value = titulo.substring(0, 60) + '...';
-}
-
-// Simple search functionality
-document.getElementById('proposicao_search').addEventListener('input', function() {
-    const query = this.value.toLowerCase();
-    const items = document.querySelectorAll('.proposicao-item');
-    
-    items.forEach(item => {
-        const text = item.textContent.toLowerCase();
-        if (text.includes(query)) {
-            item.style.display = 'block';
-        } else {
-            item.style.display = 'none';
-        }
-    });
-});
+// No inline creation form here; redirect to dedicated page
 </script>
 
 {% endblock %}

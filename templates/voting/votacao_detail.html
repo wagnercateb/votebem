@@ -11,7 +11,13 @@
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}
+                        {% if votacao.proposicao.id_proposicao %}
+                            <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+                                {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}
+                            </a>
+                        {% else %}
+                            {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}
+                        {% endif %}
                     </h5>
                     {% if user_vote %}
                         <span class="badge bg-success fs-6">
@@ -30,7 +36,15 @@
             </div>
             
             <div class="card-body">
-                <h4 class="card-title">{{ votacao.titulo }}</h4>
+                <h4 class="card-title">
+                    {% if votacao.proposicao.id_proposicao %}
+                        <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+                            {{ votacao.titulo }}
+                        </a>
+                    {% else %}
+                        {{ votacao.titulo }}
+                    {% endif %}
+                </h4>
                 <p class="card-text">{{ votacao.resumo }}</p>
                 
                 <div class="row mb-3">

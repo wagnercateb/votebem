@@ -61,6 +61,7 @@ def proposicoes_list(request):
     search = request.GET.get('search', '')
     tipo_filter = request.GET.get('tipo', '')
     ano_filter = request.GET.get('ano', '')
+    estado_filter = request.GET.get('estado', '')
     
     # Base queryset
     proposicoes = Proposicao.objects.all().order_by('-ano', '-numero')
@@ -79,6 +80,9 @@ def proposicoes_list(request):
     if ano_filter:
         proposicoes = proposicoes.filter(ano=ano_filter)
     
+    if estado_filter:
+        proposicoes = proposicoes.filter(estado=estado_filter)
+    
     # Pagination
     paginator = Paginator(proposicoes, 25)  # Show 25 propositions per page
     page_number = request.GET.get('page')
@@ -93,6 +97,7 @@ def proposicoes_list(request):
         'search': search,
         'tipo_filter': tipo_filter,
         'ano_filter': ano_filter,
+        'estado_filter': estado_filter,
         'tipos_disponiveis': tipos_disponiveis,
         'anos_disponiveis': anos_disponiveis,
         'total_proposicoes': proposicoes.count(),
@@ -271,6 +276,97 @@ def votacoes_management(request):
     }
     
     return render(request, 'admin/voting/votacoes_management.html', context)
+
+@staff_member_required
+def votacao_create(request):
+    """Dedicated page to create a new votação, with optional prefill by proposição."""
+    if request.method == 'POST':
+        proposicao_id = request.POST.get('proposicao_id')
+        titulo = request.POST.get('titulo')
+        resumo = request.POST.get('resumo')
+        data_hora_votacao = request.POST.get('data_hora_votacao')
+        no_ar_desde = request.POST.get('no_ar_desde')
+        no_ar_ate = request.POST.get('no_ar_ate')
+        ativo = request.POST.get('ativo') == 'on'
+        sim_oficial = request.POST.get('sim_oficial')
+        nao_oficial = request.POST.get('nao_oficial')
+
+        if proposicao_id and titulo:
+            try:
+                proposicao = Proposicao.objects.get(id=proposicao_id)
+
+                # Parse datetimes, default to now if invalid or missing
+                try:
+                    dt_voto = timezone.datetime.fromisoformat(data_hora_votacao.replace('T', ' ')) if data_hora_votacao else timezone.now()
+                except Exception:
+                    dt_voto = timezone.now()
+                try:
+                    dt_desde = timezone.datetime.fromisoformat(no_ar_desde.replace('T', ' ')) if no_ar_desde else timezone.now()
+                except Exception:
+                    dt_desde = timezone.now()
+                try:
+                    dt_ate = timezone.datetime.fromisoformat(no_ar_ate.replace('T', ' ')) if no_ar_ate else None
+                except Exception:
+                    dt_ate = None
+
+                # Parse integers
+                try:
+                    sim_of = int(sim_oficial or 0)
+                except ValueError:
+                    sim_of = 0
+                try:
+                    nao_of = int(nao_oficial or 0)
+                except ValueError:
+                    nao_of = 0
+
+                votacao = VotacaoDisponivel.objects.create(
+                    proposicao=proposicao,
+                    titulo=titulo,
+                    resumo=resumo or f"Votação sobre {proposicao.titulo}",
+                    data_hora_votacao=dt_voto,
+                    no_ar_desde=dt_desde,
+                    no_ar_ate=dt_ate,
+                    ativo=ativo,
+                    sim_oficial=sim_of,
+                    nao_oficial=nao_of,
+                )
+                messages.success(request, f'Votação "{votacao.titulo}" criada com sucesso.')
+                return redirect('gerencial:votacao_edit', pk=votacao.pk)
+            except Proposicao.DoesNotExist:
+                messages.error(request, 'Proposição não encontrada.')
+        else:
+            messages.error(request, 'Preencha os campos obrigatórios.')
+
+    # Prefill from GET parameters or proposicao id
+    prefill = {
+        'proposicao_id': '',
+        'proposicao_search': '',
+        'titulo': '',
+        'resumo': '',
+        'data_hora_votacao': timezone.now().strftime('%Y-%m-%dT%H:%M'),
+        'no_ar_desde': timezone.now().strftime('%Y-%m-%dT%H:%M'),
+        'no_ar_ate': '',
+        'ativo': True,
+        'sim_oficial': 0,
+        'nao_oficial': 0,
+        'proposicao_display': ''
+    }
+    proposicao_id = request.GET.get('proposicao_id')
+    if proposicao_id:
+        try:
+            proposicao = Proposicao.objects.get(id=proposicao_id)
+            prefill['proposicao_id'] = proposicao.id
+            prefill['proposicao_search'] = proposicao.titulo
+            prefill['titulo'] = f"Votação: {proposicao.titulo}"
+            prefill['resumo'] = (proposicao.ementa or '').strip()
+            prefill['proposicao_display'] = f"{proposicao.tipo} {proposicao.numero}/{proposicao.ano} - {proposicao.titulo}"
+        except Proposicao.DoesNotExist:
+            messages.error(request, 'Proposição para preenchimento não encontrada.')
+
+    context = {
+        'prefill': prefill,
+    }
+    return render(request, 'admin/voting/votacao_create.html', context)
 
 @staff_member_required
 def users_management(request):
@@ -615,6 +711,39 @@ def proposicao_add(request):
 
 
 @staff_member_required
+def proposicao_import(request):
+    """Import a proposição from Câmara by id_proposicao and redirect to edit"""
+    context = {
+        'title': 'Importar Proposição por ID da Câmara',
+    }
+
+    if request.method == 'POST':
+        id_proposicao = request.POST.get('id_proposicao', '').strip()
+        if not id_proposicao:
+            messages.error(request, 'Informe o ID da proposição da Câmara (idProposicao).')
+        else:
+            try:
+                ext_id = int(id_proposicao)
+                from .services.camara_api import camara_api
+
+                # Use the service to sync a single proposição by its ID
+                try:
+                    proposicao = camara_api._sync_single_proposicao({'id': ext_id})
+                except Exception as e:
+                    messages.error(request, f'Erro ao obter dados da Câmara: {str(e)}')
+                    proposicao = None
+
+                if proposicao:
+                    messages.success(request, f'Proposição {proposicao.tipo} {proposicao.numero}/{proposicao.ano} importada/atualizada com sucesso!')
+                    return redirect('gerencial:proposicao_edit', pk=proposicao.pk)
+                else:
+                    messages.error(request, 'Não foi possível criar a proposição a partir do ID informado.')
+            except ValueError:
+                messages.error(request, 'O ID informado deve ser um número inteiro válido.')
+
+    return render(request, 'admin/voting/proposicao_import.html', context)
+
+@staff_member_required
 def camara_admin(request):
     """
     Administrative tools for managing Chamber propositions
@@ -818,7 +947,7 @@ def ajax_proposicao_search(request):
     results = [
         {
             'id': p.id,
-            'text': f"{p.tipo} {p.numero}/{p.ano} - {p.titulo[:60]}",
+            'text': f"{p.tipo} {p.numero}/{p.ano} - {p.titulo}",
             'id_proposicao': p.id_proposicao,
         }
         for p in proposicoes

@@ -109,7 +109,7 @@
             </thead>
             <tbody>
                 {% for item in stats.por_tipo %}
-                <tr>
+                <tr class="click-row" data-tipo="{{ item.tipo }}">
                     <td>{{ item.tipo|default:"Não especificado" }}</td>
                     <td><span class="count-badge">{{ item.count }}</span></td>
                 </tr>
@@ -133,7 +133,7 @@
             </thead>
             <tbody>
                 {% for item in stats.por_ano %}
-                <tr>
+                <tr class="click-row" data-ano="{{ item.ano }}">
                     <td>{{ item.ano|default:"Não especificado" }}</td>
                     <td><span class="count-badge">{{ item.count }}</span></td>
                 </tr>
@@ -157,7 +157,7 @@
             </thead>
             <tbody>
                 {% for item in stats.por_estado %}
-                <tr>
+                <tr class="click-row" data-estado="{{ item.estado }}">
                     <td>{{ item.estado|default:"Não especificado" }}</td>
                     <td><span class="count-badge">{{ item.count }}</span></td>
                 </tr>
@@ -180,4 +180,30 @@
     </a>
 </div>
 
+{% endblock %}
+{% block extra_js %}
+<script>
+(function() {
+  const baseUrl = "{% url 'gerencial:proposicoes_list' %}";
+  function goWithParams(params) {
+    const usp = new URLSearchParams(params);
+    if ([...usp.keys()].length > 0) {
+      window.location.href = baseUrl + '?' + usp.toString();
+    }
+  }
+  document.querySelectorAll('tr.click-row').forEach(function(tr) {
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', function() {
+      const tipo = tr.getAttribute('data-tipo');
+      const ano = tr.getAttribute('data-ano');
+      const estado = tr.getAttribute('data-estado');
+      const params = {};
+      if (tipo) params.tipo = tipo;
+      if (ano) params.ano = ano;
+      if (estado) params.estado = estado;
+      goWithParams(params);
+    });
+  });
+})();
+</script>
 {% endblock %}

@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from django.db.models import Q
 from .models import Enquete, RespostaEnquete
-from voting.models import Proposicao
+from voting.models import Proposicao, VotacaoDisponivel
 from .forms import EnqueteForm, RespostaEnqueteForm
 
 class EnqueteListView(ListView):
@@ -57,6 +57,9 @@ class EnqueteDetailView(DetailView):
         
         context['user_response'] = user_response
         context['can_respond'] = enquete.is_published() and user_response is None and self.request.user.is_authenticated
+        if context['can_respond']:
+            # Provide the response form to the template
+            context['form'] = RespostaEnqueteForm()
         
         # Get response statistics
         context['total_respostas'] = enquete.get_total_respostas()
@@ -64,6 +67,23 @@ class EnqueteDetailView(DetailView):
         context['respostas_nao'] = enquete.get_respostas_nao()
         context['percentual_sim'] = enquete.get_percentual_sim()
         context['percentual_nao'] = enquete.get_percentual_nao()
+
+        # Related voting and proposition external URL
+        votacao_relacionada = None
+        proposicao_url = None
+        if enquete.proposicao:
+            votacao_relacionada = (
+                VotacaoDisponivel.objects
+                .filter(proposicao=enquete.proposicao)
+                .order_by('-ativo', '-no_ar_desde', '-created_at')
+                .first()
+            )
+            if enquete.proposicao.id_proposicao:
+                proposicao_url = (
+                    f"http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={enquete.proposicao.id_proposicao}"
+                )
+        context['votacao_relacionada'] = votacao_relacionada
+        context['proposicao_url'] = proposicao_url
         
         return context
 

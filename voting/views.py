@@ -294,3 +294,63 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
         context['congressman_photo_url'] = congressman.get_foto_url()
         
         return context
+
+
+class VotacoesPesquisaView(ListView):
+    """Public search/list of all voting sessions with filters"""
+    model = VotacaoDisponivel
+    template_name = 'voting/votacoes_pesquisa.html'
+    context_object_name = 'votacoes'
+    paginate_by = 25
+
+    def get_queryset(self):
+        qs = VotacaoDisponivel.objects.select_related('proposicao').order_by('-no_ar_desde')
+
+        q = self.request.GET.get('q')
+        tipo = self.request.GET.get('tipo')
+        ano = self.request.GET.get('ano')
+        ativo = self.request.GET.get('ativo')
+
+        if q:
+            qs = qs.filter(
+                Q(titulo__icontains=q) |
+                Q(resumo__icontains=q) |
+                Q(proposicao__titulo__icontains=q) |
+                Q(proposicao__ementa__icontains=q)
+            )
+
+        if tipo:
+            qs = qs.filter(proposicao__tipo=tipo)
+
+        if ano:
+            try:
+                qs = qs.filter(proposicao__ano=int(ano))
+            except ValueError:
+                pass
+
+        if ativo == 'sim':
+            qs = qs.filter(ativo=True)
+        elif ativo == 'nao':
+            qs = qs.filter(ativo=False)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Distinct tipos and anos for filters
+        tipos = list(
+            VotacaoDisponivel.objects.values_list('proposicao__tipo', flat=True)
+            .distinct()
+        )
+        anos = list(
+            VotacaoDisponivel.objects.values_list('proposicao__ano', flat=True)
+            .distinct()
+        )
+        context['tipos'] = sorted([t for t in tipos if t])
+        context['anos'] = sorted([a for a in anos if a])
+        # Preserve current filters
+        context['q'] = self.request.GET.get('q', '')
+        context['tipo_sel'] = self.request.GET.get('tipo', '')
+        context['ano_sel'] = self.request.GET.get('ano', '')
+        context['ativo_sel'] = self.request.GET.get('ativo', '')
+        return context
