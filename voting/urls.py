@@ -13,4 +13,6 @@ urlpatterns = [
     path('ranking/', views.RankingView.as_view(), name='ranking'),
     path('ranking-personalizado/', views.PersonalizedRankingView.as_view(), name='ranking_personalizado'),
     path('congressman/<int:pk>/', views.CongressmanDetailView.as_view(), name='congressman_detail'),
+    # Public subpage for official votes via app
+    path('votos/oficiais/', views.votos_oficiais_app_public, name='votos_oficiais_app'),
 ]

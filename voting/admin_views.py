@@ -38,6 +38,41 @@ def admin_dashboard(request):
 
 
 @staff_member_required
+def votos_oficiais_app(request):
+    """Subpágina embutível de votos oficiais com filtros e estatísticas client-side.
+    Aceita query param `votacao_id` para carregar votos de uma votação específica.
+    """
+    votacao_id = request.GET.get('votacao_id')
+    votacao = None
+    votos_data = []
+    if votacao_id:
+        try:
+            votacao = VotacaoDisponivel.objects.select_related('proposicao').get(pk=int(votacao_id))
+            # Votos oficiais: por proposição
+            registros = (
+                CongressmanVote.objects
+                .select_related('congressman')
+                .filter(proposicao=votacao.proposicao)
+            )
+            for r in registros:
+                votos_data.append({
+                    'nome': r.congressman.nome,
+                    'id_cadastro': r.congressman.id_cadastro,
+                    'partido': r.congressman.partido or '',
+                    'uf': r.congressman.uf or '',
+                    'voto': r.get_voto_display_text(),
+                })
+        except Exception:
+            votacao = None
+
+    context = {
+        'votacao': votacao,
+        'votos_json': json.dumps(votos_data, ensure_ascii=False),
+    }
+    return render(request, 'admin/voting/votos_oficiais_app.html', context)
+
+
+@staff_member_required
 def congressistas_update(request):
     """Update Congressman table from Câmara API with optional idLegislatura param (default 57).
     Fetches all pages, deduplicates by id (keep last), aggregates party siglas history.

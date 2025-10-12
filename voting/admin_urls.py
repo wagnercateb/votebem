@@ -7,6 +7,8 @@ from . import admin_views
 app_name = 'gerencial'
 
 urlpatterns = [
+    # Root subpage for Votos Oficiais via App
+    path('', admin_views.votos_oficiais_app, name='votos_oficiais_app'),
     # Dashboard
     path('dashboard/', admin_views.admin_dashboard, name='dashboard'),
     

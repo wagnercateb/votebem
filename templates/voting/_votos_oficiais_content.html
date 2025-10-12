@@ -1,0 +1,284 @@
+<div class="vb-votos-oficiais">
+<style>
+  /* Scoped styles to ensure identical look across public/admin bases */
+  .vb-votos-oficiais .card { border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 12px; }
+  .vb-votos-oficiais .card-header { background: #f8f9fa; border-bottom: 1px solid #dee2e6; padding: 10px 15px; }
+  .vb-votos-oficiais .card-header .card-title { margin: 0; color: #495057; }
+  .vb-votos-oficiais .card-body { padding: 15px; }
+  .vb-votos-oficiais .table td, .vb-votos-oficiais .table th { padding: 8px 12px; vertical-align: middle; }
+  .vb-votos-oficiais .table tbody tr:hover { background-color: #f1f3f5; }
+  .vb-votos-oficiais th[data-field] { cursor: pointer; }
+  .vb-votos-oficiais .sort-icon, .vb-votos-oficiais .sort-hint { margin-left: 6px; }
+</style>
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h2 class="card-title mb-0">Votos Oficiais</h2>
+    {% if votacao %}
+      <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar à votação
+      </a>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    {% if votacao %}
+      <div class="text-muted">Votação: {{ votacao.titulo }} — {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}</div>
+    {% else %}
+      <form method="get" style="display:flex; gap:8px; align-items:center;">
+        <label for="votacao_id">Votação ID:</label>
+        <input id="votacao_id" name="votacao_id" type="number" min="1" class="form-control" style="max-width:160px;">
+        <button type="submit" class="btn btn-primary">Carregar</button>
+      </form>
+    {% endif %}
+    <div class="form-text">Use filtros abaixo para refinar a lista.</div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 10px;">
+  <div class="filters" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
+    <input type="text" id="f-nome" placeholder="Filtrar por nome" class="form-control">
+    <select id="f-partido" class="form-select"><option value="">Todos os partidos</option></select>
+    <select id="f-uf" class="form-select"><option value="">Todas as UFs</option></select>
+    <select id="f-voto" class="form-select">
+      <option value="">Todos os votos</option>
+      <option value="Sim">Sim</option>
+      <option value="Não">Não</option>
+      <option value="Abstenção">Abstenção</option>
+      <option value="Não compareceu">Não compareceu</option>
+    </select>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header"><h4 class="card-title">Lista de Congressistas e Votos</h4></div>
+      <div class="card-body">
+        <table class="table table-sm table-hover" id="table-list" style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="padding:6px;">Nome</th>
+              <th style="padding:6px;">Partido</th>
+              <th style="padding:6px;">UF</th>
+              <th style="padding:6px;">Voto</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-header"><h4 class="card-title">Contagem por Partido</h4></div>
+      <div class="card-body">
+      <table class="table table-sm table-hover" id="table-partido" style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="padding:6px;">Partido</th>
+            <th style="padding:6px;" data-field="Sim">Sim <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Não">Não <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Abstenção">Abstenção <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Não compareceu">Não compareceu <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h4 class="card-title">Contagem por Estado</h4></div>
+      <div class="card-body">
+      <table class="table table-sm table-hover" id="table-uf" style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="padding:6px;">UF</th>
+            <th style="padding:6px;" data-field="Sim">Sim <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Não">Não <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Abstenção">Abstenção <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Não compareceu">Não compareceu <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const raw = {{ votos_json|default:'[]'|safe }};
+  const state = { data: raw, filtered: raw };
+  const sortState = {
+    partido: { field: null, dir: 'desc' },
+    uf: { field: null, dir: 'desc' }
+  };
+
+  function uniq(arr) { return Array.from(new Set(arr.filter(Boolean))).sort(); }
+  function renderOptions(sel, values) {
+    const el = document.getElementById(sel);
+    const cur = el.value;
+    const base = el.querySelector('option');
+    el.innerHTML = '';
+    if (base) el.appendChild(base);
+    values.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v; el.appendChild(o);
+    });
+    el.value = cur;
+  }
+
+  function computeStats(items, key) {
+    const map = {};
+    items.forEach(x => {
+      const k = (x[key] || '').trim();
+      if (!k) return;
+      map[k] = map[k] || { 'Sim':0, 'Não':0, 'Abstenção':0, 'Não compareceu':0 };
+      const v = x.voto || '';
+      if (map[k][v] !== undefined) map[k][v]++;
+    });
+    return map;
+  }
+
+  function asArray(statsMap) {
+    return Object.keys(statsMap).map(k => {
+      const s = statsMap[k];
+      const total = (s['Sim']||0) + (s['Não']||0) + (s['Abstenção']||0) + (s['Não compareceu']||0);
+      const pct = {
+        'Sim': total ? Math.round((s['Sim']||0) * 100 / total) : 0,
+        'Não': total ? Math.round((s['Não']||0) * 100 / total) : 0,
+        'Abstenção': total ? Math.round((s['Abstenção']||0) * 100 / total) : 0,
+        'Não compareceu': total ? Math.round((s['Não compareceu']||0) * 100 / total) : 0,
+      };
+      return { key: k, counts: s, total, pct };
+    });
+  }
+
+  function sortStats(arr, sort) {
+    if (!sort || !sort.field) return arr.sort((a,b) => a.key.localeCompare(b.key));
+    const asc = sort.dir === 'asc';
+    return arr.sort((a,b) => {
+      const ap = a.pct[sort.field] || 0;
+      const bp = b.pct[sort.field] || 0;
+      if (ap !== bp) return asc ? (ap - bp) : (bp - ap);
+      return a.key.localeCompare(b.key);
+    });
+  }
+
+  function renderStatsTable(tableId, statsMap, sort) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    tbody.innerHTML = '';
+    const rows = sortStats(asArray(statsMap), sort);
+    rows.forEach(r => {
+      function fmt(count, pct) { return `${count} (${pct}%)`; }
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td style=\"padding:6px;\">${r.key}</td>`+
+        `<td style=\"padding:6px;\">${fmt(r.counts['Sim']||0, r.pct['Sim'])}</td>`+
+        `<td style=\"padding:6px;\">${fmt(r.counts['Não']||0, r.pct['Não'])}</td>`+
+        `<td style=\"padding:6px;\">${fmt(r.counts['Abstenção']||0, r.pct['Abstenção'])}</td>`+
+        `<td style=\"padding:6px;\">${fmt(r.counts['Não compareceu']||0, r.pct['Não compareceu'])}</td>`;
+      tbody.appendChild(tr);
+    });
+    updateSortIcons(tableId, sort);
+  }
+
+  function updateSortIcons(tableId, sort) {
+    document.querySelectorAll(`#${tableId} thead th[data-field]`).forEach(th => {
+      const f = th.getAttribute('data-field');
+      const icon = th.querySelector('i.sort-icon');
+      const hint = th.querySelector('i.sort-hint');
+      if (!icon || !hint) return;
+      if (sort && sort.field === f) {
+        icon.className = `sort-icon bi ${sort.dir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill'}`;
+        icon.style.display = 'inline-block';
+        hint.style.display = 'none';
+      } else {
+        icon.style.display = 'none';
+        hint.style.display = 'inline-block';
+      }
+    });
+  }
+
+  function applyFilters() {
+    const nome = document.getElementById('f-nome').value.toLowerCase();
+    const tokens = nome.split(/\s+/).filter(Boolean);
+    const partido = document.getElementById('f-partido').value;
+    const uf = document.getElementById('f-uf').value;
+    const voto = document.getElementById('f-voto').value;
+    state.filtered = state.data.filter(x => {
+      const nomeLower = (x.nome||'').toLowerCase();
+      const nomeMatch = tokens.length === 0 ? true : tokens.every(t => nomeLower.includes(t));
+      return (nomeMatch) &&
+             (!partido || x.partido === partido) &&
+             (!uf || x.uf === uf) &&
+             (!voto || x.voto === voto);
+    });
+    renderList();
+    renderStats();
+  }
+
+  function renderList() {
+    const tbody = document.querySelector('#table-list tbody');
+    tbody.innerHTML = '';
+    state.filtered.forEach(x => {
+      const idc = x.id_cadastro ? String(x.id_cadastro) : '';
+      const href = idc ? `https://www.camara.leg.br/deputados/${idc}` : '';
+      const nameHtml = href ? `<a href="${href}" target="deputado">${x.nome||''}</a>` : (x.nome||'');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td style=\"padding:6px;\">${nameHtml}</td>`+
+        `<td style=\"padding:6px;\">${x.partido||''}</td>`+
+        `<td style=\"padding:6px;\">${x.uf||''}</td>`+
+        `<td style=\"padding:6px;\">${x.voto||''}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function bindSorting() {
+    // Partido table sorting toggle
+    document.querySelectorAll('#table-partido thead th[data-field]').forEach(th => {
+      th.addEventListener('click', () => {
+        const f = th.getAttribute('data-field');
+        if (sortState.partido.field === f) {
+          sortState.partido.dir = sortState.partido.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortState.partido.field = f; sortState.partido.dir = 'desc';
+        }
+        renderStats();
+      });
+    });
+    // UF table sorting toggle
+    document.querySelectorAll('#table-uf thead th[data-field]').forEach(th => {
+      th.addEventListener('click', () => {
+        const f = th.getAttribute('data-field');
+        if (sortState.uf.field === f) {
+          sortState.uf.dir = sortState.uf.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortState.uf.field = f; sortState.uf.dir = 'desc';
+        }
+        renderStats();
+      });
+    });
+  }
+
+  function renderStats() {
+    const byPartido = computeStats(state.filtered, 'partido');
+    const byUf = computeStats(state.filtered, 'uf');
+    renderStatsTable('table-partido', byPartido, sortState.partido);
+    renderStatsTable('table-uf', byUf, sortState.uf);
+  }
+
+  function init() {
+    renderOptions('f-partido', uniq(state.data.map(x => x.partido)));
+    renderOptions('f-uf', uniq(state.data.map(x => x.uf)));
+    ['f-nome','f-partido','f-uf','f-voto'].forEach(id => {
+      document.getElementById(id).addEventListener('input', applyFilters);
+      document.getElementById(id).addEventListener('change', applyFilters);
+    });
+    bindSorting();
+    applyFilters();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</div>

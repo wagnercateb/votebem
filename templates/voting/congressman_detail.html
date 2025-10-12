@@ -24,14 +24,16 @@
                          style="width: 150px; height: 150px; object-fit: cover;"
                          onerror="this.src='https://via.placeholder.com/150x150?text=Foto'">
                     
-                    <h4>{{ congressman.nome }}</h4>
+                    <h4>
+                        <a href="https://www.camara.leg.br/deputados/{{ congressman.id_cadastro }}" target="deputado">{{ congressman.nome }}</a>
+                    </h4>
                     <p class="text-muted">
                         <span class="badge badge-primary">{{ congressman.partido }}</span>
                         <span class="badge badge-secondary">{{ congressman.uf }}</span>
                     </p>
                     
-                    <a href="http://www.camara.leg.br/internet/Deputado/dep_Detalhe.asp?id={{ congressman.id_cadastro }}" 
-                       target="_blank" 
+                    <a href="https://www.camara.leg.br/deputados/{{ congressman.id_cadastro }}" 
+                       target="deputado" 
                        class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-external-link-alt"></i>
                         Página Oficial
