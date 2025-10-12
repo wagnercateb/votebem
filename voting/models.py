@@ -97,6 +97,7 @@ class Congressman(models.Model):
     id_cadastro = models.IntegerField(unique=True, verbose_name="ID Cadastro")
     nome = models.CharField(max_length=200, verbose_name="Nome")
     partido = models.CharField(max_length=50, verbose_name="Partido")
+    partidos_historico = models.TextField(blank=True, null=True, verbose_name="Partidos (histórico)")
     uf = models.CharField(max_length=2, verbose_name="UF")
     foto_url = models.URLField(blank=True, null=True, verbose_name="URL da Foto")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")

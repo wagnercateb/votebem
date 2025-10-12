@@ -252,6 +252,11 @@
             <!-- Informações Adicionais -->
             <div class="info-section">
                 <h3>Informações da Votação</h3>
+                <div style="margin: 10px 0 15px 0;">
+                    <a href="{% url 'gerencial:votacao_obter_votacao' votacao.pk %}" class="btn btn-outline-primary">
+                        Obter votação
+                    </a>
+                </div>
                 <div class="info-grid">
                     <div class="info-item">
                         <strong>Proposição Relacionada:</strong>

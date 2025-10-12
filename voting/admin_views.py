@@ -10,8 +10,11 @@ from datetime import datetime, timedelta
 import time
 import json
 import logging
+import re
+import requests
 from .models import Proposicao, VotacaoDisponivel, Voto, Congressman, CongressmanVote
 from django.contrib.auth.models import User
+from .services.camara_api import camara_api
 
 @staff_member_required
 def admin_dashboard(request):
@@ -32,6 +35,251 @@ def admin_dashboard(request):
     }
     
     return render(request, 'admin/voting/admin_dashboard.html', context)
+
+
+@staff_member_required
+def congressistas_update(request):
+    """Update Congressman table from Câmara API with optional idLegislatura param (default 57).
+    Fetches all pages, deduplicates by id (keep last), aggregates party siglas history.
+    """
+    id_legislatura = request.GET.get('idLegislatura')
+    if not id_legislatura:
+        id_legislatura = '57'
+
+    created = 0
+    updated = 0
+    errors = 0
+    api_url = (
+        f"https://dadosabertos.camara.leg.br/api/v2/deputados"
+    )
+    params = {
+        'idLegislatura': id_legislatura,
+        'ordem': 'ASC',
+        'ordenarPor': 'nome',
+        'itens': 100
+    }
+
+    result_summary = None
+    if request.GET.get('run') == '1':
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0',
+                'Accept': 'application/json'
+            }
+            # Fetch all pages
+            page = 1
+            itens = 100
+            deputados_all = []
+            while True:
+                params_page = {
+                    'idLegislatura': id_legislatura,
+                    'ordem': 'ASC',
+                    'ordenarPor': 'nome',
+                    'itens': itens,
+                    'pagina': page,
+                }
+                resp = requests.get("https://dadosabertos.camara.leg.br/api/v2/deputados", params=params_page, headers=headers, timeout=30)
+                resp.raise_for_status()
+                data = resp.json()
+                dados = data.get('dados', [])
+                if not dados:
+                    break
+                deputados_all.extend(dados)
+                links = data.get('links', [])
+                has_next = any(l.get('rel') == 'next' for l in links)
+                if not has_next:
+                    break
+                page += 1
+                if page > 1000:
+                    break
+
+            # Aggregate by id (keep last) and collect party siglas
+            agg = {}
+            order_counter = 0
+            for dep in deputados_all:
+                dep_id = dep.get('id')
+                nome = dep.get('nome')
+                partido = dep.get('siglaPartido') or ''
+                uf = dep.get('siglaUf') or ''
+                foto_url = dep.get('urlFoto') or ''
+                if dep_id is None or not nome:
+                    continue
+                order_counter += 1
+                entry = agg.get(dep_id, {'nome': nome, 'uf': uf, 'foto_url': foto_url, 'partido': partido, 'siglas': [], 'order': order_counter})
+                if partido and partido not in entry['siglas']:
+                    entry['siglas'].append(partido)
+                entry['nome'] = nome
+                entry['uf'] = uf
+                entry['foto_url'] = foto_url or entry['foto_url']
+                entry['partido'] = partido or entry['partido']
+                entry['order'] = order_counter
+                agg[dep_id] = entry
+
+            # Persist aggregated deputies
+            for dep_id, entry in agg.items():
+                try:
+                    nome = entry['nome']
+                    partido = entry['partido']
+                    uf = entry['uf']
+                    foto_url = entry['foto_url']
+                    partidos_hist = ", ".join(entry['siglas']) if entry['siglas'] else None
+                    try:
+                        cm = Congressman.objects.get(id_cadastro=dep_id)
+                        cm.nome = nome
+                        cm.partido = partido
+                        cm.uf = uf
+                        cm.foto_url = foto_url or cm.foto_url
+                        cm.partidos_historico = partidos_hist
+                        cm.ativo = True
+                        cm.save()
+                        updated += 1
+                    except Congressman.DoesNotExist:
+                        cm = Congressman.objects.filter(nome__iexact=nome).first()
+                        if cm:
+                            cm.id_cadastro = dep_id
+                            cm.partido = partido
+                            cm.uf = uf
+                            cm.foto_url = foto_url or cm.foto_url
+                            cm.partidos_historico = partidos_hist
+                            cm.ativo = True
+                            cm.save()
+                            updated += 1
+                        else:
+                            Congressman.objects.create(
+                                id_cadastro=dep_id,
+                                nome=nome,
+                                partido=partido,
+                                uf=uf,
+                                foto_url=foto_url or None,
+                                partidos_historico=partidos_hist,
+                                ativo=True,
+                            )
+                            created += 1
+                except Exception:
+                    errors += 1
+
+            result_summary = {
+                'total_api': len(deputados_all),
+                'created': created,
+                'updated': updated,
+                'errors': errors,
+                'id_legislatura': id_legislatura,
+            }
+            messages.success(request, f"Deputados atualizados (idLegislatura {id_legislatura}): total {len(deputados_all)}, criados {created}, atualizados {updated}, erros {errors}.")
+        except Exception as e:
+            messages.error(request, f"Erro ao atualizar deputados: {e}")
+
+    context = {
+        'id_legislatura': id_legislatura,
+        'result_summary': result_summary,
+    }
+    return render(request, 'admin/voting/congressistas_update.html', context)
+
+
+@staff_member_required
+def votacao_obter_votacao(request, pk):
+    """Fetch official voting for the proposition linked to a VotacaoDisponivel and store individual votes."""
+    votacao = get_object_or_404(VotacaoDisponivel, pk=pk)
+    proposicao = votacao.proposicao
+    if not proposicao or not proposicao.id_proposicao:
+        messages.error(request, 'Proposição sem id_proposicao; não é possível consultar votação oficial.')
+        return redirect('gerencial:votacao_edit', pk=pk)
+
+    try:
+        # Step 1: get all votações of the proposição
+        votos_list = camara_api.get_proposicao_votacoes(proposicao.id_proposicao)
+
+        if not votos_list:
+            messages.error(request, 'Nenhuma votação oficial encontrada para esta proposição.')
+            return redirect('gerencial:votacao_edit', pk=pk)
+
+        # Step 2: find main votação by descricao contains aprov/rejeit + proposta
+        main_votacao_id = None
+        for v in votos_list:
+            desc = (v.get('descricao') or '').lower()
+            if (('aprovad' in desc or 'rejeitad' in desc) and 'proposta' in desc):
+                main_votacao_id = v.get('id')
+                break
+        # Fallback: first item
+        if not main_votacao_id:
+            main_votacao_id = votos_list[0].get('id')
+
+        if not main_votacao_id:
+            messages.error(request, 'Não foi possível determinar a votação principal.')
+            return redirect('gerencial:votacao_edit', pk=pk)
+
+        # Step 3: get individual votes
+        votos_individuais = camara_api.get_votacao_votos(main_votacao_id)
+
+        # Map vote string to integers
+        def map_voto(tipo: str):
+            t = (tipo or '').strip().lower()
+            if t == 'sim':
+                return 1
+            if t == 'não' or t == 'nao':
+                return -1
+            if t == 'abstenção' or t == 'abstencao':
+                return 0
+            return None
+
+        sim_count = 0
+        nao_count = 0
+        created = 0
+        updated = 0
+        skipped = 0
+
+        for voto in votos_individuais:
+            dep = voto.get('deputado') or {}
+            nome_dep = dep.get('nome')
+            voto_tipo = voto.get('tipoVoto')
+            voto_val = map_voto(voto_tipo)
+
+            if not nome_dep:
+                skipped += 1
+                continue
+
+            cm = Congressman.objects.filter(nome__iexact=nome_dep).first()
+            if not cm:
+                # Try by id if provided
+                dep_id = dep.get('id')
+                if dep_id:
+                    cm = Congressman.objects.filter(id_cadastro=dep_id).first()
+            if not cm:
+                skipped += 1
+                continue
+
+            obj, was_created = CongressmanVote.objects.update_or_create(
+                congressman=cm,
+                proposicao=proposicao,
+                defaults={'voto': voto_val}
+            )
+            if was_created:
+                created += 1
+            else:
+                updated += 1
+
+            if voto_val == 1:
+                sim_count += 1
+            elif voto_val == -1:
+                nao_count += 1
+
+        # Update official counts on votacao
+        try:
+            votacao.sim_oficial = sim_count
+            votacao.nao_oficial = nao_count
+            votacao.save(update_fields=['sim_oficial', 'nao_oficial'])
+        except Exception:
+            pass
+
+        messages.success(
+            request,
+            f"Votação oficial importada (id {main_votacao_id}). SIM: {sim_count}, NÃO: {nao_count}, "
+            f"novos: {created}, atualizados: {updated}, ignorados: {skipped}."
+        )
+    except Exception as e:
+        messages.error(request, f"Erro ao obter votação oficial: {e}")
+
+    return redirect('gerencial:votacao_edit', pk=pk)
 
 @staff_member_required
 def proposicoes_statistics(request):

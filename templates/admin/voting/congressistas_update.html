@@ -1,0 +1,37 @@
+{% extends "admin/voting/base_administrativo.html" %}
+
+{% block title %}Atualizar Deputados - VoteBem{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="/gerencial/dashboard/">Dashboard</a></li>
+<li class="breadcrumb-item active">Atualizar Deputados</li>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <h2>Atualizar Deputados (Câmara API)</h2>
+    <p>Informe o parâmetro <code>idLegislatura</code> para atualizar a tabela de deputados. Padrão: <strong>57</strong>.</p>
+    <form method="get" class="card p-3" style="margin-bottom: 20px;">
+        <div class="mb-3">
+            <label for="idLegislatura" class="form-label">idLegislatura</label>
+            <input type="number" class="form-control" id="idLegislatura" name="idLegislatura" value="{{ id_legislatura|default:'57' }}" min="1">
+        </div>
+        <input type="hidden" name="run" value="1">
+        <button type="submit" class="btn btn-primary">Atualizar Deputados</button>
+        <a href="/gerencial/dashboard/" class="btn btn-secondary">Voltar ao Dashboard</a>
+    </form>
+
+    {% if result_summary %}
+    <div class="card p-3">
+        <h5>Resultado</h5>
+        <ul>
+            <li>idLegislatura: {{ result_summary.id_legislatura }}</li>
+            <li>Total na API: {{ result_summary.total_api }}</li>
+            <li>Criados: {{ result_summary.created }}</li>
+            <li>Atualizados: {{ result_summary.updated }}</li>
+            <li>Erros: {{ result_summary.errors }}</li>
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

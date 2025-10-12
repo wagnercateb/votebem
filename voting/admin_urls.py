@@ -22,16 +22,18 @@ urlpatterns = [
     path('votacoes/management/', admin_views.votacoes_management, name='votacoes_management'),
     path('votacoes/list/', admin_views.votacoes_management, name='votacoes_list'),  # Placeholder
     path('votacao/create/', admin_views.votacao_create, name='votacao_create'),
+    path('votacao/<int:pk>/obter-votacao/', admin_views.votacao_obter_votacao, name='votacao_obter_votacao'),
     
     # Usuários
     path('users/management/', admin_views.users_management, name='users_management'),
     path('users/list/', admin_views.users_management, name='users_list'),  # Placeholder
     path('users/profiles/', admin_views.users_management, name='users_profiles'),  # Placeholder
-    
+
     # Congressistas
     path('congressistas/list/', admin_views.users_management, name='congressistas_list'),  # Placeholder
     path('congressista/create/', admin_views.users_management, name='congressista_create'),  # Placeholder
     path('votos/oficiais/', admin_views.users_management, name='votos_oficiais'),  # Placeholder
+    path('congressistas/update/', admin_views.congressistas_update, name='congressistas_update'),
     
     # Dados
     path('data/import-export/', admin_views.data_import_export, name='data_import_export'),

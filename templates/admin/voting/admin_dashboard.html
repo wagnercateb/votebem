@@ -224,9 +224,10 @@
     <div class="action-card">
         <h3>Congressistas e Votos Oficiais</h3>
         <ul class="action-list">
-            <li><a href="/admin/voting/congressman/">Gerenciar Congressistas</a></li>
+            <li><a href="/admin/voting/congressman/">Deputados via Django</a></li>
             <li><a href="/admin/voting/congressmanvote/">Votos Oficiais</a></li>
             <li><a href="/admin/voting/congressman/add/">Adicionar Congressista</a></li>
+            <li><a href="{% url 'gerencial:congressistas_update' %}">Atualizar Deputados (Câmara API)</a></li>
         </ul>
     </div>
     
