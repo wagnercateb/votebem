@@ -186,8 +186,25 @@ def votacao_obter_votacao(request, pk):
         return redirect('gerencial:votacao_edit', pk=pk)
 
     try:
+        logger = logging.getLogger(__name__)
+        def log_step(message, data=None):
+            prefix = f"[VotacaoImport id={votacao.id}] "
+            if data is not None:
+                try:
+                    line = prefix + message + " | " + json.dumps(data, ensure_ascii=False)
+                except Exception:
+                    line = prefix + message + f" | {data}"
+            else:
+                line = prefix + message
+            print(line)
+            try:
+                logger.info(line)
+            except Exception:
+                pass
+        log_step("Starting import flow", {"proposicao_id_proposicao": proposicao.id_proposicao})
         # Step 1: get all votações of the proposição
         votos_list = camara_api.get_proposicao_votacoes(proposicao.id_proposicao)
+        log_step("Fetched votações list for proposição", {"count": len(votos_list) if isinstance(votos_list, list) else None})
 
         if not votos_list:
             messages.error(request, 'Nenhuma votação oficial encontrada para esta proposição.')
@@ -207,9 +224,41 @@ def votacao_obter_votacao(request, pk):
         if not main_votacao_id:
             messages.error(request, 'Não foi possível determinar a votação principal.')
             return redirect('gerencial:votacao_edit', pk=pk)
+        log_step("Selected main votação", {"main_votacao_id": main_votacao_id})
 
-        # Step 3: get individual votes
+        # Step 3: get voting details (for official counts) and individual votes
+        detalhes_votacao = camara_api.get_votacao_details(main_votacao_id) or {}
+        dados_det = detalhes_votacao.get('dados') or {}
         votos_individuais = camara_api.get_votacao_votos(main_votacao_id)
+        log_step("Fetched votação details and individual votes", {
+            "details_keys": list(detalhes_votacao.keys()) if isinstance(detalhes_votacao, dict) else None,
+            "dados_det_keys": list(dados_det.keys()) if isinstance(dados_det, dict) else None,
+            "individual_votes_count": len(votos_individuais) if isinstance(votos_individuais, list) else None,
+        })
+        try:
+            sample = []
+            for i in range(min(3, len(votos_individuais) if isinstance(votos_individuais, list) else 0)):
+                v = votos_individuais[i]
+                dep_sample = v.get('deputado') if isinstance(v, dict) else None
+                sample.append({
+                    'keys': list(v.keys()) if isinstance(v, dict) else None,
+                    'deputado_keys': list(dep_sample.keys()) if isinstance(dep_sample, dict) else None,
+                    'tipoVoto': v.get('tipoVoto') if isinstance(v, dict) else None,
+                })
+            if sample:
+                log_step("Vote payload sample", {"items": sample})
+        except Exception:
+            pass
+
+        # Extract numeric congress vote id (e.g., from '2270800-160' -> 160)
+        congress_vote_numeric_id = None
+        try:
+            if isinstance(main_votacao_id, str) and '-' in main_votacao_id:
+                congress_vote_numeric_id = int(main_votacao_id.split('-')[-1])
+            elif isinstance(main_votacao_id, (int, float)):
+                congress_vote_numeric_id = int(main_votacao_id)
+        except Exception:
+            congress_vote_numeric_id = None
 
         # Map vote string to integers
         def map_voto(tipo: str):
@@ -221,60 +270,155 @@ def votacao_obter_votacao(request, pk):
             if t == 'abstenção' or t == 'abstencao':
                 return 0
             return None
+        # Count SIM/NÃO independently of DB matches; prefer official counts from details
+        # Fallback to computing from individual votes when details are missing
+        sim_count = int(dados_det.get('placarSim') or 0)
+        nao_count = int(dados_det.get('placarNao') or 0)
+        if (sim_count == 0 and nao_count == 0) and votos_individuais:
+            sim_count = 0
+            nao_count = 0
+            for v in votos_individuais:
+                tipo = (v.get('tipoVoto') or '').strip().lower()
+                if tipo == 'sim':
+                    sim_count += 1
+                elif tipo in ('não', 'nao'):
+                    nao_count += 1
+        log_step("Computed official counts", {"placarSim": sim_count, "placarNao": nao_count})
 
-        sim_count = 0
-        nao_count = 0
+        # Prepare congressman lookup maps to reduce skipping
+        from unicodedata import normalize
+        def norm(s: str) -> str:
+            s = (s or '').strip().lower()
+            try:
+                return ''.join(c for c in normalize('NFKD', s) if not ord(c) > 127)
+            except Exception:
+                return s
+
+        congressmen = list(Congressman.objects.only('id', 'id_cadastro', 'nome'))
+        by_id = {cm.id_cadastro: cm for cm in congressmen if cm.id_cadastro}
+        by_name = {norm(cm.nome): cm for cm in congressmen if cm.nome}
+
         created = 0
         updated = 0
         skipped = 0
+        auto_created_cm = 0
 
         for voto in votos_individuais:
             dep = voto.get('deputado') or {}
-            nome_dep = dep.get('nome')
-            voto_tipo = voto.get('tipoVoto')
+            # Heuristic: if 'deputado' key missing, look for any key containing 'deput'
+            if not dep and isinstance(voto, dict):
+                try:
+                    cand_keys = [k for k in voto.keys() if isinstance(k, str) and 'deput' in k.lower()]
+                    for ck in cand_keys:
+                        if isinstance(voto.get(ck), dict):
+                            dep = voto.get(ck) or {}
+                            log_step("Detected alternative deputy container", {"key": ck})
+                            break
+                except Exception:
+                    pass
+            # Robust deputy id/name extraction across possible API variations
+            dep_id = (
+                dep.get('id')
+                or voto.get('idDeputado')
+                or voto.get('deputadoId')
+                or voto.get('id_deputado')
+            )
+            # Generic scan for any key that looks like deputy id
+            if dep_id is None and isinstance(voto, dict):
+                try:
+                    for k, v in voto.items():
+                        kl = k.lower() if isinstance(k, str) else ''
+                        if 'id' in kl and 'deput' in kl and v is not None:
+                            dep_id = v
+                            log_step("Detected deputy id from generic key", {"key": k, "value": v})
+                            break
+                except Exception:
+                    pass
+            try:
+                if dep_id is not None:
+                    dep_id = int(dep_id)
+            except Exception:
+                pass
+            nome_dep = (
+                dep.get('nome')
+                or voto.get('nome')
+                or voto.get('deputadoNome')
+                or voto.get('nome_deputado')
+            )
+            if not nome_dep and isinstance(voto, dict):
+                try:
+                    for k, v in voto.items():
+                        kl = k.lower() if isinstance(k, str) else ''
+                        if 'nome' in kl and 'deput' in kl and v:
+                            nome_dep = v
+                            log_step("Detected deputy name from generic key", {"key": k, "value": v})
+                            break
+                except Exception:
+                    pass
+            voto_tipo = voto.get('tipoVoto') or voto.get('tipo_voto')
             voto_val = map_voto(voto_tipo)
 
-            if not nome_dep:
-                skipped += 1
-                continue
-
-            cm = Congressman.objects.filter(nome__iexact=nome_dep).first()
+            cm = None
+            if dep_id and dep_id in by_id:
+                cm = by_id.get(dep_id)
+            elif nome_dep:
+                cm = by_name.get(norm(nome_dep))
             if not cm:
-                # Try by id if provided
-                dep_id = dep.get('id')
+                # As a robustness fallback, auto-create congressman from vote data when ID is present
                 if dep_id:
-                    cm = Congressman.objects.filter(id_cadastro=dep_id).first()
-            if not cm:
-                skipped += 1
-                continue
+                    try:
+                        cm = Congressman.objects.create(
+                            id_cadastro=dep_id,
+                            nome=nome_dep or f"Deputado {dep_id}",
+                            partido=(dep.get('siglaPartido') or ''),
+                            uf=(dep.get('siglaUf') or ''),
+                            ativo=True,
+                        )
+                        by_id[dep_id] = cm
+                        by_name[norm(cm.nome)] = cm
+                        auto_created_cm += 1
+                        log_step("Auto-created missing congressman", {"id_cadastro": dep_id, "nome": cm.nome, "partido": cm.partido, "uf": cm.uf})
+                    except Exception:
+                        cm = None
+                        log_step("Failed to auto-create congressman", {"id_cadastro": dep_id, "nome": nome_dep})
+                if not cm:
+                    skipped += 1
+                    log_step("Skipped vote: no congressman match", {"dep_id": dep_id, "nome_dep": nome_dep, "tipoVoto": voto_tipo, "raw_vote": voto})
+                    continue
 
             obj, was_created = CongressmanVote.objects.update_or_create(
                 congressman=cm,
                 proposicao=proposicao,
-                defaults={'voto': voto_val}
+                defaults={'voto': voto_val, 'congress_vote_id': congress_vote_numeric_id}
             )
+            if congress_vote_numeric_id is not None:
+                try:
+                    if getattr(obj, 'congress_vote_id', None) != congress_vote_numeric_id:
+                        obj.congress_vote_id = congress_vote_numeric_id
+                        obj.save(update_fields=['congress_vote_id'])
+                except Exception:
+                    pass
             if was_created:
                 created += 1
+                log_step("Inserted CongressmanVote", {"congressman_id": cm.id, "id_cadastro": cm.id_cadastro, "voto": voto_val})
             else:
                 updated += 1
-
-            if voto_val == 1:
-                sim_count += 1
-            elif voto_val == -1:
-                nao_count += 1
+                log_step("Updated CongressmanVote", {"congressman_id": cm.id, "id_cadastro": cm.id_cadastro, "voto": voto_val})
 
         # Update official counts on votacao
         try:
             votacao.sim_oficial = sim_count
             votacao.nao_oficial = nao_count
             votacao.save(update_fields=['sim_oficial', 'nao_oficial'])
+            log_step("Saved official counts on VotacaoDisponivel", {"sim_oficial": sim_count, "nao_oficial": nao_count})
         except Exception:
             pass
 
+        log_step("Import summary", {"novos": created, "atualizados": updated, "ignorados": skipped, "deputados_criados": auto_created_cm})
         messages.success(
             request,
             f"Votação oficial importada (id {main_votacao_id}). SIM: {sim_count}, NÃO: {nao_count}, "
-            f"novos: {created}, atualizados: {updated}, ignorados: {skipped}."
+            f"novos: {created}, atualizados: {updated}, ignorados: {skipped}, deputados criados: {auto_created_cm}."
         )
     except Exception as e:
         messages.error(request, f"Erro ao obter votação oficial: {e}")

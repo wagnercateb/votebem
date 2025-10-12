@@ -130,6 +130,7 @@ class CongressmanVote(models.Model):
     congressman = models.ForeignKey(Congressman, on_delete=models.CASCADE, verbose_name="Congressista")
     proposicao = models.ForeignKey(Proposicao, on_delete=models.CASCADE, verbose_name="Proposição")
     voto = models.IntegerField(choices=VOTO_CHOICES, blank=True, null=True, verbose_name="Voto")
+    congress_vote_id = models.IntegerField(blank=True, null=True, verbose_name="ID Votação da Câmara")
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

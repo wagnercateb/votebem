@@ -8,6 +8,7 @@ urlpatterns = [
     path('pesquisar/', views.VotacoesPesquisaView.as_view(), name='votacoes_pesquisa'),
     path('votacao/<int:pk>/', views.VotacaoDetailView.as_view(), name='votacao_detail'),
     path('votar/<int:votacao_id>/', views.VotarView.as_view(), name='votar'),
+    path('votar/<int:votacao_id>/delete/', views.DeleteVotoView.as_view(), name='voto_delete'),
     path('meus-votos/', views.MeusVotosView.as_view(), name='meus_votos'),
     path('ranking/', views.RankingView.as_view(), name='ranking'),
     path('ranking-personalizado/', views.PersonalizedRankingView.as_view(), name='ranking_personalizado'),

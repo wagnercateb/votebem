@@ -135,14 +135,15 @@
         font-family: monospace;
     }
     
-    .row {
+    /* Use a scoped grid for form fields to avoid affecting Bootstrap .row */
+    .form-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1rem;
     }
     
     @media (max-width: 768px) {
-        .row {
+        .form-grid {
             grid-template-columns: 1fr;
         }
         
@@ -191,7 +192,7 @@
                     <textarea id="resumo" name="resumo" class="form-control" required>{{ votacao.resumo }}</textarea>
                 </div>
 
-                <div class="row">
+                <div class="form-grid">
                     <div class="form-group">
                         <label for="data_hora_votacao">Data/Hora da Votação Original *</label>
                         <input type="datetime-local" id="data_hora_votacao" name="data_hora_votacao" 
@@ -207,7 +208,7 @@
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="form-grid">
                     <div class="form-group">
                         <label for="no_ar_ate">No Ar Até (opcional)</label>
                         <input type="datetime-local" id="no_ar_ate" name="no_ar_ate" 
@@ -225,7 +226,7 @@
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="form-grid">
                     <div class="form-group">
                         <label for="sim_oficial">Votos SIM Oficiais</label>
                         <input type="number" id="sim_oficial" name="sim_oficial" class="form-control" 
@@ -253,9 +254,9 @@
             <div class="info-section">
                 <h3>Informações da Votação</h3>
                 <div style="margin: 10px 0 15px 0;">
-                    <a href="{% url 'gerencial:votacao_obter_votacao' votacao.pk %}" class="btn btn-outline-primary">
+                    <button type="button" class="btn btn-outline-primary" onclick="window.location.href='{% url 'gerencial:votacao_obter_votacao' votacao.pk %}'">
                         Obter votação
-                    </a>
+                    </button>
                 </div>
                 <div class="info-grid">
                     <div class="info-item">

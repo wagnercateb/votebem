@@ -104,6 +104,37 @@ class VotarView(LoginRequiredMixin, View):
         messages.success(request, f'Seu voto "{voto_choice}" foi registrado com sucesso!')
         return redirect('voting:votacao_detail', pk=votacao_id)
 
+class DeleteVotoView(LoginRequiredMixin, View):
+    """Handle deletion of the user's own vote for a specific voting session"""
+
+    def post(self, request, votacao_id):
+        votacao = get_object_or_404(VotacaoDisponivel, id=votacao_id)
+
+        # Only allow deleting the authenticated user's own vote
+        try:
+            voto = Voto.objects.get(user=request.user, votacao=votacao)
+        except Voto.DoesNotExist:
+            messages.error(request, 'Você não possui voto registrado nesta votação.')
+            return redirect('voting:votacao_detail', pk=votacao_id)
+
+        # Delete the vote
+        voto.delete()
+
+        # Attempt to remove record from user profile votos_gravados
+        try:
+            profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            ids = profile.get_votos_list()
+            if votacao_id in ids:
+                ids = [vid for vid in ids if vid != votacao_id]
+                profile.votos_gravados = ''.join(f'{vid}.' for vid in ids)
+                profile.save()
+        except Exception:
+            # Profile update is non-critical for deletion flow; ignore errors
+            pass
+
+        messages.success(request, 'Seu voto foi excluído. Você pode votar novamente.')
+        return redirect('voting:votacao_detail', pk=votacao_id)
+
 class MeusVotosView(LoginRequiredMixin, ListView):
     """List user's votes"""
     model = Voto

@@ -202,9 +202,28 @@
     </form>
 </div>
 
-<!-- Results Info -->
-<div class="results-info">
-    Mostrando {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ total_proposicoes }} proposições
+<!-- Results Info + Top Pagination -->
+<div class="results-info" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+    <div>
+        Mostrando {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ total_proposicoes }} proposições
+    </div>
+    {% if page_obj.has_other_pages %}
+    <div class="pagination" style="margin: 0;">
+        {% if page_obj.has_previous %}
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page=1">« Primeira</a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">‹ Anterior</a>
+        {% endif %}
+
+        <span class="current">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </span>
+
+        {% if page_obj.has_next %}
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima ›</a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última »</a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <!-- Propositions Table -->
@@ -285,8 +304,8 @@
 {% if page_obj.has_other_pages %}
 <div class="pagination">
     {% if page_obj.has_previous %}
-        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}page=1">« Primeira</a>
-        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}page={{ page_obj.previous_page_number }}">‹ Anterior</a>
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page=1">« Primeira</a>
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">‹ Anterior</a>
     {% endif %}
     
     <span class="current">
@@ -294,8 +313,8 @@
     </span>
     
     {% if page_obj.has_next %}
-        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima ›</a>
-        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última »</a>
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima ›</a>
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última »</a>
     {% endif %}
 </div>
 {% endif %}
