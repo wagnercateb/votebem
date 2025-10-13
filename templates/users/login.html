@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
+{% load socialaccount %}
 
 {% block title %}Entrar - VoteBem{% endblock %}
 
@@ -21,6 +22,19 @@
                         </button>
                     </div>
                 </form>
+                
+                <hr>
+                <div class="text-center mb-3">
+                    <p class="mb-2">Ou entre com:</p>
+                    <div class="d-grid gap-2">
+                        <a class="btn btn-outline-danger" href="{% provider_login_url 'google' process='login' %}">
+                            Entrar com Google
+                        </a>
+                        <a class="btn btn-outline-primary" href="{% provider_login_url 'facebook' process='login' %}">
+                            Entrar com Facebook
+                        </a>
+                    </div>
+                </div>
                 
                 <hr>
                 

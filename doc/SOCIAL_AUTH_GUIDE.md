@@ -72,10 +72,15 @@ After running migrations, you need to configure the social applications in Djang
    - Visit [Google Cloud Console](https://console.cloud.google.com/)
    - Create a new project or select existing one
 
-2. **Enable Google+ API**:
-   - Go to **APIs & Services** > **Library**
-   - Search for "Google+ API" and enable it
-   - Also enable "Google People API" for profile information
+2. **Configure OAuth consent screen**:
+   - Go to **APIs & Services** > **OAuth consent screen**
+   - Choose User Type (External for public apps)
+   - Fill in App name, support email, authorized domains
+   - Add scopes ("profile" and "email" are sufficient)
+   - Add test users (for development)
+   - Save and continue
+
+   Note: "Google+ API" is deprecated and NOT required. Use the default OpenID Connect scopes and, if needed, "Google People API" for profile data.
 
 3. **Create OAuth2 Credentials**:
    - Go to **APIs & Services** > **Credentials**
@@ -97,6 +102,17 @@ After running migrations, you need to configure the social applications in Djang
 5. **Get Credentials**:
    - Copy **Client ID** and **Client Secret**
    - Add them to your `.env` file
+
+#### Official Google Documentation and Tutorials
+
+- Create OAuth client ID: https://developers.google.com/identity/protocols/oauth2/web-server#creatingcred
+- OAuth consent screen: https://developers.google.com/identity/protocols/oauth2/web-server#creatingcred-consent
+- Google Identity for web (OpenID Connect): https://developers.google.com/identity/protocols/oauth2/openid-connect
+- Credentials page (Console): https://console.cloud.google.com/apis/credentials
+- Scopes reference: https://developers.google.com/identity/protocols/oauth2/scopes
+- People API overview: https://developers.google.com/people
+
+Step-by-step tutorial (Google official): https://developers.google.com/identity/gsi/web/guides/overview
 
 #### Step 2: Configure in Django Admin
 
@@ -160,19 +176,32 @@ After running migrations, you need to configure the social applications in Djang
    - **Sites**: Select your site
    - **Save**
 
+#### Official Facebook Documentation and Tutorials
+
+- Facebook Login overview: https://developers.facebook.com/docs/facebook-login/
+- Web login (OAuth2): https://developers.facebook.com/docs/facebook-login/web/
+- Create an app: https://developers.facebook.com/apps/
+- Valid OAuth redirect URIs: https://developers.facebook.com/docs/facebook-login/security/#redirecturi
+- App review and permissions: https://developers.facebook.com/docs/apps/review/login
+- App dashboard (find App ID/Secret): https://developers.facebook.com/apps/ > select your app > Settings > Basic
+
+Step-by-step tutorial (Facebook official): https://developers.facebook.com/docs/facebook-login/web/
+
 ## 🎨 Templates and UI
 
-The following templates have been created for social authentication:
+The application integrates social authentication on both custom user pages and django-allauth defaults:
 
-### Login Page (`templates/account/login.html`)
-- Social login buttons for Google and Facebook
-- Traditional email/password login form
-- Links to signup and password reset
+### Users Login (`templates/users/login.html`)
+- Adds Google and Facebook buttons using `provider_login_url` with `process='login'`
+- Keeps traditional email/password login (`auth_views.LoginView`)
+- Links to signup page `/users/register/`
+- URLs: `/users/login/`
 
-### Signup Page (`templates/account/signup.html`)
-- Social signup buttons for Google and Facebook
-- Traditional email registration form
-- Link to login page
+### Users Register (`templates/users/register.html`)
+- Adds Google and Facebook buttons using `provider_login_url` with `process='signup'`
+- Keeps traditional email registration flow
+- Links back to login page `/users/login/`
+- URLs: `/users/register/`
 
 ### Social Connections (`templates/socialaccount/connections.html`)
 - Manage connected social accounts
@@ -193,6 +222,17 @@ The following URLs are available for social authentication:
 /accounts/facebook/login/           # Facebook OAuth login
 /accounts/google/login/callback/    # Google OAuth callback
 /accounts/facebook/login/callback/  # Facebook OAuth callback
+
+# Users module pages integrating social auth
+/users/login/                       # Custom login page with social buttons
+/users/register/                    # Custom register page with social buttons
+
+## 🔑 Where to find Client IDs and Secrets
+
+- Google Client ID/Secret: Google Cloud Console → APIs & Services → Credentials → Your OAuth 2.0 Client ID → copy Client ID and Client Secret
+- Facebook App ID/Secret: Facebook for Developers → Your App → Settings → Basic → copy App ID and App Secret
+
+Add these values to `.env` and verify they load in settings (`development.py` / `production.py`).
 ```
 
 ## ⚙️ Configuration Options
@@ -235,6 +275,38 @@ SOCIALACCOUNT_STORE_TOKENS = True
     'FIELDS': ['id', 'first_name', 'last_name', 'name', 'email'],
     'VERSION': 'v17.0',
 }
+
+## 🛠 Project Integration Checklist
+
+- Confirm `INSTALLED_APPS` includes:
+  - `allauth`, `allauth.account`, `allauth.socialaccount`
+  - `allauth.socialaccount.providers.google`, `allauth.socialaccount.providers.facebook`
+- Confirm `AUTHENTICATION_BACKENDS` includes `allauth.account.auth_backends.AuthenticationBackend`
+- Confirm `TEMPLATES[...]['OPTIONS']['context_processors']` includes `django.template.context_processors.request`
+- Set environment variables (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`)
+- Create Social Applications in Django Admin and assign to your Site
+- Verify buttons appear on `/users/login/` and `/users/register/`
+- Test end-to-end login with both providers locally
+
+### Template Snippets
+
+Users Login (`templates/users/login.html`):
+
+```
+{% load socialaccount %}
+<a class="btn btn-outline-danger" href="{% provider_login_url 'google' process='login' %}">Entrar com Google</a>
+<a class="btn btn-outline-primary" href="{% provider_login_url 'facebook' process='login' %}">Entrar com Facebook</a>
+```
+
+Users Register (`templates/users/register.html`):
+
+```
+{% load socialaccount %}
+<a class="btn btn-outline-danger" href="{% provider_login_url 'google' process='signup' %}">Cadastrar com Google</a>
+<a class="btn btn-outline-primary" href="{% provider_login_url 'facebook' process='signup' %}">Cadastrar com Facebook</a>
+```
+
+These rely on `allauth.urls` mounted at `/accounts/` and provider configuration in settings (`votebem/settings`).
 ```
 
 ## 🚀 Deployment Considerations
