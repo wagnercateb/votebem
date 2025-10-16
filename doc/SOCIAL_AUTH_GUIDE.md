@@ -74,6 +74,7 @@ After running migrations, you need to configure the social applications in Djang
 
 2. **Configure OAuth consent screen**:
    - Go to **APIs & Services** > **OAuth consent screen**
+      - https://console.cloud.google.com/auth/branding?project=votobom-195116
    - Choose User Type (External for public apps)
    - Fill in App name, support email, authorized domains
    - Add scopes ("profile" and "email" are sufficient)

@@ -318,3 +318,6 @@ local_settings.py
 *.swp
 *.swo
 *~
+
+#veio do projeto VideoDownloader para unificar o que for possível
+vdLinuxScripts/
