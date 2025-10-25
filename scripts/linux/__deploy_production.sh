@@ -216,7 +216,7 @@ services:
       - ./backups:/backups
     restart: unless-stopped
     networks:
-      - votebem_network
+      - vps_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \${DB_USER} -d \${DB_NAME}"]
       interval: 30s
@@ -231,7 +231,7 @@ services:
       - redis_data:/data
     restart: unless-stopped
     networks:
-      - votebem_network
+      - vps_network
     healthcheck:
       test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "\${REDIS_PASSWORD:-redis_password}", "ping"]
       interval: 30s
@@ -254,7 +254,6 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      votebem_network:
       vps_network:
         aliases:
           - votebem-web
@@ -280,7 +279,7 @@ services:
       - web
     restart: unless-stopped
     networks:
-      - votebem_network
+      - vps_network
 
 volumes:
   postgres_data:
@@ -289,7 +288,7 @@ volumes:
   media_volume:
 
 networks:
-  votebem_network:
+  vps_network:
     driver: bridge
   vps_network:
     external: true

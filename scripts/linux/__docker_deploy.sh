@@ -1,14 +1,48 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# __docker_deploy.sh
-# Refactors the deployment to standardize Docker bind mounts under /dados.
-# Host paths use a unified pattern like:
-#   /dados/votebem/... (code, logs, static, media, backups, ssl)
-#   /dados/postgres/votebem/... (database)
-#   /dados/valkey/votebem/... (valkey)
-#   /dados/nginx/conf.d/... (nginx site config)
-# The script generates a docker-compose file with absolute host paths.
+# __docker_deploy.sh — Deployment orchestrator for VoteBem on Docker
+#
+# Overview
+# - Standardizes host bind mounts under `/dados` for portability and backup discipline.
+# - Generates a `docker-compose.yml` with absolute host paths and sane defaults.
+# - Provisions required directories and ownership, creates/updates `.env`, and patches Django settings.
+# - Builds and launches services: Postgres (`db`), Valkey/Redis (`valkey`), Django+Gunicorn (`web`), and Nginx (`nginx`).
+#
+# Multi‑site Nginx and networking assumptions
+# - This app is accessed via a multi‑site Nginx container that reverse‑proxies requests.
+# - Cross‑stack service discovery relies on a shared Docker network: `vps_network`.
+# - The Django/Gunicorn container must join `vps_network` with an alias like `votebem-web` so Nginx can resolve it.
+# - The Nginx default site proxies to `http://votebem-web:8000`, which resolves via Docker’s embedded DNS on `vps_network`.
+#
+# Bind mount structure (host → container)
+# - `/dados/votebem/app` → project repository (build context for `web`).
+# - `/dados/votebem/logs` → `/app/logs` (app logs, rotated externally if desired).
+# - `/dados/nginx/app/static` → `/app/staticfiles` (collected static; served by Nginx or Whitenoise).
+# - `/dados/nginx/app/media` → `/app/media` (user uploads; served by Nginx).
+# - `/dados/postgres/votebem/data` → Postgres data dir (persistent DB state).
+# - `/dados/valkey/votebem/data` → Valkey data dir (persistent cache state when AOF is enabled).
+# - `/dados/nginx/conf.d` → Nginx site configs inside container.
+# - `/dados/certbot/certs` → `/etc/letsencrypt` (TLS certificates inside Nginx).
+# - `/dados/certbot/acme` → `/var/www/certbot` (ACME HTTP‑01 challenge directory).
+#
+# Generated configuration artifacts
+# - `.env`: app environment (DB, Redis, Django, domains), with secrets preserved if already present.
+# - `docker-compose.yml`: defines containers, volumes, networks, health checks, and dependencies.
+# - `default.conf`: Nginx catch‑all site for non‑mapped domains, proxying to `votebem-web:8000`.
+#
+# Security and operational notes
+# - Uses `set -euo pipefail` for strict error handling; missing variables and failing commands abort.
+# - Health checks ensure Postgres readiness before `web` starts; logs are scanned for common auth issues.
+# - If DB auth fails, the script can reset the Postgres data directory to reapply credentials (destructive).
+# - Certificates are expected to be managed by Certbot on the host and mounted read‑only into Nginx.
+#
+# Usage
+# - Run on the target host with Docker/Compose installed.
+# - Provide domain/IP when prompted (defaults exist), or script reads from `.env` after creation.
+# - After launch, verify `vps_network` membership and DNS resolution: `getent hosts votebem-web` within Nginx.
+#
+# The remainder of the script implements these steps and generates the runtime configuration.
 
 ##############################
 # Utilities
@@ -137,27 +171,42 @@ ${SUDO} chmod -R 0777 "${STATIC_DIR}" "${MEDIA_DIR}" "${LOG_DIR}"
 ##############################
 log "Generating Nginx default.conf at ${NGINX_DEFAULT_CONF}"
 cat > "${NGINX_DEFAULT_CONF}" << 'CONF'
+# Default catch‑all site for non‑mapped domains
+# This runs inside the multi‑site Nginx container and proxies to the app
+# using the Docker DNS alias `votebem-web` on the shared `vps_network`.
 server {
-    listen 80 default_server;
-    server_name _;
+    listen 80 default_server;      # default vhost for HTTP requests without a specific server_name
+    server_name _;                 # wildcard: applies when no other vhost matches
 
-    # Static
+    # Static files (if needed for default site)
     location /static/ {
-        alias /app/staticfiles/;
+        alias /app/staticfiles/;   # bind‑mounted from host: /dados/nginx/app/static
+        # Consider adding cache headers here for performance if used
     }
-    # Media
+
+    # Media uploads (optional)
     location /media/ {
-        alias /app/media/;
+        alias /app/media/;         # bind‑mounted from host: /dados/nginx/app/media
     }
+
+    # Proxy all other requests to the upstream app container
     location / {
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Port $server_port;
-        proxy_redirect off;
-        proxy_pass http://votebem-web:8000;
+        # Preserve original request metadata for Django behind a reverse proxy
+        proxy_set_header Host $host;                       # original host (domain)
+        proxy_set_header X-Real-IP $remote_addr;           # client IP as seen by Nginx
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; # proxy chain
+        proxy_set_header X-Forwarded-Proto $scheme;        # http/https scheme
+        proxy_set_header X-Forwarded-Host $host;           # forwarded host
+        proxy_set_header X-Forwarded-Port $server_port;    # forwarded port
+        proxy_redirect off;                                # do not rewrite Location headers
+
+        # Upstream target: DNS name must be resolvable via Docker DNS on vps_network
+        proxy_pass http://votebem-web:8000;                # Gunicorn listens on 8000 inside app container
+
+        # Optional tuning (uncomment and adjust as needed)
+        # proxy_connect_timeout 5s;
+        # proxy_read_timeout 60s;
+        # proxy_buffering on;
     }
 }
 CONF
@@ -371,6 +420,44 @@ fi
 # Generate docker-compose file with /dados bind mounts
 ##############################
 log "Writing docker-compose to ${COMPOSE_FILE}"
+# Detailed explanation of the generated docker-compose.yml
+#
+# Top-level keys
+# - `name`: Compose project name; used as a prefix for network and resource scoping.
+#
+# services:
+# - `db` (Postgres 15):
+#   - `environment`: DB name/user/pass exported to container.
+#   - `volumes`: bind-mount persistent data at `${POSTGRES_DIR}`.
+#   - `healthcheck`: waits until `pg_isready` reports ready before dependent services start.
+#   - `networks`: joins `${APP_NAME}_net` (private app network). If connected to `vps_network` with an alias,
+#                 note that cross-stack alias is intended for the `web` app, not the database.
+#
+# - `valkey` (Redis-compatible Valkey):
+#   - `command`: enables append-only file (AOF) and sets a password.
+#   - `volumes`: persistent data at `${VALKEY_DIR}`.
+#   - `networks`: private app network only.
+#
+# - `web` (Django + Gunicorn):
+#   - `build`: uses `${WEB_CONTEXT}/Dockerfile` as the build context.
+#   - `env_file`: loads runtime env from `${ENV_FILE}`.
+#   - `depends_on`: waits for `db` (healthy) and `valkey` (started).
+#   - `volumes`: mounts static, media, and logs directories.
+#   - `networks`: joins `${APP_NAME}_net`. To allow Nginx (in a separate stack) to resolve the app,
+#                 this service must also join `vps_network` with alias `votebem-web`. If the alias appears under
+#                 another service, move it under `web` for correct upstream resolution.
+#
+# - `nginx` (reverse proxy):
+#   - `ports`: exposes 80 and 443 to the host.
+#   - `depends_on`: starts after `web`.
+#   - `volumes`: site configs, static/media, certs, and ACME directory mounts.
+#   - `networks`: joins `${APP_NAME}_net` (within this stack). In a multi-site deployment, an external Nginx may live
+#                 in another stack attached to `vps_network`.
+#
+# networks:
+# - `${APP_NAME}_net`: private bridge for intra-stack communication.
+# - `vps_network`: external network enabling cross-stack service discovery via Docker DNS.
+#   Ensure this exists and both Nginx and the `web` container are attached to it.
 cat > "${COMPOSE_FILE}" << EOF
 name: ${APP_NAME}
 
