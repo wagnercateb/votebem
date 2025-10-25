@@ -131,25 +131,47 @@ cp .env.example .env
 vim .env
 ```
 
-Required environment variables:
+### Environment Configuration (.env) — Production
+
+The production stack reads environment from `/dados/votebem/.env` on the server. The `.env` at the repository root is for local development only.
+
+Set these keys and keep credentials stable across deploys:
 
 ```env
-# Security
-SECRET_KEY=your-super-secret-key-here
+# Core
+DJANGO_SECRET_KEY=keep-existing-generated-once
 DEBUG=False
-ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
+USE_HTTPS=True
+
+# Domain and proxy
+BASE_URL=https://votebem.online
+ALLOWED_HOSTS=votebem.online,www.votebem.online
+CSRF_TRUSTED_ORIGINS=https://votebem.online,http://votebem.online,https://www.votebem.online,http://www.votebem.online
+CORS_ALLOWED_ORIGINS=https://votebem.online,http://votebem.online,https://www.votebem.online,http://www.votebem.online
+USE_X_FORWARDED_HOST=True
+SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
 
 # Database
-DB_PASSWORD=secure-database-password
+DB_NAME=votebem_db
+DB_USER=votebem_user
+DB_PASSWORD=your-secure-password
+DB_HOST=db
+DB_PORT=5432
+
+# Redis
+REDIS_PASSWORD=your-redis-password
 
 # Email
 EMAIL_HOST=smtp.gmail.com
 EMAIL_HOST_USER=your-email@gmail.com
 EMAIL_HOST_PASSWORD=your-app-password
-
-# SSL
-USE_HTTPS=True
 ```
+
+Rules and tips:
+- `ALLOWED_HOSTS` does not include scheme; domains only.
+- `CSRF_TRUSTED_ORIGINS` and `CORS_ALLOWED_ORIGINS` must include scheme; add both `https://` and `http://` for the domain and `www` subdomain.
+- Keep `DJANGO_SECRET_KEY`, `DB_*`, and `REDIS_PASSWORD` consistent between runs; changing `DB_PASSWORD` after Postgres is initialized requires updating the DB user or resetting the data directory.
+- After deployment, verify config: `docker-compose -f docker-compose.yml exec -T web python manage.py check --deploy`.
 
 ### 2. Deploy Application
 

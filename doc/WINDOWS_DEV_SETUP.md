@@ -457,3 +457,23 @@ django_votebem/
 4. Start developing new features!
 
 For production deployment, refer to `DEPLOYMENT_GUIDE.md`.
+
+## Windows Development Scripts (.bat)
+
+These batch files automate common development tasks. Use them from the project root or from the `scripts` folder.
+
+- `setup.bat`
+  - Purpose: First-time setup (create venv, upgrade pip, install dependencies)
+  - Usage: `.\scripts\setup.bat` (from project root) or `.\setup.bat` (inside scripts)
+- `startup.bat`
+  - Purpose: Start daily development with Docker services (PostgreSQL, Redis) and app
+  - Usage: `.\scripts\startup.bat` or `.\startup.bat`
+- `startup_dev.bat`
+  - Purpose: Start pure local development (SQLite), enable DEBUG tooling
+  - Usage: `.\scripts\startup_dev.bat` or `.\startup_dev.bat`
+- `stop.bat`
+  - Purpose: Cleanly stop Docker Compose services
+  - Usage: `.\scripts\stop.bat` or `.\stop.bat`
+- `troubleshoot.bat`
+  - Purpose: Diagnose common issues (Python install, venv status, Django, Docker availability)
+  - Usage: `.\scripts\troubleshoot.bat` or `.\troubleshoot.bat`

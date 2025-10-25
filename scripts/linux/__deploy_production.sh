@@ -254,7 +254,10 @@ services:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - votebem_network
+      votebem_network:
+      vps_network:
+        aliases:
+          - votebem-web
     command: >
       sh -c "python manage.py migrate --settings=votebem.settings.production &&
              python manage.py collectstatic --noinput --settings=votebem.settings.production &&
@@ -288,6 +291,8 @@ volumes:
 networks:
   votebem_network:
     driver: bridge
+  vps_network:
+    external: true
 EOF
 
 # Update nginx configuration for production (HTTP-only)

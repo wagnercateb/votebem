@@ -73,4 +73,4 @@ volumes:
 
 networks:
   default:
-    name: votebem_dev_network
+    name: vps_dev_network

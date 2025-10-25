@@ -19,7 +19,7 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - votebem_dev_network
+      - vps_dev_network
 
   # Redis Cache
   redis:
@@ -37,7 +37,7 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - votebem_dev_network
+      - vps_dev_network
 
   # Nginx Reverse Proxy (Optional - for testing production-like setup)
   nginx:
@@ -55,7 +55,7 @@ services:
       - redis
     restart: unless-stopped
     networks:
-      - votebem_dev_network
+      - vps_dev_network
 
   # pgAdmin (Optional - Database Management UI)
   pgadmin:
@@ -73,7 +73,7 @@ services:
       - db
     restart: unless-stopped
     networks:
-      - votebem_dev_network
+      - vps_dev_network
 
   # Redis Commander (Optional - Redis Management UI)
   redis-commander:
@@ -87,7 +87,7 @@ services:
       - redis
     restart: unless-stopped
     networks:
-      - votebem_dev_network
+      - vps_dev_network
 
 volumes:
   postgres_dev_data:
@@ -98,5 +98,5 @@ volumes:
     driver: local
 
 networks:
-  votebem_dev_network:
+  vps_dev_network:
     driver: bridge

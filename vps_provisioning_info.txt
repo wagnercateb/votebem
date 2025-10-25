@@ -1,0 +1,55 @@
+VPS Provisioning Completed
+==========================
+Date: Mon Oct 20 14:20:55 UTC 2025
+Server: vb
+IP: 104.131.170.158
+Sudoer User: votebem
+Docker Version: Docker version 28.5.1, build e180ab8
+Docker Compose Version: Docker Compose version v2.40.1
+
+Services Configured:
+- Docker: systemctl status docker
+- Fail2ban: systemctl status fail2ban
+- UFW: ufw status
+
+Security:
+- SSH configured for key-based authentication
+- Password authentication disabled
+- Firewall configured (ports 22, 80, 443, 5678)
+- Fail2ban configured for SSH and Nginx protection
+- Automatic security updates enabled
+
+Next Steps:
+1. Switch to sudoer user: sudo su - votebem
+2. Run the VoteBem setup script: setup_votebem.sh
+3. Configure your application-specific settings
+
+SSH Access:
+- ssh votebem@104.131.170.158 (with SSH key)
+- ssh root@104.131.170.158 (with SSH key)
+
+SSH Key Setup Instructions:
+- copie o arquivo id_rsa_bcb2.ppk para ~/.ssh
+- altere a permissão da chave (senão ela não funciona): chmod 600 ~/.ssh/id_rsa_bcb2.ppk
+- ative o servidor ssh: eval SSH_AUTH_SOCK=/tmp/ssh-XXXXXXr1ctyg/agent.223902; export SSH_AUTH_SOCK;
+SSH_AGENT_PID=223903; export SSH_AGENT_PID;
+echo Agent pid 223903;
+- adicione a chave: ssh-add ~/.ssh/id_rsa_bcb2.ppk
+- em uma linha (após copiar): chmod 600 ~/.ssh/id_rsa_bcb2.ppk; eval SSH_AUTH_SOCK=/tmp/ssh-XXXXXXfW31cm/agent.223904; export SSH_AUTH_SOCK;
+SSH_AGENT_PID=223905; export SSH_AGENT_PID;
+echo Agent pid 223905;; ssh-add ~/.ssh/id_rsa_bcb2.ppk
+
+Git Remote Access:
+- para acessar o Git remoto (no bash): eval SSH_AUTH_SOCK=/tmp/ssh-XXXXXXODieUK/agent.223906; export SSH_AUTH_SOCK;
+SSH_AGENT_PID=223907; export SSH_AGENT_PID;
+echo Agent pid 223907;; ssh-add C:/Users/desig.cateb/.ssh/id_rsa_paraPutty.ppk
+- no computador de casa (no bash): eval SSH_AUTH_SOCK=/tmp/ssh-XXXXXX6EAM3h/agent.223908; export SSH_AUTH_SOCK;
+SSH_AGENT_PID=223909; export SSH_AGENT_PID;
+echo Agent pid 223909;; ssh-add C:/Users/User/.ssh/id_rsa_paraPutty.ppk
+- para conferir as chaves carregadas: ssh-add -l
+
+SSH Agent Auto-start (Windows):
+- to set the SSH agent service to start automatically when you log in and starts it immediately:
+    Set-Service -Name 'ssh-agent' -StartupType Automatic
+    Start-Service ssh-agent
+

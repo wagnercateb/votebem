@@ -2,6 +2,69 @@
 
 This directory contains scripts for deploying and managing the VoteBem application.
 
+## Scripts Directory Overview
+
+### Windows Development Scripts (.bat)
+- `setup.bat`
+  - Purpose: Initial development environment setup (venv, pip, deps)
+  - Usage: `.\scripts\setup.bat` (from project root) or `.\setup.bat` (from scripts folder)
+- `startup.bat`
+  - Purpose: Start the Django development environment with Docker services
+  - Usage: `.\scripts\startup.bat` or `.\startup.bat`
+- `startup_dev.bat`
+  - Purpose: Pure local Django development (SQLite), DEBUG tools enabled
+  - Usage: `.\scripts\startup_dev.bat` or `.\startup_dev.bat`
+- `stop.bat`
+  - Purpose: Clean shutdown of Docker Compose services used in dev
+  - Usage: `.\scripts\stop.bat` or `.\stop.bat`
+- `troubleshoot.bat`
+  - Purpose: Diagnose common development environment issues (Python, venv, Docker)
+  - Usage: `.\scripts\troubleshoot.bat` or `.\troubleshoot.bat`
+
+### Linux Production Scripts (.sh)
+- `common_functions.sh`
+  - Purpose: Shared utility functions (logging, validation, error handling)
+  - Usage: Source from other scripts: `source "$(dirname "$0")/common_functions.sh"`
+- `provision_vps.sh`
+  - Purpose: Initial VPS provisioning and security setup (run as root)
+  - Usage: `curl -sSL https://raw.githubusercontent.com/wagnercateb/django-votebem/main/scripts/provision_vps.sh | bash`
+- `setup_votebem.sh`
+  - Purpose: VoteBem application setup on a provisioned VPS (run as sudoer)
+  - Usage: `curl -sSL https://raw.githubusercontent.com/wagnercateb/django-votebem/main/scripts/setup_votebem.sh | bash`
+- `deploy_production.sh`
+  - Purpose: Production deployment and updates (build, migrate, static, restart)
+  - Usage: `./scripts/deploy_production.sh` (from project root)
+- `setup_ssl.sh`
+  - Purpose: SSL certificates with Let's Encrypt, HTTPS nginx configuration
+  - Usage: `./scripts/setup_ssl.sh` (after DNS points to server)
+
+## Script Dependencies and Workflow
+
+### Development Workflow (Windows)
+1. First-time setup: run `setup.bat`
+2. Daily development: run `startup.bat` (or `startup_dev.bat` for pure local)
+3. End of day: run `stop.bat`
+4. Troubleshooting: run `troubleshoot.bat`
+
+### Production Deployment Workflow (Linux)
+1. VPS Setup: run `provision_vps.sh` (as root)
+2. Application Setup: run `setup_votebem.sh` (as sudoer)
+3. SSL Setup: run `setup_ssl.sh` (as sudoer, with domain configured)
+4. Updates/Deploy: run `deploy_production.sh` (as application user)
+
+## Environment Variables
+
+### Windows Scripts
+- No specific environment variables required; scripts handle environment setup.
+
+### Linux Scripts
+- `SUDOER_USERNAME`: Username for the sudoer user (provision_vps.sh)
+- `SUDOER_PASSWORD`: Password for the sudoer user (provision_vps.sh)
+- `SSH_PUBLIC_KEY`: SSH public key for authentication (provision_vps.sh)
+- `VOTEBEM_DOMAIN`: Domain name for SSL certificates (setup_votebem.sh / setup_ssl.sh)
+- `VOTEBEM_PASSWORD`: Password for the votebem user (setup_votebem.sh)
+- `NO_REBOOT`: Skip automatic reboot (provision_vps.sh)
+
 ## Available Scripts
 
 ### 1. `deploy_production.sh`

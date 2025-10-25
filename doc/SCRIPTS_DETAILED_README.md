@@ -55,6 +55,9 @@ curl -sSL https://raw.githubusercontent.com/wagnercateb/django-votebem/main/scri
 - Installs Docker and Docker Compose
 - Creates a sudoer user (prompts for username if not provided)
 - Sets up SSH key authentication
+- Creates the sudoer user's `.ssh/` directory with `chmod 700` and correct ownership
+- Writes the SSH key to `.ssh/authorized_keys` with `chmod 600` and correct ownership
+- Prompts interactively for an SSH public key if `SSH_PUBLIC_KEY` is not provided
 - Configures UFW firewall
 - Installs and configures Fail2Ban
 - Applies basic security hardening

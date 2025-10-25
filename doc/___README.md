@@ -66,27 +66,14 @@ This documentation is organized to guide you through every aspect of the VoteBem
 - **Contains**: Two-phase setup process, security configuration, application deployment
 - **When to Use**: New VPS setup, security hardening, automated provisioning
 
----
-
-## 🏗️ Architecture & Authentication
-
-### [ARCHITECTURE_DIAGRAMS.md](./ARCHITECTURE_DIAGRAMS.md)
-**System architecture and workflow diagrams**
-- **Use Case**: Understanding system design, database structure, and application flows
-- **Contains**: Mermaid diagrams for architecture, ERD, user flows, deployment structure
-- **When to Use**: System analysis, development planning, architecture review
-
-### [SOCIAL_AUTH_GUIDE.md](./SOCIAL_AUTH_GUIDE.md)
-**Social authentication setup with Google and Facebook**
-- **Use Case**: Implementing OAuth2 login with social providers
-- **Contains**: Google/Facebook OAuth setup, django-allauth configuration, account linking
-- **When to Use**: Adding social login features, OAuth configuration, user authentication
-
----
-
-## 🗺️ Complete VoteBem Setup Process
-
-The following UML diagram shows the complete process of setting up the VoteBem application from VPS provisioning to production deployment:
+### Scripts Overview
+- Windows development scripts: `.bat` in `scripts/` — `setup.bat`, `startup.bat`, `startup_dev.bat`, `stop.bat`, `troubleshoot.bat`.
+- Linux production scripts: `.sh` in `scripts/` — `provision_vps.sh`, `setup_votebem.sh`, `deploy_production.sh`, `setup_ssl.sh`, plus `common_functions.sh`.
+- Quick workflows:
+  - Development: setup → startup/startup_dev → stop → troubleshoot.
+  - Production: provision → setup_votebem → setup_ssl → deploy_production.
+- Environment variables: see `SCRIPTS_README.md` for Linux script variables; Windows scripts auto-handle local env.
+- Where to start: use `WINDOWS_DEV_SETUP.md` for dev; use `SCRIPTS_DETAILED_README.md` (provision) then `SCRIPTS_README.md` (deploy) for production.
 
 ```mermaid
 graph TD
