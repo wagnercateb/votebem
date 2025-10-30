@@ -149,8 +149,8 @@ graph TD
 1. **💻 Local Development Setup** ([WINDOWS_DEV_SETUP.md](./WINDOWS_DEV_SETUP.md))
    - Windows 11 development environment configuration
    - Python virtual environment and dependencies
-   - Docker services for PostgreSQL and Redis
-   - DBeaver and pgAdmin database management setup
+- Docker services for MariaDB and Redis
+- DBeaver and Adminer database management setup
 
 2. **🚀 VPS Provisioning** ([SCRIPTS_DETAILED_README.md](./SCRIPTS_DETAILED_README.md))
    - Choose VPS provider (Linode recommended)

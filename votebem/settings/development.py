@@ -11,43 +11,44 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-me')
 # Allowed hosts for development
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0').split(',')
 
-# Database for development (PostgreSQL in Docker with SQLite fallback)
-import psycopg2
+# Database for development (MariaDB in Docker with SQLite fallback)
 from django.core.exceptions import ImproperlyConfigured
+import pymysql
 
 def get_database_config():
     """
-    Try to connect to PostgreSQL first, fallback to SQLite if not available.
+    Try to connect to MariaDB first, fallback to SQLite if not available.
     """
     try:
-        # Test PostgreSQL connection
-        conn = psycopg2.connect(
+        # Test MariaDB connection
+        conn = pymysql.connect(
             host=config('DB_HOST', default='localhost'),
-            port=config('DB_PORT', default='5432'),
+            port=int(config('DB_PORT', default='3306')),
             user=config('DB_USER', default='votebem_user'),
             password=config('DB_PASSWORD', default='votebem_dev_password'),
             database=config('DB_NAME', default='votebem_dev'),
-            connect_timeout=5
+            connect_timeout=5,
         )
         conn.close()
-        
-        # PostgreSQL is available
+
+        # MariaDB is available
         return {
             'default': {
-                'ENGINE': 'django.db.backends.postgresql',
+                'ENGINE': 'django.db.backends.mysql',
                 'NAME': config('DB_NAME', default='votebem_dev'),
                 'USER': config('DB_USER', default='votebem_user'),
                 'PASSWORD': config('DB_PASSWORD', default='votebem_dev_password'),
                 'HOST': config('DB_HOST', default='localhost'),
-                'PORT': config('DB_PORT', default='5432'),
+                'PORT': config('DB_PORT', default='3306'),
                 'OPTIONS': {
-                    'connect_timeout': 60,
+                    'charset': 'utf8mb4',
+                    'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
                 },
             }
         }
-    except (psycopg2.OperationalError, ImportError):
-        # PostgreSQL not available, use SQLite
-        print("PostgreSQL not available, using SQLite database")
+    except Exception:
+        # MariaDB not available, use SQLite
+        print("MariaDB not available, using SQLite database")
         return {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',

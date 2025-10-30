@@ -43,7 +43,7 @@ This repository contains multiple implementations of the VoteBem voting system:
 - **Key Features**:
   - Django 4.2+ framework
   - Docker containerization
-  - PostgreSQL database
+  - MariaDB database
   - Redis caching
   - Nginx reverse proxy
   - User authentication
@@ -73,7 +73,7 @@ This repository contains multiple implementations of the VoteBem voting system:
 ##### `requirements.txt`
 - **Description**: Python dependencies list
 - **Use Case**: Defines all Python packages needed for the project
-- **Key Dependencies**: Django, PostgreSQL driver, Redis, authentication, forms
+- **Key Dependencies**: Django, MariaDB driver, Redis, authentication, forms
 - **Usage**: `pip install -r requirements.txt`
 
 ##### `requirements-minimal.txt`
@@ -96,17 +96,17 @@ This repository contains multiple implementations of the VoteBem voting system:
 ##### `docker-compose.yml`
 - **Description**: Production Docker services orchestration
 - **Use Case**: Defines and runs multi-container production environment
-- **Services**: Django app, PostgreSQL, Redis, Nginx
+- **Services**: Django app, MariaDB, Redis, Nginx
 
 ##### `docker-compose.dev.yml`
 - **Description**: Development Docker services orchestration
 - **Use Case**: Development environment with debugging and hot reload
-- **Services**: Django app, PostgreSQL, Redis (development configurations)
+- **Services**: Django app, MariaDB, Redis (development configurations)
 
 ##### `docker-compose.dev-services.yml`
 - **Description**: Development support services only
 - **Use Case**: Runs only database and Redis for local Django development
-- **Services**: PostgreSQL, Redis (without Django container)
+- **Services**: MariaDB, Redis (without Django container)
 
 ##### `Makefile`
 - **Description**: Build automation and command shortcuts
@@ -126,8 +126,8 @@ This repository contains multiple implementations of the VoteBem voting system:
 - **Use Case**: Automated admin user creation for deployment
 - **Usage**: Creates admin user with predefined credentials
 
-##### `config_postgres_admin.py`
-- **Description**: PostgreSQL admin configuration script
+##### `config_mariadb_admin.py`
+- **Description**: MariaDB admin configuration script
 - **Use Case**: Sets up database admin user and permissions
 - **Usage**: Database initialization and admin setup
 
@@ -255,7 +255,7 @@ make prod
 
 ### Django Implementation:
 - **Backend**: Django 4.2+, Python 3.11+
-- **Database**: PostgreSQL
+- **Database**: MariaDB
 - **Cache**: Redis
 - **Web Server**: Nginx
 - **Containerization**: Docker & Docker Compose

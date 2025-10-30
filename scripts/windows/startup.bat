@@ -21,7 +21,7 @@ docker --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo WARNING: Docker is not available
     echo Django will run with SQLite database
-    echo To use PostgreSQL, please install and start Docker Desktop
+    echo To use MariaDB, please install and start Docker Desktop
     goto skip_docker_startup
 )
 
@@ -61,7 +61,7 @@ echo.
 echo Available URLs:
 echo - Main Application: http://localhost:8000
 echo - Admin Panel: http://localhost:8000/admin
-echo - pgAdmin (DB UI): http://localhost:8080
+echo - Adminer (DB UI): http://localhost:8080
 echo - Redis Commander: http://localhost:8081
 echo.
 echo Press Ctrl+C to stop the server

@@ -11,18 +11,20 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 # Allowed hosts
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
-# Database
+# Database (MariaDB/MySQL)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.db.backends.mysql',
         'NAME': config('DB_NAME', default='votebem_db'),
         'USER': config('DB_USER', default='votebem_user'),
         'PASSWORD': config('DB_PASSWORD', default='votebem_password'),
         'HOST': config('DB_HOST', default='db'),
-        'PORT': config('DB_PORT', default='5432'),
+        'PORT': config('DB_PORT', default='3306'),
         'OPTIONS': {
-            'connect_timeout': 60,
+            'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
+        'CONN_MAX_AGE': 60,
     }
 }
 

@@ -97,17 +97,17 @@ superuser:
 	docker-compose exec web python manage.py createsuperuser --settings=votebem.settings.production
 
 dbshell:
-	docker-compose exec db psql -U votebem_user -d votebem_db
+	docker-compose exec db mysql -u votebem_user -p votebem_db
 
 backup:
 	@echo "Creating database backup..."
 	mkdir -p backups
-	docker-compose exec -T db pg_dump -U votebem_user votebem_db | gzip > backups/backup_$$(date +%Y%m%d_%H%M%S).sql.gz
+	docker-compose exec -T db mysqldump -u votebem_user -p votebem_db | gzip > backups/backup_$$(date +%Y%m%d_%H%M%S).sql.gz
 	@echo "Backup created in backups/ directory"
 
 restore:
 	@read -p "Enter backup file path: " backup_file; \
-	gunzip -c $$backup_file | docker-compose exec -T db psql -U votebem_user -d votebem_db
+	gunzip -c $$backup_file | docker-compose exec -T db mysql -u votebem_user -p votebem_db
 
 # Testing & Quality
 test:

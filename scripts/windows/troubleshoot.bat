@@ -71,7 +71,7 @@ echo Troubleshooting Complete
 echo ========================================
 echo.
 echo Common fixes:
-echo 1. For psycopg2 errors: pip install --only-binary=all psycopg2-binary
+echo 1. For mysqlclient errors: Install "Microsoft C++ Build Tools" then pip install mysqlclient
 echo 2. For Django not found: .venv\Scripts\activate then pip install Django
 echo 3. For Docker issues: Start Docker Desktop and wait for it to load
 echo 4. For permission errors: Run as Administrator

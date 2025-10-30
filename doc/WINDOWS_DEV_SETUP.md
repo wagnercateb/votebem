@@ -1,6 +1,6 @@
 # VoteBem Django Application - Windows 11 Development Setup
 
-This guide will help you set up the VoteBem Django application for development on Windows 11. The main Django application will run natively on Windows, while auxiliary services (PostgreSQL, Redis, Nginx) will run in Docker containers.
+This guide will help you set up the VoteBem Django application for development on Windows 11. The main Django application will run natively on Windows, while auxiliary services (MariaDB, Redis, Nginx) will run in Docker containers.
 
 ## Prerequisites
 
@@ -51,7 +51,7 @@ pip install -r requirements.txt
 pip install python-decouple django-redis
 ```
 
-**Note**: The application now uses PostgreSQL instead of SQLite and requires additional packages for environment variable management and Redis caching.
+**Note**: The application now prefers MariaDB instead of SQLite and requires additional packages for environment variable management and Redis caching.
 
 ### Step 4: Create Environment Configuration
 
@@ -72,12 +72,12 @@ SECRET_KEY=dev-secret-key-change-this
 # Allowed Hosts
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-# Database Configuration (PostgreSQL in Docker)
+# Database Configuration (MariaDB in Docker)
 DB_NAME=votebem_dev
 DB_USER=votebem_user
 DB_PASSWORD=votebem_dev_password
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=3306
 
 # Redis Configuration (Redis in Docker)
 REDIS_URL=redis://localhost:6379/0
@@ -100,7 +100,7 @@ FACEBOOK_APP_SECRET=
 
 ### Step 5: Start Auxiliary Services (Docker)
 
-Start PostgreSQL and Redis using Docker Compose:
+Start MariaDB and Redis using Docker Compose:
 
 ```cmd
 docker-compose -f docker-compose.dev-services.yml up -d
@@ -108,7 +108,7 @@ docker-compose -f docker-compose.dev-services.yml up -d
 
 ### Step 6: Initialize Database
 
-Run Django migrations to set up the PostgreSQL database. You can use either method:
+Run Django migrations to set up the MariaDB database. You can use either method:
 
 **Method 1 (Recommended)**: Using the migration script
 ```cmd
@@ -152,51 +152,42 @@ python manage.py runserver 0.0.0.0:8000 --settings=votebem.settings.development
 
 - **Main Application**: http://localhost:8000
 - **Admin Panel**: http://localhost:8000/admin
-- **PostgreSQL**: localhost:5432
+- **MariaDB**: localhost:3306
 - **Redis**: localhost:6379
 
 ## Database Access with DBeaver
 
-DBeaver is a powerful database management tool that supports both PostgreSQL and Redis connections.
+DBeaver is a powerful database management tool that supports both MariaDB and Redis connections.
 
-### Setting up PostgreSQL Connection in DBeaver
+### Setting up MariaDB Connection in DBeaver
 
 1. **Open DBeaver** and click "New Database Connection"
-2. **Select PostgreSQL** from the database list
+2. **Select MySQL/MariaDB** from the database list
 3. **Configure connection settings**:
    - **Host**: `localhost`
-   - **Port**: `5432`
+- **Port**: `3306`
    - **Database**: `votebem_dev`
    - **Username**: `votebem_user`
    - **Password**: `votebem_dev_password`
 4. **Test Connection** to verify settings
 5. **Click Finish** to save the connection
 
-### Setting up PostgreSQL Connection in pgAdmin
+### Using Adminer (DB UI in Docker)
 
-pgAdmin runs inside Docker and requires different connection parameters than DBeaver. Use the configuration helper script:
+Adminer runs inside Docker and connects to the MariaDB service. You can also get helper instructions via:
 
 ```cmd
-python config_postgres_admin.py
+python config_mariadb_admin.py
 ```
 
-This script will provide the exact connection parameters and step-by-step instructions. The key difference is:
+Quick Adminer access and login details:
 
-- **DBeaver (External)**: Uses `localhost` as host
-- **pgAdmin (Docker)**: Uses `db` as host (Docker service name)
-
-**Manual pgAdmin Configuration**:
-1. **Open pgAdmin** at http://localhost:8080
-2. **Login** with `admin@votebem.dev` / `admin123`
-3. **Right-click 'Servers'** → 'Register' → 'Server'
-4. **General tab**: Name = `VoteBem PostgreSQL (Docker)`
-5. **Connection tab**:
-   - **Host**: `db` (not localhost!)
-   - **Port**: `5432`
-   - **Database**: `votebem_dev`
-   - **Username**: `votebem_user`
-   - **Password**: `votebem_dev_password`
-6. **Click 'Save'**
+- **Open Adminer** at http://localhost:8080
+- **System**: MySQL
+- **Server**: `db` (Docker service name)
+- **Username**: `votebem_user`
+- **Password**: `votebem_dev_password`
+- **Database**: `votebem_dev`
 
 ### Setting up Redis Connection in DBeaver
 
@@ -212,7 +203,7 @@ This script will provide the exact connection parameters and step-by-step instru
 
 ### Using DBeaver for Database Management
 
-**PostgreSQL Operations**:
+**MariaDB Operations**:
 - View all tables and their structure
 - Execute SQL queries
 - Browse table data
@@ -229,8 +220,8 @@ This script will provide the exact connection parameters and step-by-step instru
 
 If you prefer other tools:
 
-**For PostgreSQL**:
-- **pgAdmin**: Web-based PostgreSQL administration (included in Docker setup)
+**For MariaDB**:
+- **Adminer**: Web-based MariaDB administration (included in Docker setup)
 - **TablePlus**: Modern database management tool
 - **DataGrip**: JetBrains database IDE
 
@@ -281,7 +272,7 @@ If you prefer other tools:
 
 ### Database Management
 
-- **View database**: Use pgAdmin or any PostgreSQL client connecting to `localhost:5432`
+- **View database**: Use Adminer or any MariaDB client connecting to `localhost:3306`
 - **Reset database**: 
   ```cmd
   docker-compose -f docker-compose.dev-services.yml down -v
@@ -300,7 +291,7 @@ If you prefer other tools:
 ### Common Issues
 
 1. **Port already in use**: 
-   - Check if another application is using ports 8000, 5432, or 6379
+   - Check if another application is using ports 8000, 3306, or 6379
    - Stop conflicting services or change ports in configuration
    - Use `netstat -ano | findstr :8000` to find processes using port 8000
 
@@ -310,10 +301,10 @@ If you prefer other tools:
    - Verify Docker services are healthy: `docker-compose -f docker-compose.dev-services.yml ps`
 
 3. **Database connection errors**:
-   - Verify PostgreSQL container is running: `docker ps`
+   - Verify MariaDB container is running: `docker ps`
    - Check database credentials in `.env.dev` match Docker configuration
-   - Ensure PostgreSQL container is healthy: `docker logs <postgres_container_name>`
-   - Try connecting manually: `docker exec -it <postgres_container> psql -U votebem_user -d votebem_dev`
+   - Ensure MariaDB container is healthy: `docker logs <mariadb_container_name>`
+   - Try connecting manually: `docker exec -it <mariadb_container> mysql -u votebem_user -p -D votebem_dev`
 
 4. **Python module not found**:
    - Ensure virtual environment is activated: `.venv\Scripts\activate`
@@ -326,7 +317,7 @@ If you prefer other tools:
    - Use `run_server.py` script which handles environment loading automatically
 
 6. **Migration errors**:
-   - Ensure PostgreSQL is running before migrations
+   - Ensure MariaDB is running before migrations
    - Use `python run_migrations.py` for automatic environment setup
    - Clear migration history if needed: `docker-compose -f docker-compose.dev-services.yml down -v`
 
@@ -363,17 +354,17 @@ python run_server.py
 # Run migrations with environment loading
 python run_migrations.py
 
-# Get pgAdmin connection instructions
-python config_postgres_admin.py
+# Get Adminer connection info
+python config_mariadb_admin.py
 
 # View Django logs with verbosity
 python manage.py runserver --verbosity=2 --settings=votebem.settings.development
 
-# Check database connection (PostgreSQL)
+# Check database connection (MariaDB)
 python manage.py dbshell --settings=votebem.settings.development
 
-# Connect to PostgreSQL directly
-docker exec -it <postgres_container> psql -U votebem_user -d votebem_dev
+# Connect to MariaDB directly
+docker exec -it <mariadb_container> mysql -u votebem_user -p -D votebem_dev
 
 # Connect to Redis directly
 docker exec -it <redis_container> redis-cli
@@ -430,7 +421,7 @@ django_votebem/
 ├── votebem/                  # Main Django project
 │   ├── settings/             # Settings modules
 │   │   ├── base.py           # Base settings
-│   │   ├── development.py    # Development settings (PostgreSQL + Redis)
+│   │   ├── development.py    # Development settings (MariaDB + Redis)
 │   │   └── production.py     # Production settings
 │   ├── urls.py               # URL routing
 │   └── wsgi.py               # WSGI application
@@ -466,7 +457,7 @@ These batch files automate common development tasks. Use them from the project r
   - Purpose: First-time setup (create venv, upgrade pip, install dependencies)
   - Usage: `.\scripts\setup.bat` (from project root) or `.\setup.bat` (inside scripts)
 - `startup.bat`
-  - Purpose: Start daily development with Docker services (PostgreSQL, Redis) and app
+- Purpose: Start daily development with Docker services (MariaDB, Redis) and app
   - Usage: `.\scripts\startup.bat` or `.\startup.bat`
 - `startup_dev.bat`
   - Purpose: Start pure local development (SQLite), enable DEBUG tooling

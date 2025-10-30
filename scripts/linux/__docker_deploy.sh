@@ -7,7 +7,7 @@ set -euo pipefail
 # - Standardizes host bind mounts under `/dados` for portability and backup discipline.
 # - Generates a `docker-compose.yml` with absolute host paths and sane defaults.
 # - Provisions required directories and ownership, creates/updates `.env`, and patches Django settings.
-# - Builds and launches services: Postgres (`db`), Valkey/Redis (`valkey`), Django+Gunicorn (`web`), and Nginx (`nginx`).
+# - Builds and launches services: MariaDB (`db`), Valkey/Redis (`valkey`), Django+Gunicorn (`web`), and Nginx (`nginx`).
 #
 # Multi‑site Nginx and networking assumptions
 # - This app is accessed via a multi‑site Nginx container that reverse‑proxies requests.
@@ -20,7 +20,7 @@ set -euo pipefail
 # - `/dados/votebem/logs` → `/app/logs` (app logs, rotated externally if desired).
 # - `/dados/nginx/app/static` → `/app/staticfiles` (collected static; served by Nginx or Whitenoise).
 # - `/dados/nginx/app/media` → `/app/media` (user uploads; served by Nginx).
-# - `/dados/postgres/votebem/data` → Postgres data dir (persistent DB state).
+# - `/dados/mariadb/votebem/data` → MariaDB data dir (persistent DB state).
 # - `/dados/valkey/votebem/data` → Valkey data dir (persistent cache state when AOF is enabled).
 # - `/dados/nginx/conf.d` → Nginx site configs inside container.
 # - `/dados/certbot/certs` → `/etc/letsencrypt` (TLS certificates inside Nginx).
@@ -33,8 +33,8 @@ set -euo pipefail
 #
 # Security and operational notes
 # - Uses `set -euo pipefail` for strict error handling; missing variables and failing commands abort.
-# - Health checks ensure Postgres readiness before `web` starts; logs are scanned for common auth issues.
-# - If DB auth fails, the script can reset the Postgres data directory to reapply credentials (destructive).
+# - Health checks ensure MariaDB readiness before `web` starts; logs are scanned for common auth issues.
+# - If DB auth fails, the script can reset the MariaDB data directory to reapply credentials (destructive).
 # - Certificates are expected to be managed by Certbot on the host and mounted read‑only into Nginx.
 #
 # Usage
@@ -63,6 +63,14 @@ else
   err "Docker Compose is not installed (plugin or legacy). Install Docker + Compose first."; exit 1
 fi
 
+# Warn if legacy docker-compose via snap is detected (can cause /var/lib/snapd/void cwd issues)
+if [[ "${COMPOSE_CMD}" == "docker-compose" ]]; then
+  DOCKER_COMPOSE_BIN="$(command -v docker-compose || echo "")"
+  if [[ "${DOCKER_COMPOSE_BIN}" == *snap* ]]; then
+    warn "Detected docker-compose installed via snap; using absolute -f paths to avoid snap cwd issues."
+  fi
+fi
+
 # Basic dependencies
 command -v docker >/dev/null 2>&1 || { err "Docker not found"; exit 1; }
 command -v git >/dev/null 2>&1     || { err "git not found"; exit 1; }
@@ -83,7 +91,7 @@ BACKUPS_DIR="${BASE_DIR}/backups"
 SSL_DIR="${BASE_DIR}/ssl"
 
 # Service-specific roots
-POSTGRES_DIR="/dados/postgres/${APP_NAME}/data"
+MARIADB_DIR="/dados/mariadb/${APP_NAME}/data"
 VALKEY_DIR="/dados/valkey/${APP_NAME}/data"
 REDIS_DIR="/dados/redis/${APP_NAME}/data"
 NGINX_CONF_DIR="/dados/nginx/conf.d"
@@ -92,6 +100,41 @@ NGINX_DEFAULT_CONF="${NGINX_CONF_DIR}/default.conf"
 # Repository (adjust if needed)
 REPO_URL_SSH="git@github.com:wagnercateb/votebem.git"
 REPO_URL_HTTPS="https://github.com/wagnercateb/votebem.git"
+
+# Normalize paths to avoid CRLF issues when the script is edited on Windows (WSL)
+strip_cr() { printf '%s' "$1" | tr -d '\r'; }
+trim_ws() {
+  local s="$1"
+  # Remove leading whitespace
+  s="${s#${s%%[![:space:]]*}}"
+  # Remove trailing whitespace
+  s="${s%${s##*[![:space:]]}}"
+  printf '%s' "$s"
+}
+BASE_DIR="$(strip_cr "${BASE_DIR}")"
+REPO_DIR="$(strip_cr "${REPO_DIR}")"
+COMPOSE_FILE="$(strip_cr "${COMPOSE_FILE}")"
+ENV_FILE="$(strip_cr "${ENV_FILE}")"
+LOG_DIR="$(strip_cr "${LOG_DIR}")"
+STATIC_DIR="$(strip_cr "${STATIC_DIR}")"
+MEDIA_DIR="$(strip_cr "${MEDIA_DIR}")"
+BACKUPS_DIR="$(strip_cr "${BACKUPS_DIR}")"
+SSL_DIR="$(strip_cr "${SSL_DIR}")"
+MARIADB_DIR="$(strip_cr "${MARIADB_DIR}")"
+VALKEY_DIR="$(strip_cr "${VALKEY_DIR}")"
+NGINX_CONF_DIR="$(strip_cr "${NGINX_CONF_DIR}")"
+NGINX_DEFAULT_CONF="$(strip_cr "${NGINX_DEFAULT_CONF}")"
+
+# Prompt helper with default value (supports silent input for secrets)
+prompt_with_default() {
+  local label="$1"; local def="$2"; local silent="${3:-0}"; local input="";
+  if [[ "$silent" -eq 1 ]]; then
+    read -s -p "Enter ${label} (default: ${def}): " input; echo
+  else
+    read -p "Enter ${label} (default: ${def}): " input
+  fi
+  if [[ -z "$input" ]]; then printf '%s' "$def"; else printf '%s' "$input"; fi
+}
 
 ##############################
 # Input (domain, IP)
@@ -155,14 +198,14 @@ log "Creating /dados directory structure for ${APP_NAME}"
 ${SUDO} mkdir -p \
   "/dados" \
   "${BASE_DIR}" "${LOG_DIR}" "${STATIC_DIR}" "${MEDIA_DIR}" "${BACKUPS_DIR}" "${SSL_DIR}" \
-  "${POSTGRES_DIR}" "${VALKEY_DIR}" "${NGINX_CONF_DIR}" \
+  "${MARIADB_DIR}" "${VALKEY_DIR}" "${NGINX_CONF_DIR}" \
   "/dados/certbot/acme" "/dados/certbot/certs"
 
-# Assign ownership to current user so we can write inside
-USR="$(id -un)"; GRP="$(id -gn)"
+# Assign ownership to invoking user (preserve original user when running via sudo)
+USR="${SUDO_USER:-$(id -un)}"; GRP="$(id -gn "${USR}")"
 ${SUDO} chown -R "${USR}:${GRP}" \
-  "${BASE_DIR}" "${POSTGRES_DIR%/data}" "${VALKEY_DIR%/data}" \
-  "${POSTGRES_DIR}" "${VALKEY_DIR}" "${NGINX_CONF_DIR}" "${STATIC_DIR}" "${MEDIA_DIR}" \
+  "${BASE_DIR}" "${MARIADB_DIR%/data}" "${VALKEY_DIR%/data}" \
+  "${MARIADB_DIR}" "${VALKEY_DIR}" "${NGINX_CONF_DIR}" "${STATIC_DIR}" "${MEDIA_DIR}" \
   "/dados/certbot/acme" "/dados/certbot/certs"
 ${SUDO} chmod -R 0777 "${STATIC_DIR}" "${MEDIA_DIR}" "${LOG_DIR}"
 
@@ -301,6 +344,11 @@ fi
 ##############################
 # .env generation (basic, preserve secrets if exists)
 ##############################
+# Ensure repository directory exists after clone/update
+if [[ ! -d "${REPO_DIR}" ]]; then
+  err "Repository directory ${REPO_DIR} not found after clone. Check permissions or SSH setup."
+  exit 1
+fi
 log "Creating .env at ${ENV_FILE}"
 DB_NAME_DEFAULT="votebem"
 DB_USER_DEFAULT="votebem_user"
@@ -324,15 +372,22 @@ else
   DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY_DEFAULT}"
 fi
 
+# Prompt user to confirm or override secrets (defaults shown). Password prompts hidden.
+DB_PASSWORD="$(prompt_with_default 'DB_PASSWORD' "${DB_PASSWORD}" 1)"; DB_PASSWORD="$(trim_ws "$(strip_cr "${DB_PASSWORD}")")"
+REDIS_PASSWORD="$(prompt_with_default 'REDIS_PASSWORD' "${REDIS_PASSWORD}" 1)"; REDIS_PASSWORD="$(trim_ws "$(strip_cr "${REDIS_PASSWORD}")")"
+DJANGO_SECRET_KEY="$(prompt_with_default 'DJANGO_SECRET_KEY' "${DJANGO_SECRET_KEY}")"; DJANGO_SECRET_KEY="$(trim_ws "$(strip_cr "${DJANGO_SECRET_KEY}")")"
+
 # Detect web build context (directory containing Dockerfile)
 WEB_CONTEXT=""
 if [[ -f "${REPO_DIR}/django_votebem/Dockerfile" ]]; then
   WEB_CONTEXT="${REPO_DIR}/django_votebem"
 elif [[ -f "${REPO_DIR}/Dockerfile" ]]; then
   WEB_CONTEXT="${REPO_DIR}"
-else
-  WEB_CONTEXT="$(find "${REPO_DIR}" -maxdepth 3 -type f -name Dockerfile -printf '%h\n' | head -n 1 || true)"
+elif [[ -d "${REPO_DIR}" ]]; then
+  WEB_CONTEXT="$(find "${REPO_DIR}" -maxdepth 3 -type f -name Dockerfile -printf '%h\n' 2>/dev/null | head -n 1 || true)"
 fi
+# Sanitize path (strip CR) for WSL/Windows-edited script
+WEB_CONTEXT="$(strip_cr "${WEB_CONTEXT}")"
 if [[ -z "${WEB_CONTEXT}" ]]; then
   err "Dockerfile not found under ${REPO_DIR}. Please ensure the project contains a Dockerfile."
   exit 1
@@ -354,7 +409,7 @@ DB_NAME=${DB_NAME}
 DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
 DB_HOST=db
-DB_PORT=5432
+DB_PORT=3306
 
 # Redis
 REDIS_HOST=valkey
@@ -368,7 +423,9 @@ GUNICORN_TIMEOUT=120
 EOF
 
 # Patch Django settings to enforce env overrides and sanitize CORS
-SETTINGS_FILE="$(find \"${REPO_DIR}\" -maxdepth 3 -type f -name 'settings.py' | head -n 1 || true)"
+SETTINGS_FILE="$(find "${REPO_DIR}" -maxdepth 3 -type f -name 'settings.py' 2>/dev/null | head -n 1 || true)"
+# Sanitize path (strip CR) for WSL/Windows-edited script
+SETTINGS_FILE="$(strip_cr "${SETTINGS_FILE}")"
 if [[ -n "${SETTINGS_FILE}" ]] && ! grep -q "Deploy overrides injected by __docker_deploy.sh" "${SETTINGS_FILE}"; then
   log "Injecting deploy overrides into ${SETTINGS_FILE}"
   cat >> "${SETTINGS_FILE}" << 'PY'
@@ -420,16 +477,18 @@ fi
 # Generate docker-compose file with /dados bind mounts
 ##############################
 log "Writing docker-compose to ${COMPOSE_FILE}"
+# Ensure compose directory exists
+mkdir -p "$(dirname "${COMPOSE_FILE}")"
 # Detailed explanation of the generated docker-compose.yml
 #
 # Top-level keys
 # - `name`: Compose project name; used as a prefix for network and resource scoping.
 #
 # services:
-# - `db` (Postgres 15):
+# - `db` (MariaDB 11):
 #   - `environment`: DB name/user/pass exported to container.
-#   - `volumes`: bind-mount persistent data at `${POSTGRES_DIR}`.
-#   - `healthcheck`: waits until `pg_isready` reports ready before dependent services start.
+#   - `volumes`: bind-mount persistent data at `${MARIADB_DIR}`.
+#   - `healthcheck`: waits until `mysqladmin ping` reports ready before dependent services start.
 #   - `networks`: joins `${APP_NAME}_net` (private app network). If connected to `vps_network` with an alias,
 #                 note that cross-stack alias is intended for the `web` app, not the database.
 #
@@ -463,25 +522,27 @@ name: ${APP_NAME}
 
 services:
   db:
-    image: postgres:15-alpine
+    image: "mariadb:11"
     container_name: ${APP_NAME}_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      MARIADB_DATABASE: "${DB_NAME}"
+      MARIADB_USER: "${DB_USER}"
+      MARIADB_PASSWORD: "${DB_PASSWORD}"
+      MARIADB_ROOT_PASSWORD: "${DB_PASSWORD}"
+      TZ: "UTC"
     volumes:
-      - ${POSTGRES_DIR}:/var/lib/postgresql/data
+      - "${MARIADB_DIR}:/var/lib/mysql"
+    ports:
+      - "${DB_HOST_PORT:-3307}:3306"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} -h localhost -p 5432 || exit 1"]
+      test: ["CMD-SHELL", "mariadb -h 127.0.0.1 -uroot -p${DB_PASSWORD} -e 'SELECT 1' >/dev/null 2>&1 || exit 1"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 12
+      start_period: 90s
     networks:
-      ${APP_NAME}_net:
-      vps_network:
-        aliases:
-          - votebem-web
+      - ${APP_NAME}_net
 
   valkey:
     image: valkey/valkey:latest
@@ -489,29 +550,32 @@ services:
     restart: unless-stopped
     command: ["valkey-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
     volumes:
-      - ${VALKEY_DIR}:/data
+      - "${VALKEY_DIR}:/data"
     networks:
       - ${APP_NAME}_net
 
   web:
     build:
-      context: ${WEB_CONTEXT}
+      context: "${WEB_CONTEXT}"
       dockerfile: Dockerfile
     container_name: ${APP_NAME}_web
     restart: unless-stopped
     env_file:
-      - ${ENV_FILE}
+      - "${ENV_FILE}"
     depends_on:
       db:
         condition: service_healthy
       valkey:
         condition: service_started
     volumes:
-      - ${STATIC_DIR}:/app/staticfiles
-      - ${MEDIA_DIR}:/app/media
-      - ${LOG_DIR}:/app/logs
+      - "${STATIC_DIR}:/app/staticfiles"
+      - "${MEDIA_DIR}:/app/media"
+      - "${LOG_DIR}:/app/logs"
     networks:
-      - ${APP_NAME}_net
+      ${APP_NAME}_net:
+      vps_network:
+        aliases:
+          - votebem-web
 
   nginx:
     image: nginx:1.25-alpine
@@ -523,11 +587,11 @@ services:
     depends_on:
       - web
     volumes:
-      - ${NGINX_CONF_DIR}:/etc/nginx/conf.d
-      - ${STATIC_DIR}:/app/staticfiles
-      - ${MEDIA_DIR}:/app/media
-      - /dados/certbot/certs:/etc/letsencrypt:ro
-      - /dados/certbot/acme:/var/www/certbot:ro
+      - "${NGINX_CONF_DIR}:/etc/nginx/conf.d"
+      - "${STATIC_DIR}:/app/staticfiles"
+      - "${MEDIA_DIR}:/app/media"
+      - "/dados/certbot/certs:/etc/letsencrypt:ro"
+      - "/dados/certbot/acme:/var/www/certbot:ro"
     networks:
       - ${APP_NAME}_net
 
@@ -538,48 +602,94 @@ networks:
     external: true
 EOF
 
+# Normalize line endings in generated files (avoid CRLF issues)
+sed -i 's/\r$//' "${COMPOSE_FILE}" 2>/dev/null || true
+sed -i 's/\r$//' "${ENV_FILE}" 2>/dev/null || true
+
+# Prepare a temp copy to mitigate environment-specific path resolution issues
+TMP_COMPOSE="/tmp/${APP_NAME}-compose.yml"
+cp -f "${COMPOSE_FILE}" "${TMP_COMPOSE}" 2>/dev/null || true
+
 # Clean up legacy redis container if present
 docker rm -f "${APP_NAME}_redis" >/dev/null 2>&1 || true
 
-# Bring up the stack
-${COMPOSE_CMD} -f "${COMPOSE_FILE}" up -d --build
-log "Containers launched. Check logs with: ${COMPOSE_CMD} -f \"${COMPOSE_FILE}\" logs -f"
+# Bring up the stack using absolute compose file path for robustness across environments
+COMPOSE_TO_USE="${COMPOSE_FILE}"
+if [[ ! -f "${COMPOSE_FILE}" ]]; then
+  warn "Compose file not found at ${COMPOSE_FILE}. Directory contents of $(dirname "${COMPOSE_FILE}"):"
+  ls -la "$(dirname "${COMPOSE_FILE}")" || true
+fi
+# If compose plugin fails to parse the main file, fallback to /tmp copy
+if ! ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" config >/dev/null 2>&1; then
+  warn "Compose failed to open ${COMPOSE_TO_USE}; falling back to ${TMP_COMPOSE}"
+  COMPOSE_TO_USE="${TMP_COMPOSE}"
+fi
+# Ensure the shared external network exists (avoids: 'network vps_network declared as external, but could not be found')
+if ! docker network inspect vps_network >/dev/null 2>&1; then
+  log "Creating shared Docker bridge network 'vps_network'"
+  docker network create --driver=bridge vps_network || warn "Failed to create vps_network; stack startup may fail."
+fi
+${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" up -d --build
+log "Containers launched. Check logs with: ${COMPOSE_CMD} -f \"${COMPOSE_TO_USE}\" logs -f"
+
+# Auto-remediate MariaDB tc.log corruption (Bad magic header)
+# If MariaDB aborts startup due to a corrupted tc.log, remove it and retry DB startup.
+DB_RECENT_LOGS="$(${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" logs --tail=200 db 2>/dev/null || true)"
+if echo "$DB_RECENT_LOGS" | grep -qi "Bad magic header in tc log"; then
+  warn "Detected MariaDB tc.log corruption (Bad magic header). Removing tc.log and retrying DB startup."
+  ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" stop db || true
+  rm -f "${MARIADB_DIR}/tc.log" || true
+  ${SUDO} chown -R "${USR}:${GRP}" "${MARIADB_DIR%/data}" "${MARIADB_DIR}" || true
+  ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" up -d db || true
+  # Give MariaDB a moment to re-initialize cleanly
+  sleep 5
+fi
+
+# Auto-remediate common permission/ownership issues on data dir
+DB_RECENT_LOGS="$(${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" logs --tail=200 db 2>/dev/null || true)"
+if echo "$DB_RECENT_LOGS" | grep -qiE "Permission denied|Can't create/write to file|Can't change dir to '/var/lib/mysql'"; then
+  warn "Detected MariaDB data directory permission issue. Fixing ownership to uid:gid 999:999 and restarting DB."
+  ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" stop db || true
+  ${SUDO} chown -R 999:999 "${MARIADB_DIR%/data}" "${MARIADB_DIR}" || true
+  ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" up -d db || true
+  sleep 5
+fi
 
 # Ensure default server on port 80 and reload nginx
 sed -i 's/listen 80;/listen 80 default_server;/' "${NGINX_DEFAULT_CONF}" || true
-${COMPOSE_CMD} -f "${COMPOSE_FILE}" exec -T nginx sh -lc "nginx -t && nginx -s reload" || ${COMPOSE_CMD} -f "${COMPOSE_FILE}" restart nginx || true
+${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" exec -T nginx sh -lc "nginx -t && nginx -s reload" || ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" restart nginx || true
 
 # Post-deploy database auth check and remediation
 sleep 5
-WEB_RECENT_LOGS="$( ${COMPOSE_CMD} -f \"${COMPOSE_FILE}\" logs --tail=200 web 2>/dev/null || true )"
-if echo "$WEB_RECENT_LOGS" | grep -q "password authentication failed"; then
-  warn "Postgres auth failure detected from logs. Resetting ${POSTGRES_DIR} to apply current credentials."
-  ${COMPOSE_CMD} -f "${COMPOSE_FILE}" down || true
-  rm -rf "${POSTGRES_DIR}"
-  mkdir -p "${POSTGRES_DIR}"
-  ${SUDO} chown -R "${USR}:${GRP}" "${POSTGRES_DIR%/data}" "${POSTGRES_DIR}" || true
-  ${COMPOSE_CMD} -f "${COMPOSE_FILE}" up -d --build
+WEB_RECENT_LOGS="$( ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" logs --tail=200 web 2>/dev/null || true )"
+if echo "$WEB_RECENT_LOGS" | grep -qi "access denied for user\|authentication"; then
+  warn "MariaDB auth failure detected from logs. Resetting ${MARIADB_DIR} to apply current credentials."
+  ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" down || true
+  rm -rf "${MARIADB_DIR}"
+  mkdir -p "${MARIADB_DIR}"
+  ${SUDO} chown -R "${USR}:${GRP}" "${MARIADB_DIR%/data}" "${MARIADB_DIR}" || true
+  ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" up -d --build
 fi
 
 # Direct DB connectivity test from web; auto-reset on failure
-DB_TEST_CODE='import os, psycopg2; psycopg2.connect(host=os.getenv("DB_HOST"), port=os.getenv("DB_PORT"), dbname=os.getenv("DB_NAME"), user=os.getenv("DB_USER"), password=os.getenv("DB_PASSWORD")); print("DB OK")'
-if ! ${COMPOSE_CMD} -f "${COMPOSE_FILE}" exec -T web python -c "$DB_TEST_CODE" >/dev/null 2>&1; then
-  warn "DB connectivity failed from web. Resetting ${POSTGRES_DIR} to reapply credentials."
-  ${COMPOSE_CMD} -f "${COMPOSE_FILE}" down || true
-  rm -rf "${POSTGRES_DIR}"
-  mkdir -p "${POSTGRES_DIR}"
-  ${SUDO} chown -R "${USR}:${GRP}" "${POSTGRES_DIR%/data}" "${POSTGRES_DIR}" || true
-  ${COMPOSE_CMD} -f "${COMPOSE_FILE}" up -d --build
+DB_TEST_CODE='import os, pymysql; pymysql.connect(host=os.getenv("DB_HOST"), port=int(os.getenv("DB_PORT", "3306")), db=os.getenv("DB_NAME"), user=os.getenv("DB_USER"), password=os.getenv("DB_PASSWORD")); print("DB OK")'
+if ! ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" exec -T web python -c "$DB_TEST_CODE" >/dev/null 2>&1; then
+  warn "DB connectivity failed from web. Resetting ${MARIADB_DIR} to reapply credentials."
+  ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" down || true
+  rm -rf "${MARIADB_DIR}"
+  mkdir -p "${MARIADB_DIR}"
+  ${SUDO} chown -R "${USR}:${GRP}" "${MARIADB_DIR%/data}" "${MARIADB_DIR}" || true
+  ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" up -d --build
 fi
 
 # Align static/media/logs ownership to web container user for Whitenoise
-WEB_UID="$(${COMPOSE_CMD} -f "${COMPOSE_FILE}" exec -T web sh -lc 'id -u' 2>/dev/null || echo 0)"
-WEB_GID="$(${COMPOSE_CMD} -f "${COMPOSE_FILE}" exec -T web sh -lc 'id -g' 2>/dev/null || echo 0)"
+WEB_UID="$(${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" exec -T web sh -lc 'id -u' 2>/dev/null || echo 0)"
+WEB_GID="$(${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" exec -T web sh -lc 'id -g' 2>/dev/null || echo 0)"
 ${SUDO} chown -R "${WEB_UID}:${WEB_GID}" "${STATIC_DIR}" "${MEDIA_DIR}" "${LOG_DIR}" || true
 
 # Run Django migrations and collect static files
-${COMPOSE_CMD} -f "${COMPOSE_FILE}" exec -T web python manage.py migrate --noinput || true
-${COMPOSE_CMD} -f "${COMPOSE_FILE}" exec -T web python manage.py collectstatic --noinput || true
+${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" exec -T web python manage.py migrate --noinput || true
+${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" exec -T web python manage.py collectstatic --noinput || true
 
 # Post-run guidance: how to correctly configure .env
 ENV_PATH="${ENV_FILE:-/dados/votebem/.env}"
@@ -600,15 +710,15 @@ Required keys (example production values):
   SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
   DB_NAME=votebem_db
   DB_USER=votebem_user
-  DB_PASSWORD=your-secure-password (must match Postgres; do not change casually)
+  DB_PASSWORD=your-secure-password (must match MariaDB; do not change casually)
   DB_HOST=db
-  DB_PORT=5432
+  DB_PORT=3306
   REDIS_PASSWORD=your-redis-password
 
 Tips:
   - Edit with: sudo nano ${ENV_PATH}
   - The repo .env is for local dev only; production reads ${ENV_PATH}.
-  - If you change DB_PASSWORD after Postgres is initialized, update the DB user password or reset the data directory.
+  - If you change DB_PASSWORD after MariaDB is initialized, update the DB user password or reset the data directory.
 ========================================================================
 EOF
 
@@ -645,7 +755,7 @@ server {
 }
 SSL
     # Reload nginx to apply SSL config
-    ${COMPOSE_CMD} -f "${COMPOSE_FILE}" restart nginx || true
+    ${COMPOSE_CMD} -f "${COMPOSE_TO_USE}" restart nginx || true
   else
     log "SSL certs not found under ${CERTS_BASE}; skipping ssl.conf."
   fi

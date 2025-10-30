@@ -173,7 +173,7 @@ DB_NAME=votebem_db
 DB_USER=votebem_user
 DB_PASSWORD=$DB_PASSWORD
 DB_HOST=db
-DB_PORT=5432
+DB_PORT=3306
 
 # Redis Configuration
 REDIS_URL=redis://:$REDIS_PASSWORD@redis:6379/0
@@ -205,20 +205,21 @@ log "Updating docker-compose configuration..."
 cat > docker-compose.prod.yml << EOF
 services:
   db:
-    image: postgres:15-alpine
+    image: mariadb:11
     container_name: votebem_db
     environment:
-      POSTGRES_DB: \${DB_NAME}
-      POSTGRES_USER: \${DB_USER}
-      POSTGRES_PASSWORD: \${DB_PASSWORD}
+      MYSQL_DATABASE: \${DB_NAME}
+      MYSQL_USER: \${DB_USER}
+      MYSQL_PASSWORD: \${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: \${DB_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mariadb_data:/var/lib/mysql
       - ./backups:/backups
     restart: unless-stopped
     networks:
       - vps_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \${DB_USER} -d \${DB_NAME}"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u\${DB_USER} -p\${DB_PASSWORD} || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -282,7 +283,7 @@ services:
       - vps_network
 
 volumes:
-  postgres_data:
+  mariadb_data:
   redis_data:
   static_volume:
   media_volume:
@@ -311,7 +312,7 @@ docker-compose -f docker-compose.prod.yml down --remove-orphans || true
 # Clean up any problematic volumes if this is a fresh deployment
 if [[ ! -f ".deployment_completed" ]]; then
     log "Fresh deployment detected. Cleaning up any existing volumes..."
-    docker volume rm votebem_postgres_data votebem_redis_data 2>/dev/null || true
+    docker volume rm votebem_mariadb_data votebem_redis_data 2>/dev/null || true
     log "Cleaned up existing volumes for fresh start"
 fi
 

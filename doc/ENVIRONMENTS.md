@@ -43,11 +43,11 @@ docker-compose -f docker-compose.dev.yml up -d
 
 **Key Features**:
 - **No Django Web Container**: Only infrastructure services
-- **Database Management**: Includes **pgAdmin** (port 8080) for database administration
+- **Database Management**: Includes **Adminer** (port 8080) for database administration
 - **Redis Management**: Includes **Redis Commander** (port 8081) for Redis monitoring
 - **Nginx**: Optional reverse proxy for testing production-like setup
 - **Network**: Dedicated development network
-- **Services**: db, redis, nginx, pgAdmin, Redis Commander
+- **Services**: db, redis, nginx, Adminer, Redis Commander
 - **Use Case**: When you want to run Django locally but use containerized databases
 
 **Usage**:
@@ -61,10 +61,10 @@ docker-compose -f docker-compose.dev-services.yml up -d
 | Feature | Production | Development | Services Only |
 |---------|------------|-------------|---------------|
 | **Django App** | ✅ (Gunicorn) | ✅ (Dev Server) | ❌ (Run locally) |
-| **Database** | PostgreSQL | PostgreSQL | PostgreSQL |
+| **Database** | MariaDB | MariaDB | MariaDB |
 | **Redis** | ✅ | ✅ | ✅ |
 | **Nginx** | ✅ (Full config) | ❌ | ✅ (Optional) |
-| **pgAdmin** | ❌ | ❌ | ✅ |
+| **Adminer** | ❌ | ❌ | ✅ |
 | **Redis Commander** | ❌ | ❌ | ✅ |
 | **Debug Mode** | ❌ | ✅ | N/A |
 | **Code Mounting** | ❌ | ✅ | N/A |
@@ -74,30 +74,30 @@ docker-compose -f docker-compose.dev-services.yml up -d
 
 ### Production (docker-compose.yml)
 - **Web Application**: 8000
-- **Database**: 5432
+- **Database**: 3306
 - **Redis**: 6379
 - **Nginx**: 80, 443
 - **Debug Port**: 5678
 
 ### Development (docker-compose.dev.yml)
 - **Web Application**: 8000
-- **Database**: 5432
+- **Database**: 3306
 - **Redis**: 6379
 - **Debug Port**: 5678
 
 ### Services Only (docker-compose.dev-services.yml)
-- **Database**: 5432
+- **Database**: 3306
 - **Redis**: 6379
-- **pgAdmin**: 8080
+- **Adminer**: 8080
 - **Redis Commander**: 8081
 - **Nginx**: 80, 443
 
 ## Current Setup
 
 Based on the running containers, the project is currently using **docker-compose.dev-services.yml**, which provides:
-- PostgreSQL database (`votebem_db_dev`)
+- MariaDB database (`votebem_db_dev`)
 - Redis cache (`votebem_redis_dev`)
-- pgAdmin for database management (http://localhost:8080)
+- Adminer for database management (http://localhost:8080)
 - Redis Commander for Redis monitoring (http://localhost:8081)
 - Nginx reverse proxy
 
@@ -105,11 +105,11 @@ The Django application is running locally (not in a container), accessible at `h
 
 ## Database Information
 
-- **Database Type**: PostgreSQL (running in Docker container)
+- **Database Type**: MariaDB (running in Docker container)
 - **Database Name**: `votebem_dev`
-- **Container**: `votebem_db_dev` (postgres:15-alpine)
+- **Container**: `votebem_db_dev` (mariadb:11)
 - **Host**: localhost
-- **Port**: 5432
+- **Port**: 3306
 - **Data Storage**: Inside Docker container's persistent volume
 
 ## Switching Between Environments
@@ -139,6 +139,6 @@ The recommended development workflow is:
 
 1. Use `docker-compose.dev-services.yml` for infrastructure services
 2. Run Django locally for faster development and debugging
-3. Access database via pgAdmin at http://localhost:8080
+3. Access database via Adminer at http://localhost:8080
 4. Monitor Redis via Redis Commander at http://localhost:8081
 5. Test production-like setup occasionally with `docker-compose.yml`

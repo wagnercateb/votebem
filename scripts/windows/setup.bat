@@ -51,7 +51,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo [4/10] Installing Python dependencies...
-echo This may take a few minutes, especially for psycopg2-binary...
+echo This may take a few minutes (mysqlclient can take longer on Windows)...
 pip install -r requirements.txt
 if %errorlevel% neq 0 (
     echo ERROR: Failed to install Python dependencies
@@ -59,7 +59,7 @@ if %errorlevel% neq 0 (
     echo Common solutions:
     echo 1. Make sure you have Visual Studio Build Tools installed
     echo 2. Try: pip install --only-binary=all -r requirements.txt
-    echo 3. Or install without PostgreSQL: pip install Django gunicorn whitenoise
+    echo 3. For MariaDB, ensure Visual C++ Build Tools are installed for mysqlclient
     echo.
     pause
     exit /b 1
@@ -79,12 +79,12 @@ docker --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo WARNING: Docker is not available
     echo You can still run Django with SQLite database
-    echo To use PostgreSQL, please install and start Docker Desktop
+    echo To use MariaDB, please install and start Docker Desktop
     goto skip_docker
 )
 
 echo Docker is available, starting services...
-echo [7/10] Starting Docker services (PostgreSQL, Redis, etc.)...
+echo [7/10] Starting Docker services (MariaDB, Redis, Adminer)...
 docker-compose -f docker-compose.dev-services.yml up -d
 if %errorlevel% neq 0 (
     echo WARNING: Failed to start Docker services
@@ -137,7 +137,7 @@ echo 2. Open http://localhost:8000 in your browser
 echo 3. Access admin at http://localhost:8000/admin
 echo.
 echo Optional services:
-echo - pgAdmin (Database UI): http://localhost:8080
+echo - Adminer (Database UI): http://localhost:8080
 echo - Redis Commander: http://localhost:8081
 echo - Nginx Proxy: http://localhost (when enabled)
 echo.

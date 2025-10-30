@@ -2,19 +2,20 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:15-alpine
+    image: mariadb:11
     container_name: votebem_db_dev
     environment:
-      POSTGRES_DB: votebem_dev
-      POSTGRES_USER: votebem_user
-      POSTGRES_PASSWORD: votebem_dev_password
+      MARIADB_DATABASE: votebem_dev
+      MARIADB_USER: votebem_user
+      MARIADB_PASSWORD: votebem_dev_password
+      MARIADB_ROOT_PASSWORD: votebem_root_pwd
     volumes:
-      - postgres_dev_data:/var/lib/postgresql/data
+      - mariadb_dev_data:/var/lib/mysql
     ports:
-      - "5432:5432"
+      - "3306:3306"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U votebem_user -d votebem_dev"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$MARIADB_USER -p$MARIADB_PASSWORD || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -41,7 +42,7 @@ services:
     container_name: votebem_web_dev
     environment:
       - DEBUG=True
-      - DATABASE_URL=postgresql://votebem_user:votebem_dev_password@db:5432/votebem_dev
+      - DATABASE_URL=mysql://votebem_user:votebem_dev_password@db:3306/votebem_dev?charset=utf8mb4
       - REDIS_URL=redis://redis:6379/0
       - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
       - SECRET_KEY=dev-secret-key-not-for-production
@@ -66,7 +67,7 @@ services:
              python manage.py runserver 0.0.0.0:8000 --settings=votebem.settings.development"
 
 volumes:
-  postgres_dev_data:
+  mariadb_dev_data:
   redis_dev_data:
   static_dev_volume:
   media_dev_volume:

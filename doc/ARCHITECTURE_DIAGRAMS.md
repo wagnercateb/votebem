@@ -44,7 +44,7 @@ graph TB
     end
     
     subgraph "Data Layer"
-        PostgreSQL["🐘 PostgreSQL<br/>Primary Database"]
+MariaDB["🐬 MariaDB<br/>Primary Database"]
         Redis["🔴 Redis<br/>Caching & Sessions"]
         StaticFiles["📁 Static Files<br/>CSS, JS, Images"]
         MediaFiles["🖼️ Media Files<br/>User Uploads"]
@@ -71,7 +71,7 @@ graph TB
     Allauth --> Google
     Allauth --> Facebook
     
-    Django --> PostgreSQL
+Django --> MariaDB
     Django --> Redis
     Django --> StaticFiles
     Django --> MediaFiles
@@ -79,14 +79,14 @@ graph TB
     Nginx --> Gunicorn
     Gunicorn --> Django
     Docker --> Nginx
-    Docker --> PostgreSQL
+Docker --> MariaDB
     Docker --> Redis
     
     Django --> CamaraAPI
     Django --> EmailService
     
     style Django fill:#2E8B57
-    style PostgreSQL fill:#336791
+style MariaDB fill:#1F305F
     style Redis fill:#DC382D
     style Docker fill:#2496ED
 ```
@@ -444,7 +444,7 @@ graph TB
         
         subgraph "Development Services"
             DevDjango["🐍 Django Dev Container<br/>Port: 8000<br/>Debug: Enabled<br/>Hot Reload: Yes"]
-            DevDB["🐘 PostgreSQL Dev<br/>Port: 5432<br/>Volume: dev_postgres_data"]
+DevDB["🐬 MariaDB Dev<br/>Port: 3306<br/>Volume: dev_mariadb_data"]
             DevRedis["🔴 Redis Dev<br/>Port: 6379<br/>Volume: dev_redis_data"]
         end
         
@@ -457,7 +457,7 @@ graph TB
         subgraph "Production Services"
             Nginx["⚡ Nginx<br/>Port: 80, 443<br/>SSL Termination<br/>Static Files Serving"]
             ProdDjango["🐍 Django Prod Container<br/>Gunicorn WSGI<br/>Health Checks<br/>Security Hardened"]
-            ProdDB["🐘 PostgreSQL Prod<br/>Persistent Volume<br/>Backup Enabled<br/>Performance Tuned"]
+ProdDB["🐬 MariaDB Prod<br/>Persistent Volume<br/>Backup Enabled<br/>Performance Tuned"]
             ProdRedis["🔴 Redis Prod<br/>Session Storage<br/>Caching Layer<br/>Persistent Volume"]
         end
         
@@ -531,7 +531,7 @@ graph TB
             end
             
             subgraph "Data Tier"
-                PostgreSQLContainer["🐘 PostgreSQL<br/>- Primary Database<br/>- ACID Compliance<br/>- Backup Automation"]
+MariaDBContainer["🐬 MariaDB<br/>- Primary Database<br/>- ACID Compliance<br/>- Backup Automation"]
                 RedisContainer["🔴 Redis<br/>- Session Storage<br/>- Caching Layer<br/>- Pub/Sub Messaging"]
             end
         end
@@ -571,14 +571,14 @@ graph TB
     NginxContainer --> DjangoContainer1
     NginxContainer --> DjangoContainer2
     
-    DjangoContainer1 --> PostgreSQLContainer
+DjangoContainer1 --> MariaDBContainer
     DjangoContainer1 --> RedisContainer
-    DjangoContainer2 --> PostgreSQLContainer
+DjangoContainer2 --> MariaDBContainer
     DjangoContainer2 --> RedisContainer
     
     NginxContainer --> StaticVolume
     DjangoContainer1 --> MediaVolume
-    PostgreSQLContainer --> DBVolume
+MariaDBContainer --> DBVolume
     RedisContainer --> RedisVolume
     
     DjangoContainer1 --> EmailService
@@ -588,7 +588,7 @@ graph TB
     
     NginxContainer --> SSLProvider
     
-    PostgreSQLContainer --> AutoBackup
+MariaDBContainer --> AutoBackup
     AutoBackup --> BackupVolume
     AutoBackup --> DisasterRecovery
     
@@ -598,7 +598,7 @@ graph TB
     style Users fill:#4CAF50
     style DjangoContainer1 fill:#FF6B6B
     style DjangoContainer2 fill:#FF6B6B
-    style PostgreSQLContainer fill:#336791
+style MariaDBContainer fill:#1F305F
     style RedisContainer fill:#DC382D
     style NginxContainer fill:#96CEB4
 ```

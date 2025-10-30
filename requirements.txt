@@ -1,6 +1,6 @@
 Django>=4.2.0,<5.0
 gunicorn==21.2.0
-psycopg2-binary>=2.9.9
+mysqlclient>=2.2.4
 whitenoise==6.5.0
 django-cors-headers==4.3.1
 debugpy==1.8.0
@@ -13,3 +13,4 @@ python-decouple==3.8
 django-environ==0.11.2
 django-allauth==0.57.0
 django-debug-toolbar==4.2.0
+PyMySQL>=1.1.0

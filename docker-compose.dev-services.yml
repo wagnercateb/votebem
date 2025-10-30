@@ -1,20 +1,20 @@
 services:
-  # PostgreSQL Database
+  # MariaDB Database
   db:
-    image: postgres:15-alpine
+    image: mariadb:11
     container_name: votebem_db_dev
     environment:
-      POSTGRES_DB: votebem_dev
-      POSTGRES_USER: votebem_user
-      POSTGRES_PASSWORD: votebem_dev_password
+      MARIADB_DATABASE: votebem_dev
+      MARIADB_USER: votebem_user
+      MARIADB_PASSWORD: votebem_dev_password
+      MARIADB_ROOT_PASSWORD: votebem_root_pwd
     volumes:
-      - postgres_dev_data:/var/lib/postgresql/data
-      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+      - mariadb_dev_data:/var/lib/mysql
     ports:
-      - "5432:5432"
+      - "3306:3306"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U votebem_user -d votebem_dev"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$MARIADB_USER -p$MARIADB_PASSWORD || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -57,18 +57,12 @@ services:
     networks:
       - vps_dev_network
 
-  # pgAdmin (Optional - Database Management UI)
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: votebem_pgadmin_dev
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@votebem.dev
-      PGADMIN_DEFAULT_PASSWORD: admin123
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    volumes:
-      - pgadmin_dev_data:/var/lib/pgadmin
+  # Adminer (Optional - Database Management UI)
+  adminer:
+    image: adminer:latest
+    container_name: votebem_adminer_dev
     ports:
-      - "8080:80"
+      - "8080:8080"
     depends_on:
       - db
     restart: unless-stopped
@@ -90,12 +84,11 @@ services:
       - vps_dev_network
 
 volumes:
-  postgres_dev_data:
+  mariadb_dev_data:
     driver: local
   redis_dev_data:
     driver: local
-  pgadmin_dev_data:
-    driver: local
+  # adminer has no volume
 
 networks:
   vps_dev_network:

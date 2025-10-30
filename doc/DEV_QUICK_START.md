@@ -30,7 +30,7 @@ This script will:
 #### 🗄️ Database
 - **SQLite** by default - No Docker setup required
 - Database file: `db.sqlite3` (easy to delete/reset)
-- Can switch to PostgreSQL later if needed
+- Can switch to MariaDB later if needed
 
 #### 🔧 Development Tools
 - **Django Extensions** - Additional management commands
@@ -71,7 +71,7 @@ This script will:
 The development environment uses these settings:
 - **Settings Module**: `votebem.settings.development`
 - **DEBUG**: `True`
-- **Database**: SQLite (fallback to PostgreSQL if Docker available)
+- **Database**: SQLite (fallback to MariaDB if Docker available)
 - **Cache**: Local memory cache
 - **Email**: Console backend
 - **Static Files**: Served by Django development server
@@ -112,7 +112,7 @@ python manage.py runserver 127.0.0.1:8000
 
 ### Docker-based Development (Optional)
 
-If you want to use PostgreSQL and Redis:
+If you want to use MariaDB and Redis:
 
 ```bash
 # Start with Docker services
@@ -120,9 +120,9 @@ If you want to use PostgreSQL and Redis:
 ```
 
 This will start:
-- PostgreSQL database
+- MariaDB database
 - Redis cache
-- pgAdmin (database UI)
+- Adminer (database UI)
 - Redis Commander (cache UI)
 
 ### Troubleshooting

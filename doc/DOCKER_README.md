@@ -156,7 +156,7 @@ DB_NAME=votebem_db
 DB_USER=votebem_user
 DB_PASSWORD=your-secure-password
 DB_HOST=db
-DB_PORT=5432
+DB_PORT=3306
 
 # Redis
 REDIS_PASSWORD=your-redis-password
@@ -170,7 +170,7 @@ EMAIL_HOST_PASSWORD=your-app-password
 Rules and tips:
 - `ALLOWED_HOSTS` does not include scheme; domains only.
 - `CSRF_TRUSTED_ORIGINS` and `CORS_ALLOWED_ORIGINS` must include scheme; add both `https://` and `http://` for the domain and `www` subdomain.
-- Keep `DJANGO_SECRET_KEY`, `DB_*`, and `REDIS_PASSWORD` consistent between runs; changing `DB_PASSWORD` after Postgres is initialized requires updating the DB user or resetting the data directory.
+- Keep `DJANGO_SECRET_KEY`, `DB_*`, and `REDIS_PASSWORD` consistent between runs; changing `DB_PASSWORD` after MariaDB is initialized requires updating the DB user or resetting the data directory.
 - After deployment, verify config: `docker-compose -f docker-compose.yml exec -T web python manage.py check --deploy`.
 
 ### 2. Deploy Application
@@ -345,13 +345,13 @@ sudo su - votebem
 
 ```bash
 # Create database backup
-docker-compose exec db pg_dump -U votebem_user votebem_db | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
+docker-compose exec db mysqldump -u votebem_user -p votebem_db | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
 
 # Restore database backup
-gunzip -c backup_file.sql.gz | docker-compose exec -T db psql -U votebem_user -d votebem_db
+gunzip -c backup_file.sql.gz | docker-compose exec -T db mysql -u votebem_user -p votebem_db
 
 # Access database shell
-docker-compose exec db psql -U votebem_user -d votebem_db
+docker-compose exec db mysql -u votebem_user -p votebem_db
 ```
 
 ### Container Management
@@ -413,7 +413,7 @@ BACKUP_DIR="/var/backups/votebem"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 # Database backup
-docker-compose exec -T db pg_dump -U votebem_user votebem_db | gzip > "$BACKUP_DIR/db_$DATE.sql.gz"
+docker-compose exec -T db mysqldump -u votebem_user -p votebem_db | gzip > "$BACKUP_DIR/db_$DATE.sql.gz"
 
 # Media files backup
 tar -czf "$BACKUP_DIR/media_$DATE.tar.gz" media/
@@ -429,7 +429,7 @@ find "$BACKUP_DIR" -name "*.gz" -mtime +30 -delete
 docker stats --no-stream
 
 # Optimize database
-docker-compose exec db psql -U votebem_user -d votebem_db -c "VACUUM ANALYZE;"
+docker-compose exec db mysql -u votebem_user -p votebem_db -e "OPTIMIZE TABLE;"
 
 # Clear cache
 docker-compose exec web python manage.py clear_cache --settings=votebem.settings.production
@@ -457,7 +457,7 @@ docker-compose build --no-cache [service_name]
 #### Database Connection Issues
 ```bash
 # Check database status
-docker-compose exec db pg_isready -U votebem_user
+docker-compose exec db sh -lc "mysqladmin ping -h localhost -u$MYSQL_USER -p$MYSQL_PASSWORD"
 
 # Reset database
 docker-compose down -v

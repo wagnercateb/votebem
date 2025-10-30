@@ -2,7 +2,7 @@
 # Docker Compose: Orchestrates the VotoBem Django stack
 #
 # Services:
-# - db     : PostgreSQL database for Django.
+# - db     : MariaDB database for Django.
 # - valkey : In-memory datastore (Redis-compatible) used by Django.
 # - web    : Django app served by Gunicorn on port 8000.
 #
@@ -14,8 +14,8 @@
 # - Both stacks join a shared Docker network named "vps_network" so Nginx can proxy to this web app.
 #
 # Storage under /dados/ on the host (service-scoped paths):
-# - /dados/postgres/votebem/data   : PostgreSQL data directory.
-# - /dados/postgres/votebem/backups: PostgreSQL backups.
+# - /dados/mariadb/votebem/data    : MariaDB data directory.
+# - /dados/mariadb/votebem/backups : MariaDB backups.
 # - /dados/valkey/vbm/data         : Valkey persistent data (app vbm = VotoBem).
 # - /dados/nginx/app/votebem       : Static and media roots served directly by the shared Nginx.
 # - /dados/votebem/logs            : App logs directory.
@@ -29,29 +29,30 @@
 ###################################################################################################
 
 services:
-  # PostgreSQL database service
+  # MariaDB database service
   db:
-    # Official Postgres image version
-    image: postgres:15-alpine
+    # Official MariaDB image version
+    image: mariadb:11
     # Human-friendly container name
     container_name: votebem_db
-    # Environment for Postgres init and authentication
+    # Environment for MariaDB init and authentication
     environment:
-      POSTGRES_DB: votebem_db
-      POSTGRES_USER: votebem_user
-      POSTGRES_PASSWORD: votebem_password
+      MARIADB_DATABASE: votebem_db
+      MARIADB_USER: votebem_user
+      MARIADB_PASSWORD: votebem_password
+      MARIADB_ROOT_PASSWORD: votebem_root_pwd
     # Host-mounted volumes for persistent data and backups
     volumes:
-      - /dados/postgres/votebem/data:/var/lib/postgresql/data
-      - /dados/postgres/votebem/backups:/backups
-    # Expose Postgres to host only if needed; comment out in production to avoid conflicts
+      - /dados/mariadb/votebem/data:/var/lib/mysql
+      - /dados/mariadb/votebem/backups:/backups
+    # Expose MariaDB to host only if needed; comment out in production to avoid conflicts
     # ports:
-    #   - "5432:5432"
+    #   - "3306:3306"
     # Restart policy for reliability
     restart: unless-stopped
     # Basic healthcheck so web waits for a healthy DB before starting
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U votebem_user -d votebem_db"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$MARIADB_USER -p$MARIADB_PASSWORD || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -90,7 +91,7 @@ services:
       # Disable debug in production
       - DEBUG=False
       # Database connection string targeting the local db service on default network
-      - DATABASE_URL=postgresql://votebem_user:votebem_password@db:5432/votebem_db
+      - DATABASE_URL=mysql://votebem_user:votebem_password@db:3306/votebem_db?charset=utf8mb4
       # Redis URL using Valkey service name on default network
       - REDIS_URL=redis://valkey:6379/0
       # Allowed hosts for Django
@@ -140,7 +141,7 @@ services:
 #     restart: unless-stopped
 
 # volumes:
-#   postgres_data:
+#   mariadb_data:
 #   redis_data:
 #   static_volume:
 #   media_volume:

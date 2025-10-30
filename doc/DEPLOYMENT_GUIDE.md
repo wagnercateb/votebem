@@ -21,8 +21,8 @@ This comprehensive guide covers the complete dockerization of the VoteBem Django
 The application has been fully containerized with separate configurations for development and production environments:
 
 ### Production Configuration
-- **Dockerfile**: Production-ready container with Gunicorn, PostgreSQL support, and remote debugging
-- **docker-compose.yml**: Production stack (Django + PostgreSQL + Redis + Nginx)
+- **Dockerfile**: Production-ready container with Gunicorn, MariaDB support, and remote debugging
+- **docker-compose.yml**: Production stack (Django + MariaDB + Redis + Nginx)
 - Optimized for performance and security
 - Includes health checks and persistent volumes
 
@@ -41,12 +41,12 @@ votebem/settings/
 ├── __init__.py
 ├── base.py          # Common settings
 ├── development.py   # Development with SQLite and debug tools
-└── production.py    # Production with PostgreSQL, Redis, security headers
+└── production.py    # Production with MariaDB, Redis, security headers
 ```
 
 ### Key Features:
 - **base.py**: Shared configuration for all environments
-- **production.py**: PostgreSQL database, Redis caching, security headers, HTTPS settings
+- **production.py**: MariaDB database, Redis caching, security headers, HTTPS settings
 - **development.py**: SQLite database, debug toolbar, development-friendly settings
 
 ## 🌐 Nginx Reverse Proxy
@@ -385,7 +385,7 @@ make prod
 2. **Database connection issues**:
    ```bash
    make dbshell
-   docker-compose exec db psql -U votebem_user -d votebem_db
+docker-compose exec db mysql -u votebem_user -p -D votebem_db
    ```
 
 3. **SSL certificate issues**:
@@ -433,7 +433,7 @@ django_votebem/
 ### Environment Variables:
 Refer to `.env.example` for all required environment variables including:
 - Django settings (SECRET_KEY, DEBUG, ALLOWED_HOSTS)
-- Database configuration (PostgreSQL)
+- Database configuration (MariaDB)
 - Redis configuration
 - Email settings
 - Security settings

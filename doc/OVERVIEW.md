@@ -27,7 +27,7 @@ Um sistema web desenvolvido em Django para permitir que cidadãos participem de 
 - **Backend**: Django 4.2.23
 - **Frontend**: Bootstrap 5 + Bootstrap Icons
 - **Formulários**: Django Crispy Forms com Bootstrap 5
-- **Banco de Dados**: SQLite (desenvolvimento) / PostgreSQL (produção)
+- **Banco de Dados**: SQLite (desenvolvimento) / MariaDB (produção)
 - **Autenticação**: Sistema nativo do Django
 - **Upload de Arquivos**: Pillow para processamento de imagens
 
@@ -148,7 +148,7 @@ django_votebem/
 ```bash
 DEBUG=False
 SECRET_KEY=sua_chave_secreta_aqui
-DATABASE_URL=postgresql://user:password@host:port/database
+DATABASE_URL=mysql://user:password@host:port/database
 ALLOWED_HOSTS=seudominio.com,www.seudominio.com
 ```
 

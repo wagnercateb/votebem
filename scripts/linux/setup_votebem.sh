@@ -173,7 +173,16 @@ mkdir -p "$BACKUP_DIR"
 
 # Backup database
 echo "Creating database backup..."
-docker-compose -f /opt/votebem/docker-compose.yml exec -T db pg_dump -U votebem_user votebem_db | gzip > "$BACKUP_DIR/db_backup_$DATE.sql.gz"
+# Use container env to avoid storing credentials here (supports MYSQL_* or MARIADB_* envs)
+docker-compose -f /opt/votebem/docker-compose.yml exec -T db sh -lc '
+  DB_NAME="${MYSQL_DATABASE:-$MARIADB_DATABASE}"
+  DB_USER="${MYSQL_USER:-$MARIADB_USER}"
+  DB_PASS="${MYSQL_PASSWORD:-$MARIADB_PASSWORD}"
+  if [ -z "$DB_NAME" ] || [ -z "$DB_USER" ]; then
+    echo "Database variables not set in container (MYSQL_*/MARIADB_*)" >&2; exit 1
+  fi
+  mysqldump -u"$DB_USER" -p"$DB_PASS" "$DB_NAME"
+' | gzip > "$BACKUP_DIR/db_backup_$DATE.sql.gz"
 
 # Backup media files
 echo "Creating media backup..."
