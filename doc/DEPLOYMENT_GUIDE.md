@@ -122,8 +122,8 @@ This script handles the complete application deployment:
 ssh votebem@your-vps-ip
 
 # Clone the repository (só vai funcionar com a chave SSH funcionando, ver acima)
-git clone git@github.com:wagnercateb/votebem.git /opt/votebem
-cd /opt/votebem
+git clone git@github.com:wagnercateb/votebem.git /dados/votebem
+cd /dados/votebem
 
 # Make the deployment script executable
 chmod +x scripts/deploy_production.sh
@@ -396,7 +396,7 @@ docker-compose exec db mysql -u votebem_user -p -D votebem_db
 
 4. **Permission issues**:
    ```bash
-   sudo chown -R votebem:votebem /opt/votebem
+sudo chown -R votebem:votebem /dados/votebem
    ```
 
 ### Log Locations:

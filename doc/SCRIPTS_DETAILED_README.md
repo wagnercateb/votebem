@@ -91,7 +91,7 @@ curl -sSL https://raw.githubusercontent.com/wagnercateb/django-votebem/main/scri
 
 **What it does**:
 - Creates the `votebem` user
-- Sets up application directories (`/opt/votebem`, `/var/log/votebem`, `/var/backups/votebem`)
+- Sets up application directories (`/dados/votebem`, `/var/log/votebem`, `/var/backups/votebem`)
 - Configures log rotation
 - Creates backup and monitoring scripts
 - Sets up automated cron jobs
@@ -132,7 +132,7 @@ curl -sSL https://raw.githubusercontent.com/wagnercateb/django-votebem/main/scri
 ## Directory Structure After Setup
 
 ```
-/opt/votebem/                 # Main application directory
+/dados/votebem/               # Main application directory
 ├── django_votebem/           # Django application code
 ├── docker-compose.yml        # Docker Compose configuration
 ├── .env                      # Environment variables
@@ -162,13 +162,13 @@ After running both scripts, follow these steps to complete the deployment:
 
 2. **Review and update configuration**:
    ```bash
-   cd /opt/votebem
+cd /dados/votebem
    nano .env  # Update database credentials, secret key, etc.
    ```
 
 3. **Deploy the application**:
    ```bash
-   cd /opt/votebem
+cd /dados/votebem
    ./scripts/deploy_production.sh
    ```
 
@@ -188,30 +188,30 @@ After running both scripts, follow these steps to complete the deployment:
 
 The setup creates several automated tasks:
 
-- **Backups**: Daily at 2:00 AM (`/opt/votebem/backup.sh`)
-- **Monitoring**: Every 5 minutes (`/opt/votebem/monitor.sh`)
+- **Backups**: Daily at 2:00 AM (`/dados/votebem/backup.sh`)
+- **Monitoring**: Every 5 minutes (`/dados/votebem/monitor.sh`)
 - **Log Rotation**: Daily with 52-day retention
 
 ### Manual Commands
 
 ```bash
 # Check application status
-docker-compose -f /opt/votebem/docker-compose.yml ps
+docker-compose -f /dados/votebem/docker-compose.yml ps
 
 # View application logs
-docker-compose -f /opt/votebem/docker-compose.yml logs -f web
+docker-compose -f /dados/votebem/docker-compose.yml logs -f web
 
 # Restart application
-docker-compose -f /opt/votebem/docker-compose.yml restart
+docker-compose -f /dados/votebem/docker-compose.yml restart
 
 # Run backup manually
-/opt/votebem/backup.sh
+/dados/votebem/backup.sh
 
 # Check monitoring logs
 tail -f /var/log/votebem/monitor.log
 
 # Check system status
-/opt/votebem/monitor.sh
+/dados/votebem/monitor.sh
 ```
 
 ## Troubleshooting

@@ -11,7 +11,7 @@ services:
     volumes:
       - mariadb_dev_data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$MARIADB_USER -p$MARIADB_PASSWORD || exit 1"]

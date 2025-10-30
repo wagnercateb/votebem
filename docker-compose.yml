@@ -46,8 +46,8 @@ services:
       - /dados/mariadb/votebem/data:/var/lib/mysql
       - /dados/mariadb/votebem/backups:/backups
     # Expose MariaDB to host only if needed; comment out in production to avoid conflicts
-    # ports:
-    #   - "3306:3306"
+    ports:
+    - "127.0.0.1:3306:3306"
     # Restart policy for reliability
     restart: unless-stopped
     # Basic healthcheck so web waits for a healthy DB before starting

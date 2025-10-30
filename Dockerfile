@@ -33,14 +33,20 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         default-mysql-client \
         build-essential \
-        default-libmysqlclient-dev \
+        pkg-config \
+        libmariadb-dev \
+        libmariadb-dev-compat \
+        zlib1g-dev \
+        libjpeg-dev \
+        libpng-dev \
         curl \
-        vim \
+        nano \
         git \
-    && rm -rf /var/lib/apt/lists/*
+        && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt /app/
+ENV MARIADB_CONFIG=/usr/bin/mariadb_config
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install additional production dependencies

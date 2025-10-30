@@ -215,11 +215,11 @@ docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperu
 
 ## File Locations
 
-- **Application**: `/opt/votebem/`
-- **Logs**: `/opt/votebem/logs/`
-- **SSL Certificates**: `/opt/votebem/ssl/`
-- **Backups**: `/opt/votebem/backups/`
-- **Environment**: `/opt/votebem/.env`
+- **Application**: `/dados/votebem/`
+- **Logs**: `/dados/votebem/logs/`
+- **SSL Certificates**: `/dados/votebem/ssl/`
+- **Backups**: `/dados/votebem/backups/`
+- **Environment**: `/dados/votebem/.env`
 
 ## Security Considerations
 

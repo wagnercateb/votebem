@@ -540,7 +540,7 @@ services:
       interval: 10s
       timeout: 10s
       retries: 12
-      start_period: 90s
+      start_period: 60s
     networks:
       - ${APP_NAME}_net
 
