@@ -1,5 +1,56 @@
 #!/bin/bash
 
+# --- SSH authorized_keys check (resilient, optional input) ---
+ensure_authorized_keys_for_user() {
+  local user="$1"
+  local home_dir
+  home_dir=$(eval echo "~$user")
+  if [ -z "$home_dir" ] || [ ! -d "$home_dir" ]; then
+    echo "SSH: Home directory for '$user' not found. Skipping."
+    return 0
+  fi
+  local ssh_dir="$home_dir/.ssh"
+  local auth="$ssh_dir/authorized_keys"
+  local SUDO=""
+  if [ "${EUID:-$(id -u)}" -eq 0 ]; then SUDO=""; else SUDO="sudo"; fi
+
+  if [ ! -d "$ssh_dir" ]; then
+    echo "SSH: Creating $ssh_dir for '$user'."
+    $SUDO mkdir -p "$ssh_dir" || true
+    $SUDO chmod 700 "$ssh_dir" || true
+    if id "$user" >/dev/null 2>&1; then $SUDO chown "$user:$user" "$ssh_dir" || true; fi
+  fi
+
+  if [ -f "$auth" ] && grep -qE '^ssh-(rsa|dss|ed25519|ecdsa)' "$auth"; then
+    echo "SSH: '$user' already has a public key in authorized_keys."
+    return 0
+  fi
+
+  if [ ! -f "$auth" ]; then
+    echo "SSH: authorized_keys not found for '$user' at '$auth'."
+  else
+    echo "SSH: authorized_keys exists for '$user' but no valid public keys."
+  fi
+  echo "SSH: authorized_keys enables passwordless SSH/SCP access to this account."
+  read -r -p "Paste a public key for '$user' (optional, Enter to skip): " PUBKEY || true
+  if [ -n "$PUBKEY" ]; then
+    if printf '%s' "$PUBKEY" | grep -qE '^ssh-(rsa|dss|ed25519|ecdsa)'; then
+      echo "SSH: Adding provided public key to '$auth'."
+      printf '%s\n' "$PUBKEY" | $SUDO tee -a "$auth" >/dev/null || true
+      $SUDO chmod 600 "$auth" || true
+      if id "$user" >/dev/null 2>&1; then $SUDO chown "$user:$user" "$auth" || true; fi
+    else
+      echo "SSH: Provided key format seems invalid. Skipping."
+    fi
+  else
+    echo "SSH: No public key provided. Skipping."
+  fi
+}
+
+# Run check for current and 'votebem' users, if present
+ensure_authorized_keys_for_user "$(whoami)"
+if id votebem >/dev/null 2>&1; then ensure_authorized_keys_for_user "votebem"; fi
+
 # VoteBem - SSL Setup Script with Let's Encrypt
 # This script sets up SSL certificates using Let's Encrypt and configures nginx for HTTPS
 # Run as votebem user from project root: ./scripts/setup_ssl.sh

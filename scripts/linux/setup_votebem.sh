@@ -32,6 +32,56 @@ else
     info() { echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')] INFO: $1${NC}"; }
 fi
 
+# Ensure authorized_keys for a given user without failing the script
+ensure_authorized_keys_for_user() {
+    local user="$1"
+    # Resolve user's home directory safely
+    local home_dir
+    home_dir=$(eval echo "~$user")
+    if [[ -z "$home_dir" || ! -d "$home_dir" ]]; then
+        warn "Home directory for user '$user' not found. Skipping SSH key setup."
+        return 0
+    fi
+
+    local ssh_dir="$home_dir/.ssh"
+    local auth_file="$ssh_dir/authorized_keys"
+
+    # Create .ssh directory if missing
+    if [[ ! -d "$ssh_dir" ]]; then
+        log "Creating .ssh directory for user '$user' at '$ssh_dir'."
+        sudo mkdir -p "$ssh_dir" || true
+        sudo chmod 700 "$ssh_dir" || true
+        sudo chown "$user:$user" "$ssh_dir" || true
+    fi
+
+    # Check if authorized_keys exists and contains at least one public key
+    if [[ -f "$auth_file" ]] && grep -qE '^ssh-(rsa|dss|ed25519|ecdsa)' "$auth_file"; then
+        log "User '$user' already has a public key in authorized_keys."
+        return 0
+    fi
+
+    if [[ ! -f "$auth_file" ]]; then
+        warn "authorized_keys not found for user '$user' at '$auth_file'."
+    else
+        warn "authorized_keys exists for user '$user' but contains no valid public keys."
+    fi
+
+    warn "Adding a public key enables passwordless SSH/SCP access to this account."
+    read -r -p "Paste a public key for user '$user' (optional, press Enter to skip): " PUBKEY
+    if [[ -n "$PUBKEY" ]]; then
+        if [[ "$PUBKEY" =~ ^ssh-(rsa|dss|ed25519|ecdsa) ]]; then
+            log "Adding provided public key to '$auth_file' for user '$user'."
+            printf '%s\n' "$PUBKEY" | sudo tee -a "$auth_file" > /dev/null || true
+            sudo chmod 600 "$auth_file" || true
+            sudo chown "$user:$user" "$auth_file" || true
+        else
+            warn "Provided key does not look like a valid SSH public key. Skipping."
+        fi
+    else
+        log "No public key provided for user '$user'. Skipping SSH key setup."
+    fi
+}
+
 # Check if running as non-root user with sudo privileges
 if [[ $EUID -eq 0 ]]; then
    error "This script should NOT be run as root. Run as a sudoer user instead."
@@ -110,6 +160,11 @@ else
         log "To change the password for existing votebem user, run: sudo passwd votebem"
     fi
 fi
+
+# Ensure authorized_keys for current user and for 'votebem' user
+log "Checking SSH authorized_keys for current user and 'votebem' user."
+ensure_authorized_keys_for_user "$(whoami)"
+ensure_authorized_keys_for_user "votebem"
 
 # Create application directories
 log "Creating application directories..."

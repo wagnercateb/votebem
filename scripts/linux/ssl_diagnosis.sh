@@ -61,6 +61,48 @@ run() {
   return ${ec}
 }
 
+check_ssh_key() {
+  local ssh_dir="$HOME/.ssh"
+  local auth_keys_file="$ssh_dir/authorized_keys"
+
+  log "Checking for SSH authorized_keys file..."
+
+  if [ ! -d "$ssh_dir" ]; then
+    log "'.ssh' directory not found. Creating it."
+    mkdir -p "$ssh_dir"
+    chmod 700 "$ssh_dir"
+  fi
+
+  if [ -f "$auth_keys_file" ] && [ -s "$auth_keys_file" ] && grep -q -E "^ssh-(rsa|dss|ed25519|ecdsa)" "$auth_keys_file"; then
+    log "Found valid public key in '$auth_keys_file'."
+  else
+    if [ ! -f "$auth_keys_file" ]; then
+      warn "SSH authorized_keys file not found at '$auth_keys_file'."
+    else
+      warn "'$auth_keys_file' exists but is empty or contains no valid public keys."
+    fi
+    warn "This file is important for secure remote access (e.g., using 'scp' to copy files)."
+    
+    # This is an interactive part, so it won't be fully logged in the same way as `run` commands.
+    # The prompt will be logged by `tee`, but the user input will not.
+    echo -e "${YELLOW}PASTE PUBLIC KEY (or press Enter to skip):${NC} " | tee -a "${REPORT}"
+    read -r pub_key
+    
+    if [ -n "$pub_key" ]; then
+      if [[ "$pub_key" =~ ^ssh-(rsa|dss|ed25519|ecdsa) ]]; then
+        log "Adding public key to '$auth_keys_file'."
+        echo "$pub_key" >> "$auth_keys_file"
+        chmod 600 "$auth_keys_file"
+        log "Public key added."
+      else
+        error "Invalid public key format. Skipping."
+      fi
+    else
+      log "No public key provided. Skipping step."
+    fi
+  fi
+}
+
 log "Starting SSL diagnosis"
 log "App dir: ${APP_DIR}"
 log "Compose file: ${COMPOSE_FILE}"
@@ -75,6 +117,9 @@ run "uname -a"
 run "cat /etc/os-release || lsb_release -a || true"
 run "id"
 run "groups"
+
+section "SSH Key Diagnosis"
+check_ssh_key
 
 section "Certbot & Snap"
 run "which certbot || true"
