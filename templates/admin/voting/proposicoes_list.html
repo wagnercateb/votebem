@@ -276,8 +276,14 @@
                                 <span class="badge badge-warning">Inativa</span>
                             {% endif %}
                         {% endfor %}
+                        {# Button: Ver official votes for preferred votação (opens new tab) #}
+                        {% if proposicao.preferred_votacao_id %}
+                            <a href="http://127.0.0.1:8000/voting/votos/oficiais/?votacao_id={{ proposicao.preferred_votacao_id }}" target="_blank" class="btn btn-info btn-sm" style="margin-top:6px;">Ver</a>
+                        {% endif %}
                     {% else %}
                         <span class="badge badge-warning">Sem votação</span>
+                        {# Button: Buscar opens gerencial page with proposicao_id prefilled in new textbox #}
+                        <a href="http://localhost:8000/gerencial/?proposicao_id={{ proposicao.id_proposicao }}" target="_blank" class="btn btn-warning btn-sm" style="margin-top:6px;">Buscar</a>
                     {% endif %}
                 </td>
                 <td class="actions-column">

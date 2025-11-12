@@ -18,6 +18,7 @@ import sys
 import os
 import subprocess
 from decouple import Config, RepositoryEnv
+from votebem.utils.devlog import dev_log  # Unified development logging
 
 def load_environment():
     """Load environment variables from .env.dev file"""
@@ -32,8 +33,8 @@ def load_environment():
             'db_port': config('DB_PORT', default='3306'),
         }
     except Exception as e:
-        print(f"Warning: Could not load .env.dev file: {e}")
-        print("Using default values...")
+        dev_log(f"Warning: Could not load .env.dev file: {e}")
+        dev_log("Using default values...")
         return {
             'db_name': 'votebem_dev',
             'db_user': 'votebem_user',
@@ -59,75 +60,75 @@ def check_docker_status():
 
 def print_connection_instructions(env_config):
     """Print detailed connection instructions for Adminer"""
-    print("=" * 70)
-    print("📋 ADMINER CONNECTION INSTRUCTIONS")
-    print("=" * 70)
-    print()
+    dev_log("=" * 70)
+    dev_log("📋 ADMINER CONNECTION INSTRUCTIONS")
+    dev_log("=" * 70)
+    dev_log("")
     
-    print("🔗 Adminer Access:")
-    print(f"   URL: http://localhost:8080")
-    print()
+    dev_log("🔗 Adminer Access:")
+    dev_log(f"   URL: http://localhost:8080")
+    dev_log("")
     
-    print("🐬 MariaDB Connection Parameters for Adminer:")
-    print("   (Use these EXACT values in Adminer)")
-    print()
-    print(f"   System: MySQL")
-    print(f"   Server: {env_config['db_host_internal']}")
-    print(f"   Port: {env_config['db_port']}")
-    print(f"   Database: {env_config['db_name']}")
-    print(f"   Username: {env_config['db_user']}")
-    print(f"   Password: {env_config['db_password']}")
-    print()
+    dev_log("🐬 MariaDB Connection Parameters for Adminer:")
+    dev_log("   (Use these EXACT values in Adminer)")
+    dev_log("")
+    dev_log(f"   System: MySQL")
+    dev_log(f"   Server: {env_config['db_host_internal']}")
+    dev_log(f"   Port: {env_config['db_port']}")
+    dev_log(f"   Database: {env_config['db_name']}")
+    dev_log(f"   Username: {env_config['db_user']}")
+    dev_log(f"   Password: {env_config['db_password']}")
+    dev_log("")
     
-    print("⚠️  IMPORTANT DIFFERENCES:")
-    print("   • Adminer (Docker): Use server 'db' (Docker service name)")
-    print("   • DBeaver (Windows): Use server 'localhost' (port forwarding)")
-    print()
+    dev_log("⚠️  IMPORTANT DIFFERENCES:")
+    dev_log("   • Adminer (Docker): Use server 'db' (Docker service name)")
+    dev_log("   • DBeaver (Windows): Use server 'localhost' (port forwarding)")
+    dev_log("")
     
-    print("📝 Step-by-Step Instructions:")
-    print("   1. Open http://localhost:8080 in your browser")
-    print("   2. Select System 'MySQL'")
-    print(f"   3. Server: {env_config['db_host_internal']}")
-    print(f"   4. Username: {env_config['db_user']}")
-    print(f"   5. Password: {env_config['db_password']}")
-    print(f"   6. Database: {env_config['db_name']}")
-    print("   7. Click 'Login'")
-    print()
+    dev_log("📝 Step-by-Step Instructions:")
+    dev_log("   1. Open http://localhost:8080 in your browser")
+    dev_log("   2. Select System 'MySQL'")
+    dev_log(f"   3. Server: {env_config['db_host_internal']}")
+    dev_log(f"   4. Username: {env_config['db_user']}")
+    dev_log(f"   5. Password: {env_config['db_password']}")
+    dev_log(f"   6. Database: {env_config['db_name']}")
+    dev_log("   7. Click 'Login'")
+    dev_log("")
     
-    print("🔍 For Comparison - DBeaver Connection:")
-    print(f"   Server: {env_config['db_host_external']}")
-    print(f"   Port: {env_config['db_port']}")
-    print(f"   Database: {env_config['db_name']}")
-    print(f"   Username: {env_config['db_user']}")
-    print(f"   Password: {env_config['db_password']}")
-    print()
+    dev_log("🔍 For Comparison - DBeaver Connection:")
+    dev_log(f"   Server: {env_config['db_host_external']}")
+    dev_log(f"   Port: {env_config['db_port']}")
+    dev_log(f"   Database: {env_config['db_name']}")
+    dev_log(f"   Username: {env_config['db_user']}")
+    dev_log(f"   Password: {env_config['db_password']}")
+    dev_log("")
 
 def print_troubleshooting():
     """Print troubleshooting information"""
-    print("🔧 TROUBLESHOOTING:")
-    print()
-    print("   If connection fails in Adminer:")
-    print("   1. Verify containers are running:")
-    print("      docker-compose -f docker-compose.dev-services.yml ps")
-    print()
-    print("   2. Check MariaDB logs:")
-    print("      docker logs votebem_db_dev")
-    print()
-    print("   3. Test connection from Adminer container:")
-    print("      docker exec -it votebem_adminer_dev ping db")
-    print()
-    print("   4. Test MariaDB from host:")
-    print("      docker exec -it votebem_db_dev mysql -u votebem_user -p$MARIADB_PASSWORD -D votebem_dev -h 127.0.0.1 -P 3306")
-    print()
-    print("   5. Restart containers if needed:")
-    print("      docker-compose -f docker-compose.dev-services.yml restart")
-    print()
+    dev_log("🔧 TROUBLESHOOTING:")
+    dev_log("")
+    dev_log("   If connection fails in Adminer:")
+    dev_log("   1. Verify containers are running:")
+    dev_log("      docker-compose -f docker-compose.dev-services.yml ps")
+    dev_log("")
+    dev_log("   2. Check MariaDB logs:")
+    dev_log("      docker logs votebem_db_dev")
+    dev_log("")
+    dev_log("   3. Test connection from Adminer container:")
+    dev_log("      docker exec -it votebem_adminer_dev ping db")
+    dev_log("")
+    dev_log("   4. Test MariaDB from host:")
+    dev_log("      docker exec -it votebem_db_dev mysql -u votebem_user -p$MARIADB_PASSWORD -D votebem_dev -h 127.0.0.1 -P 3306")
+    dev_log("")
+    dev_log("   5. Restart containers if needed:")
+    dev_log("      docker-compose -f docker-compose.dev-services.yml restart")
+    dev_log("")
 
 def main():
     """Main helper function"""
-    print("🐬 VoteBem Adminer Configuration Helper")
-    print("=" * 70)
-    print()
+    dev_log("🐬 VoteBem Adminer Configuration Helper")
+    dev_log("=" * 70)
+    dev_log("")
     
     # Load environment configuration
     env_config = load_environment()
@@ -135,24 +136,24 @@ def main():
     # Check Docker status
     adminer_running, mariadb_running, containers_info = check_docker_status()
     
-    print("🐳 Docker Container Status:")
+    dev_log("🐳 Docker Container Status:")
     if adminer_running and mariadb_running:
-        print("   ✅ Adminer container: Running")
-        print("   ✅ MariaDB container: Running")
-        print("   ✅ Ready to configure Adminer!")
+        dev_log("   ✅ Adminer container: Running")
+        dev_log("   ✅ MariaDB container: Running")
+        dev_log("   ✅ Ready to configure Adminer!")
     else:
-        print("   ❌ Some containers are not running:")
+        dev_log("   ❌ Some containers are not running:")
         if not adminer_running:
-            print("      - Adminer container: Not running")
+            dev_log("      - Adminer container: Not running")
         if not mariadb_running:
-            print("      - MariaDB container: Not running")
-        print()
-        print("   🚀 Start containers with:")
-        print("      docker-compose -f docker-compose.dev-services.yml up -d")
-        print()
+            dev_log("      - MariaDB container: Not running")
+        dev_log("")
+        dev_log("   🚀 Start containers with:")
+        dev_log("      docker-compose -f docker-compose.dev-services.yml up -d")
+        dev_log("")
         return
-    
-    print()
+
+    dev_log("")
     
     # Print connection instructions
     print_connection_instructions(env_config)
@@ -160,10 +161,10 @@ def main():
     # Print troubleshooting
     print_troubleshooting()
     
-    print("=" * 70)
-    print("✨ After following these instructions, Adminer will be able to")
-    print("   connect to your MariaDB database using Docker networking!")
-    print("=" * 70)
+    dev_log("=" * 70)
+    dev_log("✨ After following these instructions, Adminer will be able to")
+    dev_log("   connect to your MariaDB database using Docker networking!")
+    dev_log("=" * 70)
 
 if __name__ == "__main__":
     main()

@@ -12,7 +12,7 @@
 </style>
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <h2 class="card-title mb-0">Votos Oficiais</h2>
+    <h2 class="card-title mb-0">Votação oficial</h2>
     {% if votacao %}
       <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left"></i> Voltar à votação
@@ -23,15 +23,56 @@
     {% if votacao %}
       <div class="text-muted">Votação: {{ votacao.titulo }} — {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}</div>
     {% else %}
-      <form method="get" style="display:flex; gap:8px; align-items:center;">
-        <label for="votacao_id">Votação ID:</label>
-        <input id="votacao_id" name="votacao_id" type="number" min="1" class="form-control" style="max-width:160px;">
-        <button type="submit" class="btn btn-primary">Carregar</button>
+      <!-- Form de busca e carregamento
+           - Botão [Carregar]: busca votações via API por Proposição ID e lista resultados filtrados
+           - Botão [Carregar votação]: submete "votacao_id" (comportamento original) -->
+      <form id="vb-votos-form" method="get" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <label for="proposicao_id">Proposição ID:</label>
+        <input id="proposicao_id" name="proposicao_id" type="number" min="1" class="form-control" style="max-width:160px;" value="{{ prefill_proposicao_id }}">
+
+        <button id="btn-carregar-proposicao" type="submit" class="btn btn-primary">Carregar</button>
+
+        <label for="votacao_id" style="margin-left:12px;">Votação ID:</label>
+        <input id="votacao_id" name="votacao_id" type="text" class="form-control" style="max-width:160px;" placeholder="ex: 2270800-160">
+        <button id="btn-carregar-votacao" type="button" class="btn btn-success" style="display:none;">Carregar votação</button>
       </form>
+      <div class="form-text">Dica: pesquise por proposição, selecione uma votação e carregue os Votação oficial.</div>
     {% endif %}
     <div class="form-text">Use filtros abaixo para refinar a lista.</div>
   </div>
 </div>
+
+{% if not votacao %}
+<div class="card" id="vb-votacoes-card" style="display:none;">
+  <div class="card-header"><h4 class="card-title">Votações encontradas (turnos / emenda aglutinativa)</h4></div>
+  <div class="card-body">
+    <div id="vb-votacoes-status" class="text-muted" style="margin-bottom:8px;"></div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover" id="vb-votacoes-list" style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="padding:6px;">ID</th>
+            <th style="padding:6px;">Data/Hora</th>
+            <th style="padding:6px;">Descrição</th>
+            <th style="padding:6px;">Resultado</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-body" id="vb-votacoes-help" style="display:none;">
+    <div class="alert alert-info" style="margin:0;">
+      Nenhuma votação correspondente foi encontrada para a proposição informada. Tente outro ID de proposição.
+    </div>
+  </div>
+  <div class="card-body" id="vb-votacoes-error" style="display:none;">
+    <div class="alert alert-danger" style="margin:0;">
+      Ocorreu um erro ao consultar a API da Câmara. Verifique o ID e tente novamente.
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <div class="card" style="margin-bottom: 10px;">
   <div class="filters" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
@@ -114,6 +155,175 @@
     partido: { field: null, dir: 'desc' },
     uf: { field: null, dir: 'desc' }
   };
+
+  // --- Busca de votações por Proposição ID na página /gerencial/ ---
+  (function initProposicaoLookup(){
+    const form = document.getElementById('vb-votos-form');
+    const btnCarregarProposicao = document.getElementById('btn-carregar-proposicao');
+    const votacaoInput = document.getElementById('votacao_id');
+    const btnCarregarVotacao = document.getElementById('btn-carregar-votacao');
+    const propInput = document.getElementById('proposicao_id');
+    const card = document.getElementById('vb-votacoes-card');
+    const status = document.getElementById('vb-votacoes-status');
+    const listTbody = document.querySelector('#vb-votacoes-list tbody');
+    const help = document.getElementById('vb-votacoes-help');
+    const err = document.getElementById('vb-votacoes-error');
+
+    if (!form || !btnCarregarProposicao) return;
+
+    // Prefill votacao_id/consulta_id from URL if present (supports opening the link directly)
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const vParam = params.get('votacao_id') || params.get('consulta_id');
+      const pParam = params.get('proposicao_id');
+      if (vParam && votacaoInput) {
+        votacaoInput.value = vParam;
+        btnCarregarVotacao.style.display = 'inline-block';
+      }
+      if (pParam && propInput) {
+        propInput.value = pParam;
+      }
+    } catch (_) { /* ignore */ }
+
+    // Ao enviar, buscar votações da proposição e não submeter o formulário
+    form.addEventListener('submit', function(ev){
+      // Se já existe um votacao_id preenchido, opcionalmente poderíamos submeter,
+      // mas conforme solicitação, o [Carregar] deve consultar a lista pela proposição.
+      ev.preventDefault();
+      const propId = (propInput && propInput.value) ? propInput.value.trim() : '';
+      if (!propId) {
+        status.textContent = 'Informe o Proposição ID para buscar votações.';
+        card.style.display = 'block'; help.style.display = 'none'; err.style.display = 'none';
+        listTbody.innerHTML = '';
+        return;
+      }
+      // Consultar endpoint interno (cache-first: DB -> API -> DB insert)
+      let url = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(propId)}`;
+      status.textContent = 'Consultando votações (cache), aguarde...';
+      card.style.display = 'block'; help.style.display = 'none'; err.style.display = 'none';
+      listTbody.innerHTML = '';
+
+      fetch(url, { headers: { 'Accept': 'application/json' } })
+        .then(r => {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(json => {
+          const dados = Array.isArray(json?.dados) ? json.dados : [];
+          // Filtro por descrição contendo "em primeiro turno", "em segundo turno" ou "Emenda Aglutinativa" (case-insensitive)
+          const needles = [
+            'em primeiro turno',
+            'em segundo turno',
+            'emenda aglutinativa'
+          ];
+          const filtered = dados.filter(item => {
+            const d = (item?.descricao || item?.descrição || '').toLowerCase();
+            return needles.some(n => d.includes(n));
+          });
+
+          if (filtered.length === 0) {
+            status.textContent = `Nenhuma votação correspondente para a proposição ${propId}.`;
+            help.style.display = 'block'; err.style.display = 'none';
+            listTbody.innerHTML = '';
+            return;
+          }
+
+          status.textContent = `Foram encontradas ${filtered.length} votações relevantes.`;
+          help.style.display = 'none'; err.style.display = 'none';
+          listTbody.innerHTML = '';
+          filtered.forEach(item => {
+            const id = item.id || item?.idVotacao || '';
+            const dataHora = item.dataHoraRegistro || item.dataHora || '';
+            const descricao = item.descricao || item?.descrição || '';
+            const resultado = item?.resultado || '';
+            const tr = document.createElement('tr');
+            // Build a link that includes both proposicao_id and consulta_id (desired param)
+            const baseGerencial = `${window.location.origin}/gerencial/`;
+            const hrefFull = `${baseGerencial}?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(id)}`;
+            tr.innerHTML = `<td style=\"padding:6px;\"><a href=\"${hrefFull}\" data-id=\"${id}\" class=\"vb-votacao-id\">${id}</a></td>`+
+                           `<td style=\"padding:6px;\">${dataHora || ''}</td>`+
+                           `<td style=\"padding:6px;\">${descricao || ''}</td>`+
+                           `<td style=\"padding:6px;\">${resultado || ''}</td>`;
+            listTbody.appendChild(tr);
+          });
+          // Click on ID: prevent navigation and only fill the Votação ID textbox
+          listTbody.querySelectorAll('a.vb-votacao-id').forEach(a => {
+            a.addEventListener('click', (e) => {
+              e.preventDefault();
+              const idSel = a.getAttribute('data-id');
+              if (votacaoInput) {
+                votacaoInput.value = idSel || '';
+                btnCarregarVotacao.style.display = (idSel ? 'inline-block' : 'none');
+                btnCarregarVotacao.focus();
+              }
+            });
+          });
+
+          // Click nos IDs para preencher o textbox "votação id" e mostrar o botão
+          // Allow default navigation; inputs will be prefilled from URL on load
+        })
+        .catch(err0 => {
+          status.textContent = '';
+          help.style.display = 'none'; err.style.display = 'block';
+          listTbody.innerHTML = '';
+        });
+    });
+
+    // Botão para carregar votação: agora chama endpoint interno que importa e salva votos
+    if (btnCarregarVotacao) {
+      btnCarregarVotacao.addEventListener('click', function(ev){
+        ev.preventDefault();
+        const vRaw = (votacaoInput && votacaoInput.value ? votacaoInput.value.trim() : '');
+        const pRaw = (propInput && propInput.value ? propInput.value.trim() : '');
+        let propId = '';
+        let sufixo = '';
+        let composed = '';
+        if (vRaw.includes('-')) {
+          const parts = vRaw.split('-');
+          propId = (parts[0]||'').trim();
+          sufixo = (parts[1]||'').trim();
+          composed = `${propId}-${sufixo}`;
+        } else {
+          propId = pRaw;
+          sufixo = vRaw;
+          composed = propId && sufixo ? `${propId}-${sufixo}` : '';
+        }
+        if (!propId || !sufixo) {
+          status.textContent = 'Informe Proposição ID e o sufixo/ID da votação (ex: 2270800-160).';
+          card.style.display = 'block'; help.style.display = 'none'; err.style.display = 'none';
+          return;
+        }
+        const url = `${window.location.origin}/gerencial/ajax/import-congress-votes/?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(sufixo)}`;
+        status.textContent = `Importando votos oficiais de ${composed}...`;
+        card.style.display = 'block'; help.style.display = 'none'; err.style.display = 'none';
+        fetch(url, { headers: { 'Accept': 'application/json' } })
+          .then(r => r.json().then(j => ({ ok: r.ok, status: r.status, body: j })))
+          .then(resp => {
+            if (!resp.ok || !resp.body?.ok) {
+              const apiUrl = resp.body?.api_url || '';
+              status.textContent = '';
+              err.style.display = 'block'; help.style.display = 'none';
+              err.innerHTML = `<div class="alert alert-danger" style="margin:0;">Erro ao importar votos.${apiUrl ? ` URL: <a href="${apiUrl}" target="api">${apiUrl}</a>` : ''}</div>`;
+              return;
+            }
+            const json = resp.body;
+            const created = Number(json.created||0);
+            const updated = Number(json.updated||0);
+            const skipped = Number(json.skipped||0);
+            status.textContent = `Importação concluída. Criados: ${created}, Atualizados: ${updated}, Ignorados: ${skipped}.`;
+            // Atualiza UI com os votos retornados
+            state.data = Array.isArray(json.votos) ? json.votos : [];
+            applyFilters();
+          })
+          .catch(e => {
+            status.textContent = '';
+            err.style.display = 'block'; help.style.display = 'none';
+            err.innerHTML = `<div class="alert alert-danger" style="margin:0;">Falha de rede ao importar votos. Tente novamente.</div>`;
+          });
+      });
+    }
+  })();
+
 
   function uniq(arr) { return Array.from(new Set(arr.filter(Boolean))).sort(); }
   function renderOptions(sel, values) {

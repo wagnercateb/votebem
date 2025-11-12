@@ -1,6 +1,7 @@
 from .base import *
 import os
 from decouple import config
+from votebem.utils.devlog import dev_log  # Development log utility
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
@@ -48,7 +49,7 @@ def get_database_config():
         }
     except Exception:
         # MariaDB not available, use SQLite
-        print("MariaDB not available, using SQLite database")
+        dev_log("MariaDB not available, using SQLite database")
         return {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
@@ -82,7 +83,7 @@ def get_cache_config():
         }
     except (ImportError, Exception):
         # Redis not available, use local memory cache
-        print("Redis not available, using local memory cache")
+        dev_log("Redis not available, using local memory cache")
         return {
             'default': {
                 'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',

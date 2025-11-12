@@ -7,7 +7,7 @@ from . import admin_views
 app_name = 'gerencial'
 
 urlpatterns = [
-    # Root subpage for Votos Oficiais via App
+    # Root subpage for Votação oficial via App
     path('', admin_views.votos_oficiais_app, name='votos_oficiais_app'),
     # Dashboard
     path('dashboard/', admin_views.admin_dashboard, name='dashboard'),
@@ -49,4 +49,8 @@ urlpatterns = [
     # AJAX endpoints
     path('camara-admin/', admin_views.camara_admin, name='camara_admin'),
     path('ajax/proposicao-search/', admin_views.ajax_proposicao_search, name='ajax_proposicao_search')
+    ,
+    path('ajax/proposicao-votacoes/', admin_views.ajax_proposicao_votacoes, name='ajax_proposicao_votacoes')
+    ,
+    path('ajax/import-congress-votes/', admin_views.ajax_import_congress_votes, name='ajax_import_congress_votes')
 ]

@@ -71,8 +71,15 @@
                 
                 <!-- Proposition Details -->
                 <div class="border-top pt-3">
-                    <h6>Detalhes da Proposição:</h6>
+                    <!-- Atualizado título conforme solicitação -->
+                    <h6>Detalhes da proposição na Câmara</h6>
                     <p><strong>Ementa:</strong> {{ votacao.proposicao.ementa }}</p>
+                    <!-- Botão para ver proposição original na Câmara -->
+                    {% if votacao.proposicao.id_proposicao %}
+                        <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao.id_proposicao }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm mt-2">
+                            Ver proposição original
+                        </a>
+                    {% endif %}
                     {% if votacao.proposicao.autor %}
                         <p><strong>Autor:</strong> {{ votacao.proposicao.autor }}</p>
                     {% endif %}
@@ -150,7 +157,8 @@
         <!-- Voting Statistics -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Resultados Populares</h5>
+                <!-- Atualizado texto do cabeçalho conforme solicitado -->
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Resultado Votebem</h5>
             </div>
             <div class="card-body">
                 <div class="mb-3">

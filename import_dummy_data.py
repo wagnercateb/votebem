@@ -11,6 +11,7 @@ import json
 import re
 from datetime import datetime, timedelta
 from django.utils import timezone
+from votebem.utils.devlog import dev_log  # Dev logger: prints and logs to file
 
 # Setup Django environment
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -126,16 +127,16 @@ def import_dummy_data():
         with open(data_file_path, 'r', encoding='utf-8') as file:
             content = file.read()
     except FileNotFoundError:
-        print(f"Error: File not found at {data_file_path}")
+        dev_log(f"Error: File not found at {data_file_path}")
         return
     except Exception as e:
-        print(f"Error reading file: {e}")
+        dev_log(f"Error reading file: {e}")
         return
     
     # Extract the JavaScript array
     match = re.search(r'dados = (\[.*\]);', content, re.DOTALL)
     if not match:
-        print("Error: Could not find 'dados' array in the file")
+        dev_log("Error: Could not find 'dados' array in the file")
         return
     
     json_str = match.group(1)
@@ -144,10 +145,10 @@ def import_dummy_data():
         # Parse the JSON data
         data_list = json.loads(json_str)
     except json.JSONDecodeError as e:
-        print(f"Error parsing JSON: {e}")
+        dev_log(f"Error parsing JSON: {e}")
         return
     
-    print(f"Found {len(data_list)} records to import")
+    dev_log(f"Found {len(data_list)} records to import")
     
     created_proposicoes = 0
     created_votacoes = 0
@@ -189,7 +190,7 @@ def import_dummy_data():
                 
                 if created:
                     created_proposicoes += 1
-                    print(f"Created Proposicao: {proposicao}")
+                    dev_log(f"Created Proposicao: {proposicao}")
                 
                 # Create VotacaoDisponivel if there's voting data
                 if resumo or parsed_data.get('pergunta'):
@@ -218,19 +219,19 @@ def import_dummy_data():
                     
                     if created:
                         created_votacoes += 1
-                        print(f"Created VotacaoDisponivel: {votacao}")
+                        dev_log(f"Created VotacaoDisponivel: {votacao}")
                 
             except Exception as e:
                 errors += 1
-                print(f"Error processing record {item.get('idProposicao', 'unknown')}: {e}")
+                dev_log(f"Error processing record {item.get('idProposicao', 'unknown')}: {e}")
                 continue
     
-    print(f"\nImport completed:")
-    print(f"- Created {created_proposicoes} proposições")
-    print(f"- Created {created_votacoes} votações disponíveis")
-    print(f"- Errors: {errors}")
+    dev_log(f"\nImport completed:")
+    dev_log(f"- Created {created_proposicoes} proposições")
+    dev_log(f"- Created {created_votacoes} votações disponíveis")
+    dev_log(f"- Errors: {errors}")
 
 if __name__ == '__main__':
-    print("Starting dummy data import...")
+    dev_log("Starting dummy data import...")
     import_dummy_data()
-    print("Import finished.")
+    dev_log("Import finished.")

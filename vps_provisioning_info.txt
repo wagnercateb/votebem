@@ -2,7 +2,7 @@ VPS Provisioning Completed
 ==========================
 Date: Mon Oct 20 14:20:55 UTC 2025
 Server: vb
-IP: 104.131.170.158
+IP: 45.55.144.233
 Sudoer User: votebem
 Docker Version: Docker version 28.5.1, build e180ab8
 Docker Compose Version: Docker Compose version v2.40.1
@@ -25,8 +25,8 @@ Next Steps:
 3. Configure your application-specific settings
 
 SSH Access:
-- ssh votebem@104.131.170.158 (with SSH key)
-- ssh root@104.131.170.158 (with SSH key)
+- ssh votebem@45.55.144.233 (with SSH key)
+- ssh root@45.55.144.233 (with SSH key)
 
 SSH Key Setup Instructions:
 - copie o arquivo id_rsa_bcb2.ppk para ~/.ssh

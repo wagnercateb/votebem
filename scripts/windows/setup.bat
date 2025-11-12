@@ -1,8 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM Change to project root directory (parent of scripts folder)
-cd /d "%~dp0\.."
+REM Change to project root directory (two levels up from windows/)
+REM Fix: from scripts\windows to project root requires ..\..
+cd /d "%~dp0\..\.."
 
 echo ========================================
 echo VoteBem Django Development Setup

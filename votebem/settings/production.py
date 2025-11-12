@@ -226,7 +226,8 @@ SOCIALACCOUNT_PROVIDERS = {
 if config('ENABLE_REMOTE_DEBUG', default=False, cast=bool):
     import debugpy
     debugpy.listen(('0.0.0.0', 5678))
-    print('Debugpy listening on port 5678')
+    from votebem.utils.devlog import dev_log  # Dev logger for consistency
+    dev_log('Debugpy listening on port 5678')
 
 # Performance optimizations
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB

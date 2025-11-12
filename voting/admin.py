@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
-from .models import Proposicao, VotacaoDisponivel, Voto, Congressman, CongressmanVote
+from .models import Proposicao, ProposicaoVotacao, VotacaoDisponivel, Voto, Congressman, CongressmanVote
 
 @admin.register(Proposicao)
 class ProposicaoAdmin(admin.ModelAdmin):
@@ -10,10 +10,27 @@ class ProposicaoAdmin(admin.ModelAdmin):
     search_fields = ['titulo', 'ementa', 'autor', 'id_proposicao']
     readonly_fields = ['created_at', 'updated_at']
     list_per_page = 50
+    inlines = []
     
     def titulo_truncado(self, obj):
         return obj.titulo[:80] + "..." if len(obj.titulo) > 80 else obj.titulo
     titulo_truncado.short_description = 'Título'
+
+class ProposicaoVotacaoInline(admin.TabularInline):
+    model = ProposicaoVotacao
+    extra = 0
+    fields = ['votacao_sufixo', 'descricao']
+    readonly_fields = []
+
+# Attach inline to ProposicaoAdmin
+ProposicaoAdmin.inlines = [ProposicaoVotacaoInline]
+
+@admin.register(ProposicaoVotacao)
+class ProposicaoVotacaoAdmin(admin.ModelAdmin):
+    list_display = ['proposicao', 'votacao_sufixo', 'descricao', 'created_at']
+    list_filter = ['proposicao__tipo', 'proposicao__ano']
+    search_fields = ['proposicao__titulo', 'proposicao__id_proposicao', 'descricao']
+    readonly_fields = ['created_at', 'updated_at']
 
 @admin.register(VotacaoDisponivel)
 class VotacaoDisponivelAdmin(admin.ModelAdmin):
@@ -39,7 +56,7 @@ class VotacaoDisponivelAdmin(admin.ModelAdmin):
     
     def votos_oficiais(self, obj):
         return f"SIM: {obj.sim_oficial} | NÃO: {obj.nao_oficial}"
-    votos_oficiais.short_description = 'Votos Oficiais'
+    votos_oficiais.short_description = 'Votação oficial'
 
 @admin.register(Voto)
 class VotoAdmin(admin.ModelAdmin):

@@ -316,7 +316,8 @@
             <form method="post" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="exibeUltimaProposicao">
-                <button type="submit" class="btn-action btn-primary">
+                <!-- Tooltip: shows last proposition inserted -->
+                <button type="submit" class="btn-action btn-primary" title="Exibe a última proposição inserida no banco" data-bs-toggle="tooltip" data-bs-placement="top">
                     <span class="icon">🔍</span> Última Proposição
                 </button>
             </form>
@@ -324,7 +325,8 @@
             <form method="post" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="exibeEstatisticaProposicoesPriInseridas">
-                <button type="submit" class="btn-action btn-info">
+                <!-- Tooltip: shows proposition statistics -->
+                <button type="submit" class="btn-action btn-info" title="Mostra estatísticas das proposições cadastradas" data-bs-toggle="tooltip" data-bs-placement="top">
                     <span class="icon">📊</span> Estatísticas
                 </button>
             </form>
@@ -332,7 +334,8 @@
             <form method="post" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="listarProposicoesVotadas">
-                <button type="submit" class="btn-action btn-success">
+                <!-- Tooltip: lists voted propositions -->
+                <button type="submit" class="btn-action btn-success" title="Lista proposições que já foram votadas" data-bs-toggle="tooltip" data-bs-placement="top">
                     <span class="icon">✅</span> Proposições Votadas
                 </button>
             </form>
@@ -346,7 +349,8 @@
             <form method="post" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="listarVotacoesDisponiveis">
-                <button type="submit" class="btn-action btn-primary">
+                <!-- Tooltip: lists available votings -->
+                <button type="submit" class="btn-action btn-primary" title="Lista votações disponíveis para proposições relevantes" data-bs-toggle="tooltip" data-bs-placement="top">
                     <span class="icon">📋</span> Votações Disponíveis
                 </button>
             </form>
@@ -354,7 +358,8 @@
             <form method="post" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="loopObterVotacoes">
-                <button type="submit" class="btn-action btn-warning">
+                <!-- Tooltip: executes loop to fetch votes -->
+                <button type="submit" class="btn-action btn-warning" title="Executa loop para obter/atualizar votações; pode demorar" data-bs-toggle="tooltip" data-bs-placement="top">
                     <span class="icon">🔄</span> Loop Votações
                 </button>
             </form>
@@ -368,7 +373,8 @@
             <form method="post" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="cadastrarEmentasFaltantes">
-                <button type="submit" class="btn-action btn-warning">
+                <!-- Tooltip: register missing ementas -->
+                <button type="submit" class="btn-action btn-warning" title="Busca e registra ementas faltantes via API da Câmara" data-bs-toggle="tooltip" data-bs-placement="top">
                     <span class="icon">📝</span> Registrar Ementas
                 </button>
             </form>
@@ -376,7 +382,8 @@
             <form method="post" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="atualizarNProposicoes">
-                <button type="submit" class="btn-action btn-success">
+                <!-- Tooltip: update N propositions -->
+                <button type="submit" class="btn-action btn-success" title="Atualiza um conjunto de proposições a partir da API" data-bs-toggle="tooltip" data-bs-placement="top">
                     <span class="icon">⬆️</span> Atualizar N Proposições
                 </button>
             </form>
@@ -387,7 +394,8 @@
     <div class="action-card">
         <h3><span class="icon">📋</span> Tramitação</h3>
         <div class="action-buttons">
-            <button type="button" class="btn-action btn-info" onclick="toggleTramitacaoForm()">
+            <!-- Tooltip: open period listing form -->
+            <button type="button" class="btn-action btn-info" onclick="toggleTramitacaoForm()" title="Abre o formulário para listar tramitações por intervalo de datas" data-bs-toggle="tooltip" data-bs-placement="top">
                 <span class="icon">📅</span> Listar por Período
             </button>
         </div>
@@ -435,10 +443,12 @@
                 
                 <div class="row">
                     <div class="col-md-12">
-                        <button type="submit" class="btn btn-primary">
+                        <!-- Tooltip: list propositions in process -->
+                        <button type="submit" class="btn btn-primary" title="Busca proposições que tramitaram no período informado" data-bs-toggle="tooltip" data-bs-placement="top">
                             <span class="icon">🔍</span> Listar Proposições em Tramitação
                         </button>
-                        <button type="button" class="btn btn-secondary" onclick="toggleTramitacaoForm()">
+                        <!-- Tooltip: close form -->
+                        <button type="button" class="btn btn-secondary" onclick="toggleTramitacaoForm()" title="Fecha o formulário de tramitação" data-bs-toggle="tooltip" data-bs-placement="top">
                             <span class="icon">❌</span> Cancelar
                         </button>
                     </div>
@@ -482,7 +492,8 @@
             <div class="col-md-6">
                 <div class="form-group">
                     <label for="dataFinal">Data Final:</label>
-                    <input type="date" id="dataFinal" name="dataFinal" class="form-control" required readonly>
+                    <!-- Made editable: removed readonly to allow manual date selection -->
+                    <input type="date" id="dataFinal" name="dataFinal" class="form-control" required>
                 </div>
             </div>
         </div>
@@ -492,7 +503,8 @@
             O período máximo permitido é de 3 meses para evitar sobrecarga do sistema.
         </div>
         
-        <button type="submit" class="btn-action btn-primary">
+        <!-- Tooltip: sync propositions by date range -->
+        <button type="submit" class="btn-action btn-primary" title="Sincroniza proposições votadas no plenário no período (máx. 3 meses)" data-bs-toggle="tooltip" data-bs-placement="top">
             <span class="icon">🔄</span> Atualizar Proposições do Período
         </button>
     </form>
@@ -502,7 +514,7 @@
 <div class="form-section">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="mb-0">📅 Listar Proposições por Período (buscar online)</h3>
-        <a href="http://localhost:8000/gerencial/proposicoes/list/" class="btn btn-info btn-sm" target="_user">
+        <a href="http://localhost:8000/gerencial/proposicoes/list/" class="btn btn-info btn-sm" target="_user" title="Abre a lista de proposições já carregadas no sistema" data-bs-toggle="tooltip" data-bs-placement="top">
             📋 Listar proposições carregadas
         </a>
     </div>
@@ -533,7 +545,8 @@
                 </div>
             </div>
         </div>
-        <button type="submit" class="btn-action btn-primary">
+        <!-- Tooltip: list propositions by period online -->
+        <button type="submit" class="btn-action btn-primary" title="Lista proposições por período (consulta online)" data-bs-toggle="tooltip" data-bs-placement="top">
             <span class="icon">🔍</span> Listar Proposições
         </button>
     </form>
@@ -789,6 +802,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     console.log('Form submission handlers loaded for', forms.length, 'forms');
+
+    // Initialize Bootstrap tooltips for all elements with data-bs-toggle="tooltip"
+    // This enhances native title tooltips with Bootstrap styling when available.
+    try {
+        const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipElements.forEach(el => {
+            if (window.bootstrap && bootstrap.Tooltip) {
+                new bootstrap.Tooltip(el);
+            }
+        });
+    } catch (e) {
+        // If Bootstrap JS is not available, the native browser title tooltip still works.
+    }
 });
 
 // Function to toggle tramitacao form visibility

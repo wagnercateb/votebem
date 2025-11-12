@@ -27,6 +27,32 @@ class Proposicao(models.Model):
     def __str__(self):
         return f"{self.tipo} {self.numero}/{self.ano} - {self.titulo[:50]}"
 
+class ProposicaoVotacao(models.Model):
+    """Votações oficiais associadas a uma proposição (1-N).
+
+    Armazena o identificador de votação (sufixo) e sua descrição para cada proposição.
+    Exemplo: proposicao_id=2270800 possui votações 175, 160 e 135.
+    """
+    proposicao = models.ForeignKey(
+        Proposicao,
+        on_delete=models.CASCADE,
+        related_name='votacoes_oficiais',
+        verbose_name='Proposição'
+    )
+    votacao_sufixo = models.IntegerField(verbose_name='ID da Votação (sufixo)')
+    descricao = models.TextField(blank=True, null=True, verbose_name='Descrição da Votação')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Votação da Proposição'
+        verbose_name_plural = 'Votações da Proposição'
+        unique_together = ['proposicao', 'votacao_sufixo']
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.proposicao.id_proposicao}-{self.votacao_sufixo}"
+
 class VotacaoDisponivel(models.Model):
     """Model for available voting sessions"""
     proposicao = models.ForeignKey(Proposicao, on_delete=models.CASCADE, verbose_name="Proposição")

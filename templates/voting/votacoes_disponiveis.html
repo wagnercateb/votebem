@@ -51,14 +51,15 @@
                             </div>
                             
                             <div class="card-body">
+                                <!-- Título agora usa 'proposicao.titulo' e linka para a tela de detalhes interna -->
                                 <h6 class="card-title">
-                                    {% if votacao.proposicao.id_proposicao %}
-                                        <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="text-decoration-none">
+                                        {% if votacao.proposicao.titulo %}
+                                            {{ votacao.proposicao.titulo|truncatechars:60 }}
+                                        {% else %}
                                             {{ votacao.titulo|truncatechars:60 }}
-                                        </a>
-                                    {% else %}
-                                        {{ votacao.titulo|truncatechars:60 }}
-                                    {% endif %}
+                                        {% endif %}
+                                    </a>
                                 </h6>
                                 <p class="card-text text-muted small">{{ votacao.resumo|truncatechars:100 }}</p>
                                 
@@ -84,13 +85,7 @@
                                 </div>
                             </div>
                             
-                            <div class="card-footer">
-                                <div class="d-grid">
-                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-outline-primary btn-sm">
-                                        <i class="bi bi-eye"></i> Ver Detalhes
-                                    </a>
-                                </div>
-                            </div>
+                            <!-- Removido botão "Ver Detalhes" conforme solicitação -->
                         </div>
                     </div>
                 {% endfor %}

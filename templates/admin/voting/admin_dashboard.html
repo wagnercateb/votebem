@@ -183,7 +183,7 @@
     </div>
     <div class="stat-card">
         <div class="stat-number">{{ total_votos_congressistas }}</div>
-        <div class="stat-label">Votos Oficiais</div>
+        <div class="stat-label">Votação oficial</div>
     </div>
     <div class="stat-card">
         <div class="stat-number">{{ total_usuarios }}</div>
@@ -195,63 +195,65 @@
     <div class="action-card">
         <h3>Gerenciar Proposições</h3>
         <ul class="action-list">
-            <li><a href="{% url 'gerencial:proposicoes_list' %}">Listar Todas as Proposições</a></li>
-            <li><a href="/admin/voting/proposicao/add/">Adicionar via Django</a></li>
-            <li><a href="{% url 'gerencial:proposicao_add' %}">Adicionar via App</a></li>
-            <li><a href="{% url 'gerencial:proposicao_import' %}">Adicionar via ID</a></li>
-            <li><a href="{% url 'gerencial:proposicoes_statistics' %}">Estatísticas de Proposições</a></li>
+            <!-- Tooltip descreve ação e se é via App ou Django -->
+            <li><a href="{% url 'gerencial:proposicoes_list' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Exibe a lista de proposições cadastradas no aplicativo">Listar Todas as Proposições</a></li>
+            <li><a href="/admin/voting/proposicao/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre o formulário de criação no Django Admin">Adicionar via Django</a></li>
+            <li><a href="{% url 'gerencial:proposicao_add' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre o formulário de criação de proposição no aplicativo">Adicionar via App</a></li>
+            <li><a href="{% url 'gerencial:proposicao_import' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Importa uma proposição informando o ID da Câmara">Adicionar via ID</a></li>
+            <li><a href="{% url 'gerencial:proposicoes_statistics' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Mostra métricas e estatísticas das proposições">Estatísticas de Proposições</a></li>
         </ul>
     </div>
     
     <div class="action-card">
         <h3>Gerenciar Votações</h3>
         <ul class="action-list">
-            <li><a href="/admin/voting/votacaodisponivel/">Listar Todas as Votações</a></li>
-            <li><a href="{% url 'gerencial:votacoes_management' %}">Gerenciar Votações Ativas</a></li>
-            <li><a href="/admin/voting/votacaodisponivel/add/">Criar Nova Votação</a></li>
+            <!-- Ajuste de rótulo para indicar Django Admin -->
+            <li><a href="/admin/voting/votacaodisponivel/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista todas as votações disponíveis no Django Admin">Listar Todas as Votações via Django</a></li>
+            <li><a href="{% url 'gerencial:votacoes_management' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Ativa, pausa ou encerra votações no aplicativo">Gerenciar Votações Ativas</a></li>
+            <li><a href="/admin/voting/votacaodisponivel/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Cria uma nova votação pelo Django Admin">Criar Nova Votação via Django</a></li>
         </ul>
     </div>
     
     <div class="action-card">
         <h3>Gerenciar Usuários</h3>
         <ul class="action-list">
-            <li><a href="/admin/auth/user/">Listar Todos os Usuários</a></li>
-            <li><a href="{% url 'gerencial:users_management' %}">Estatísticas de Usuários</a></li>
-            <li><a href="/admin/users/userprofile/">Perfis de Usuários</a></li>
+            <li><a href="/admin/auth/user/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista todos os usuários no Django Admin">Listar Todos os Usuários via Django</a></li>
+            <li><a href="{% url 'gerencial:users_management' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Exibe estatísticas e atividade de usuários no aplicativo">Estatísticas de Usuários</a></li>
+            <li><a href="/admin/users/userprofile/" data-bs-toggle="tooltip" data-bs-placement="top" title="Gerencia perfis de usuários no Django Admin">Perfis de Usuários via Django</a></li>
         </ul>
     </div>
     
     <div class="action-card">
         <h3>Congressistas</h3>
         <ul class="action-list">
-            <li><a href="/admin/voting/congressman/">Deputados via Django</a></li>
-            <li><a href="/admin/voting/congressman/add/">Adicionar Congressista via Django</a></li>
-            <li><a href="{% url 'gerencial:congressistas_update' %}">Atualizar Deputados (Câmara API)</a></li>
+            <li><a href="/admin/voting/congressman/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista deputados no Django Admin">Deputados via Django</a></li>
+            <li><a href="/admin/voting/congressman/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Cria um novo deputado pelo Django Admin">Adicionar Congressista via Django</a></li>
+            <li><a href="{% url 'gerencial:congressistas_update' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Atualiza cadastro de deputados com dados da API da Câmara">Atualizar Deputados (Câmara API)</a></li>
         </ul>
     </div>
 
     <div class="action-card">
-        <h3>Votos Oficiais</h3>
+        <h3>Votação oficial</h3>
         <ul class="action-list">
-            <li><a href="/admin/voting/congressmanvote/">Votos Oficiais via Django</a></li>
-            <li><a href="{% url 'gerencial:votos_oficiais_app' %}">Votos Oficiais via App</a></li>
+            <li><a href="/admin/voting/congressmanvote/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista Votação oficial no Django Admin">Votação oficial via Django</a></li>
+            <li><a href="{% url 'gerencial:votos_oficiais_app' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Consulta e analisa Votação oficial no aplicativo">Votação oficial via App</a></li>
         </ul>
     </div>
     
     <div class="action-card">
         <h3>Ferramentas de Dados</h3>
         <ul class="action-list">
-            <li><a href="{% url 'gerencial:data_import_export' %}">Importar/Exportar Dados</a></li>
-            <li><a href="/admin/voting/voto/">Analisar Votos Populares</a></li>
+            <li><a href="{% url 'gerencial:data_import_export' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Importa ou exporta dados do sistema pelo aplicativo">Importar/Exportar Dados</a></li>
+            <li><a href="/admin/voting/voto/" data-bs-toggle="tooltip" data-bs-placement="top" title="Analisa votos populares no Django Admin">Analisar Votos Populares via Django</a></li>
         </ul>
     </div>
     
     <div class="action-card">
         <h3>Enquetes</h3>
         <ul class="action-list">
-            <li><a href="/admin/polls/enquete/">Gerenciar Enquetes</a></li>
-            <li><a href="/admin/polls/respostaenquete/">Respostas de Enquetes</a></li>
-            <li><a href="/admin/polls/enquete/add/">Criar Nova Enquete</a></li>
+            <li><a href="/admin/polls/enquete/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista e edita enquetes no Django Admin">Gerenciar Enquetes via Django</a></li>
+            <li><a href="/admin/polls/respostaenquete/" data-bs-toggle="tooltip" data-bs-placement="top" title="Visualiza respostas de enquetes no Django Admin">Respostas de Enquetes via Django</a></li>
+            <li><a href="/admin/polls/enquete/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Cria nova enquete pelo Django Admin">Criar Nova Enquete via Django</a></li>
         </ul>
     </div>
 </div>
@@ -282,10 +284,22 @@
             <small>{{ ultima_proposicao.tipo }} {{ ultima_proposicao.numero }}/{{ ultima_proposicao.ano }} - {{ ultima_proposicao.estado }}</small>
         </div>
         <div class="stats-value">
-            <a href="{% url 'gerencial:proposicao_edit' ultima_proposicao.pk %}">Ver Detalhes</a>
+            <!-- Tooltip para link de detalhes no aplicativo -->
+            <a href="{% url 'gerencial:proposicao_edit' ultima_proposicao.pk %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre detalhes da proposição no aplicativo">Ver Detalhes</a>
         </div>
     </div>
 </div>
 {% endif %}
 
+{% block extra_js %}
+<script>
+  // Inicializa tooltips do Bootstrap em todos os elementos com data-bs-toggle="tooltip"
+  document.addEventListener('DOMContentLoaded', function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+      new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  });
+</script>
+{% endblock %}
 {% endblock %}

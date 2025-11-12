@@ -1,14 +1,29 @@
 {% extends 'base.html' %}
-{% block title %}Pesquisar Votações - VoteBem{% endblock %}
+{% block title %}{% if is_proposicoes %}Pesquisar Proposições da Câmara dos Deputados{% else %}Pesquisar Votações de Votebem.online{% endif %}{% endblock %}
 
 {% block content %}
 <div class="row">
   <div class="col-12">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1><i class="bi bi-search"></i> Pesquisar Votações</h1>
-      <a href="{% url 'voting:votacoes_disponiveis' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Voltar às Votações
-      </a>
+      <h1>
+        <i class="bi bi-search"></i>
+        {% if is_proposicoes %}Pesquisar Proposições da Câmara dos Deputados{% else %}Pesquisar Votações de Votebem.online{% endif %}
+      </h1>
+      <div class="d-flex gap-2">
+        {% if is_proposicoes %}
+          <a href="{% url 'voting:votacoes_pesquisa' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Pesquisar Votações de Votebem.online
+          </a>
+        {% else %}
+          <!-- Botão solicitado para pesquisar proposições -->
+          <a href="{% url 'voting:votacoes_pesquisa' %}?target=proposicoes" class="btn btn-outline-primary">
+            <i class="bi bi-building"></i> Pesquisar Proposições da Câmara dos Deputados
+          </a>
+        {% endif %}
+        <a href="{% url 'voting:votacoes_disponiveis' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i> Voltar às Votações
+        </a>
+      </div>
     </div>
 
     <form method="get" class="card mb-4">
@@ -36,6 +51,7 @@
               {% endfor %}
             </select>
           </div>
+          {% if not is_proposicoes %}
           <div class="col-md-2">
             <label class="form-label">Ativa</label>
             <select name="ativo" class="form-select">
@@ -44,6 +60,7 @@
               <option value="nao" {% if ativo_sel == 'nao' %}selected{% endif %}>Não</option>
             </select>
           </div>
+          {% endif %}
         </div>
       </div>
       <div class="card-footer d-flex justify-content-between">
@@ -57,6 +74,15 @@
         <div class="table-responsive">
           <table class="table table-hover mb-0">
             <thead class="table-light">
+              {% if is_proposicoes %}
+              <tr>
+                <th>ID Câmara</th>
+                <th>Título</th>
+                <th>Proposição</th>
+                <th>Ementa</th>
+                <th>Ações</th>
+              </tr>
+              {% else %}
               <tr>
                 <th>ID</th>
                 <th>Título</th>
@@ -65,9 +91,43 @@
                 <th>No ar desde</th>
                 <th>Ações</th>
               </tr>
+              {% endif %}
             </thead>
             <tbody>
               {% for v in votacoes %}
+              {% if is_proposicoes %}
+              <tr>
+                <td>{{ v.id_proposicao }}</td>
+                <td>
+                  {% if v.id_proposicao %}
+                    <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.id_proposicao }}" target="camara" class="text-decoration-none">
+                      {{ v.titulo|truncatechars:80 }}
+                    </a>
+                  {% else %}
+                    {{ v.titulo|truncatechars:80 }}
+                  {% endif %}
+                </td>
+                <td>
+                  {% if v.id_proposicao %}
+                    <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.id_proposicao }}" target="camara" class="text-decoration-none">
+                      <span class="badge bg-primary">{{ v.tipo }} {{ v.numero }}/{{ v.ano }}</span>
+                    </a>
+                  {% else %}
+                    <span class="badge bg-primary">{{ v.tipo }} {{ v.numero }}/{{ v.ano }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="text-muted small">{{ v.ementa|truncatechars:120 }}</div>
+                </td>
+                <td>
+                  {% if v.id_proposicao %}
+                  <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.id_proposicao }}" class="btn btn-sm btn-outline-primary" target="camara">
+                    <i class="bi bi-box-arrow-up-right"></i> Câmara
+                  </a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% else %}
               <tr>
                 <td>{{ v.id }}</td>
                 <td>
@@ -103,6 +163,7 @@
                   </a>
                 </td>
               </tr>
+              {% endif %}
               {% endfor %}
             </tbody>
           </table>
@@ -128,8 +189,13 @@
     {% else %}
       <div class="text-center py-5">
         <i class="bi bi-inbox display-1 text-muted"></i>
-        <h3 class="text-muted mt-3">Nenhuma votação encontrada</h3>
-        <p class="text-muted">Ajuste os filtros para encontrar outras votações.</p>
+        {% if is_proposicoes %}
+          <h3 class="text-muted mt-3">Nenhuma proposição encontrada</h3>
+          <p class="text-muted">Ajuste os filtros para encontrar outras proposições.</p>
+        {% else %}
+          <h3 class="text-muted mt-3">Nenhuma votação encontrada</h3>
+          <p class="text-muted">Ajuste os filtros para encontrar outras votações.</p>
+        {% endif %}
       </div>
     {% endif %}
   </div>

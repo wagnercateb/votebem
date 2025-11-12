@@ -16,6 +16,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 django.setup()
 
 from django.contrib.auth import get_user_model
+from votebem.utils.devlog import dev_log  # Use dev_log to print and file-log
 
 def create_superuser():
     """Create a superuser if one doesn't exist."""
@@ -23,9 +24,9 @@ def create_superuser():
     
     # Check if superuser already exists
     if User.objects.filter(is_superuser=True).exists():
-        print("✅ Superuser already exists!")
+        dev_log("✅ Superuser already exists!")
         superuser = User.objects.filter(is_superuser=True).first()
-        print(f"   Email: {superuser.email}")
+        dev_log(f"   Email: {superuser.email}")
         return superuser
     
     # Create superuser
@@ -39,14 +40,14 @@ def create_superuser():
             email=email,
             password=password
         )
-        print("✅ Superuser created successfully!")
-        print(f"   Username: {username}")
-        print(f"   Email: {email}")
-        print(f"   Password: {password}")
-        print(f"   Admin URL: http://localhost:8000/admin/")
+        dev_log("✅ Superuser created successfully!")
+        dev_log(f"   Username: {username}")
+        dev_log(f"   Email: {email}")
+        dev_log(f"   Password: {password}")
+        dev_log(f"   Admin URL: http://localhost:8000/admin/")
         return superuser
     except Exception as e:
-        print(f"❌ Error creating superuser: {e}")
+        dev_log(f"❌ Error creating superuser: {e}")
         return None
 
 if __name__ == "__main__":

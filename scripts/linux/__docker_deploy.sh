@@ -194,7 +194,7 @@ prompt_with_default() {
 DOMAIN_DEFAULT="votebem.online"
 read -rp "Enter domain (default: ${DOMAIN_DEFAULT}): " DOMAIN_INPUT || DOMAIN_INPUT=""
 DOMAIN="${DOMAIN_INPUT:-$DOMAIN_DEFAULT}"
-VPS_IP_DEFAULT="104.131.170.158"
+VPS_IP_DEFAULT="45.55.144.233"
 read -rp "Enter VPS public IP (default: ${VPS_IP_DEFAULT}): " VPS_IP_INPUT || VPS_IP_INPUT=""
 VPS_IP="${VPS_IP_INPUT:-$VPS_IP_DEFAULT}"
 
