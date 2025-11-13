@@ -12,7 +12,6 @@ from django.utils import timezone
 from django.db import transaction
 from ..models import Proposicao, VotacaoDisponivel
 import logging
-from votebem.utils.devlog import dev_log
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ class CamaraAPIService:
         """
         try:
             url = f"{self.BASE_URL}/{endpoint}"
-            dev_log(f"DEBUG: Making request to {url} with params: {params}")
+            print(f"DEBUG: Making request to {url} with params: {params}")
             
             # Add additional headers that might help with 403 errors
             headers = {
@@ -49,17 +48,17 @@ class CamaraAPIService:
             }
             
             response = self.session.get(url, params=params, headers=headers, timeout=30)
-            dev_log(f"DEBUG: Response status: {response.status_code}")
-            dev_log(f"DEBUG: Response headers: {dict(response.headers)}")
+            print(f"DEBUG: Response status: {response.status_code}")
+            print(f"DEBUG: Response headers: {dict(response.headers)}")
             
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            dev_log(f"DEBUG: Request error: {e}")
+            print(f"DEBUG: Request error: {e}")
             logger.error(f"Error making request to {url}: {e}")
             raise Exception(f"Erro na comunicação com a API da Câmara: {str(e)}")
         except json.JSONDecodeError as e:
-            dev_log(f"DEBUG: JSON decode error: {e}")
+            print(f"DEBUG: JSON decode error: {e}")
             logger.error(f"Error decoding JSON response: {e}")
             raise Exception(f"Erro ao processar resposta da API: {str(e)}")
     
@@ -314,7 +313,7 @@ class CamaraAPIService:
                         proposicao.save(update_fields=['ementa'])
                         updated_count += 1
             except Exception as e:
-                logger.error(f"Error updating ementa for proposition {proposicao.pk}: {e}")
+logger.error(f"Error updating ementa for proposition {proposicao.pk}: {e}")
         
         return updated_count
     

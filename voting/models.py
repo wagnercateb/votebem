@@ -4,7 +4,8 @@ from django.utils import timezone
 
 class Proposicao(models.Model):
     """Model for political propositions from Camara dos Deputados"""
-    id_proposicao = models.IntegerField(unique=True, verbose_name="ID da Proposição")
+    # Make id_proposicao the primary key for the table
+    id_proposicao = models.IntegerField(primary_key=True, verbose_name="ID da Proposição")
     titulo = models.CharField(max_length=500, verbose_name="Título")
     ementa = models.TextField(verbose_name="Ementa")
     tipo = models.CharField(max_length=50, verbose_name="Tipo")
@@ -33,8 +34,10 @@ class ProposicaoVotacao(models.Model):
     Armazena o identificador de votação (sufixo) e sua descrição para cada proposição.
     Exemplo: proposicao_id=2270800 possui votações 175, 160 e 135.
     """
+    # Explicitly reference Proposicao by its new primary key id_proposicao
     proposicao = models.ForeignKey(
         Proposicao,
+        to_field='id_proposicao',
         on_delete=models.CASCADE,
         related_name='votacoes_oficiais',
         verbose_name='Proposição'
@@ -55,7 +58,13 @@ class ProposicaoVotacao(models.Model):
 
 class VotacaoDisponivel(models.Model):
     """Model for available voting sessions"""
-    proposicao = models.ForeignKey(Proposicao, on_delete=models.CASCADE, verbose_name="Proposição")
+    # Explicitly reference Proposicao by its new primary key id_proposicao
+    proposicao = models.ForeignKey(
+        Proposicao,
+        to_field='id_proposicao',
+        on_delete=models.CASCADE,
+        verbose_name="Proposição"
+    )
     titulo = models.CharField(max_length=500, verbose_name="Título da Votação")
     resumo = models.TextField(verbose_name="Resumo")
     data_hora_votacao = models.DateTimeField(verbose_name="Data/Hora da Votação Original")
@@ -154,7 +163,13 @@ class CongressmanVote(models.Model):
     ]
     
     congressman = models.ForeignKey(Congressman, on_delete=models.CASCADE, verbose_name="Congressista")
-    proposicao = models.ForeignKey(Proposicao, on_delete=models.CASCADE, verbose_name="Proposição")
+    # Explicitly reference Proposicao by its new primary key id_proposicao
+    proposicao = models.ForeignKey(
+        Proposicao,
+        to_field='id_proposicao',
+        on_delete=models.CASCADE,
+        verbose_name="Proposição"
+    )
     voto = models.IntegerField(choices=VOTO_CHOICES, blank=True, null=True, verbose_name="Voto")
     congress_vote_id = models.IntegerField(blank=True, null=True, verbose_name="ID Votação da Câmara")
     created_at = models.DateTimeField(auto_now_add=True)

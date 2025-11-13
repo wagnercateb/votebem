@@ -291,7 +291,7 @@
                     {% if proposicao.votacaodisponivel_set.exists %}
                         <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-success">Votações</a>
                     {% else %}
-                        <a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ proposicao.id }}" class="btn btn-secondary">Criar Votação</a>
+<a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ proposicao.pk }}" class="btn btn-secondary">Criar Votação</a>
                     {% endif %}
                 </td>
             </tr>

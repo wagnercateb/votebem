@@ -263,9 +263,12 @@
           // Allow default navigation; inputs will be prefilled from URL on load
         })
         .catch(err0 => {
+          // Show detailed error with the URL we called, to aid troubleshooting
           status.textContent = '';
           help.style.display = 'none'; err.style.display = 'block';
           listTbody.innerHTML = '';
+          const safeUrl = url;
+          err.innerHTML = `<div class="alert alert-danger" style="margin:0;">Ocorreu um erro ao consultar a API da Câmara. Verifique o ID e tente novamente. URL: <a href="${safeUrl}" target="api">${safeUrl}</a></div>`;
         });
     });
 

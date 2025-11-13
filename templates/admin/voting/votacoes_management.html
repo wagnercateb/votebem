@@ -233,7 +233,7 @@
 <div class="proposicoes-sem-votacao">
     <h3>Proposições sem Votação (Últimas 20)</h3>
     {% for proposicao in proposicoes_sem_votacao %}
-    <div class="proposicao-item" onclick="selectProposicao({{ proposicao.id }}, '{{ proposicao.titulo|escapejs }}')">
+<div class="proposicao-item" onclick="selectProposicao({{ proposicao.pk }}, '{{ proposicao.titulo|escapejs }}')">
         <strong>{{ proposicao.tipo }} {{ proposicao.numero }}/{{ proposicao.ano }}</strong><br>
         <small>{{ proposicao.titulo|truncatechars:100 }}</small>
     </div>

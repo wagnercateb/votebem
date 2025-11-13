@@ -11,7 +11,15 @@ class Enquete(models.Model):
     ]
     
     autor = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Autor")
-    proposicao = models.ForeignKey(Proposicao, on_delete=models.CASCADE, verbose_name="Proposição")
+    # Reference Proposicao by its new primary key field id_proposicao
+    # db_constraint=False avoids immediate FK constraint issues during schema transition
+    proposicao = models.ForeignKey(
+        Proposicao,
+        to_field='id_proposicao',
+        on_delete=models.CASCADE,
+        verbose_name="Proposição",
+        db_constraint=False,
+    )
     titulo = models.CharField(max_length=500, verbose_name="Título")
     pergunta = models.TextField(verbose_name="Pergunta")
     descricao = models.TextField(blank=True, null=True, verbose_name="Descrição")

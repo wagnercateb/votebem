@@ -570,7 +570,7 @@
             </thead>
             <tbody>
                 <tr>
-                    <td>{{ ultima_proposicao.id }}</td>
+<td>{{ ultima_proposicao.pk }}</td>
                     <td>{{ ultima_proposicao.siglaTipo }}</td>
                     <td>{{ ultima_proposicao.numero }}</td>
                     <td>{{ ultima_proposicao.ano }}</td>
@@ -652,7 +652,7 @@
             <tbody>
                 {% for proposicao in proposicoes_votadas %}
                 <tr>
-                    <td>{{ proposicao.id }}</td>
+<td>{{ proposicao.pk }}</td>
                     <td>{{ proposicao.siglaTipo }}</td>
                     <td>{{ proposicao.numero }}</td>
                     <td>{{ proposicao.ano }}</td>
@@ -714,7 +714,7 @@
             <tbody>
                 {% for proposicao in tramitacao_result %}
                 <tr>
-                    <td>{{ proposicao.id }}</td>
+<td>{{ proposicao.pk }}</td>
                     <td>{{ proposicao.siglaTipo }}</td>
                     <td>{{ proposicao.numero }}</td>
                     <td>{{ proposicao.ano }}</td>
