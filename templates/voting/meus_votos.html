@@ -23,7 +23,7 @@
                     <div class="card-header">
                         <div class="d-flex justify-content-between align-items-start">
                             <h6 class="mb-0 text-truncate" title="{{ voto.votacao.titulo }}">
-                                {{ voto.votacao.proposicao.tipo }} {{ voto.votacao.proposicao.numero }}/{{ voto.votacao.proposicao.ano }}
+{{ voto.votacao.proposicao_votacao.proposicao.tipo }} {{ voto.votacao.proposicao_votacao.proposicao.numero }}/{{ voto.votacao.proposicao_votacao.proposicao.ano }}
                             </h6>
                             <span class="badge bg-{% if voto.voto == 'SIM' %}success{% elif voto.voto == 'NAO' %}danger{% else %}warning{% endif %}">
                                 {{ voto.get_voto_display }}

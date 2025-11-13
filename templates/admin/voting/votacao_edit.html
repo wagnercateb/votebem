@@ -261,8 +261,8 @@
                 <div class="info-grid">
                     <div class="info-item">
                         <strong>Proposição Relacionada:</strong>
-                        <a href="{% url 'gerencial:proposicao_edit' votacao.proposicao.pk %}">
-                            {{ votacao.proposicao.titulo|truncatechars:50 }}
+<a href="{% url 'gerencial:proposicao_edit' votacao.proposicao_votacao.proposicao.pk %}">
+{{ votacao.proposicao_votacao.proposicao.titulo|truncatechars:50 }}
                         </a>
                     </div>
                     <div class="info-item">

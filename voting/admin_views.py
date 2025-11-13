@@ -49,12 +49,12 @@ def votos_oficiais_app(request):
     votos_data = []
     if votacao_id:
         try:
-            votacao = VotacaoDisponivel.objects.select_related('proposicao').get(pk=int(votacao_id))
-            # Votação oficial: por proposição
+            votacao = VotacaoDisponivel.objects.select_related('proposicao_votacao__proposicao').get(pk=int(votacao_id))
+            # Votação oficial: por votação específica da proposição
             registros = (
                 CongressmanVote.objects
                 .select_related('congressman')
-                .filter(proposicao=votacao.proposicao)
+                .filter(proposicao_votacao=votacao.proposicao_votacao)
             )
             for r in registros:
                 votos_data.append({
@@ -97,6 +97,9 @@ def ajax_import_congress_votes(request):
             return JsonResponse({'ok': False, 'error': 'IDs inválidos fornecidos'}, status=400)
 
         # Construir ID de votação no formato esperado pela API: "<proposicao_id>-<sufixo>"
+        # Observação: alguns ambientes da API podem não aceitar diretamente o ID composto.
+        # Para robustez, faremos fallback consultando as votações da proposição e
+        # localizando o ID exato correspondente ao sufixo.
         votacao_composta_id = f"{prop_id_int}-{sufixo_int}"
         api_url_votes = f"{CamaraAPIService.BASE_URL}/votacoes/{votacao_composta_id}/votos"
 
@@ -108,13 +111,55 @@ def ajax_import_congress_votes(request):
             }
         )
 
-        # Buscar detalhes e votos individuais na API
-        detalhes_votacao = camara_api.get_votacao_details(votacao_composta_id) or {}
-        dados_det = detalhes_votacao.get('dados') or {}
-        votos_individuais = camara_api.get_votacao_votos(votacao_composta_id)
+        # Buscar detalhes e votos individuais na API com estratégia de fallback
+        # 1) Tentar com ID composto diretamente
+        detalhes_votacao = {}
+        dados_det = {}
+        votos_individuais = []
+
+        def _try_fetch(v_id: str):
+            """Helper para tentar buscar detalhes e votos por um ID de votação."""
+            det = camara_api.get_votacao_details(v_id) or {}
+            votes = camara_api.get_votacao_votos(v_id) or []
+            return det, votes
+
+        try:
+            detalhes_votacao, votos_individuais = _try_fetch(votacao_composta_id)
+            dados_det = detalhes_votacao.get('dados') or {}
+        except Exception:
+            # 2) Fallback: consultar lista de votações da proposição e localizar pelo sufixo
+            try:
+                lista = camara_api.get_proposicao_votacoes(prop_id_int) or []
+                candidato_id = None
+                for item in lista:
+                    full_id = item.get('id') or item.get('idVotacao') or ''
+                    if not full_id:
+                        continue
+                    try:
+                        suf = None
+                        if isinstance(full_id, str) and '-' in full_id:
+                            suf = int(str(full_id).split('-')[-1])
+                        elif isinstance(full_id, int):
+                            suf = int(full_id)
+                        if suf == sufixo_int:
+                            candidato_id = str(full_id)
+                            break
+                    except Exception:
+                        continue
+                if candidato_id:
+                    api_url_votes = f"{CamaraAPIService.BASE_URL}/votacoes/{candidato_id}/votos"
+                    detalhes_votacao, votos_individuais = _try_fetch(candidato_id)
+                    dados_det = detalhes_votacao.get('dados') or {}
+                else:
+                    # Sem candidato: manter erro original
+                    raise Exception("Votação não encontrada para o sufixo informado")
+            except Exception as e2:
+                # Se o fallback também falhar, retornar erro para UI com a URL tentada
+                return JsonResponse({'ok': False, 'error': f'Erro ao importar: {e2}', 'api_url': api_url_votes}, status=502)
 
         # Converter placar oficial
         try:
+            # Converter placar oficial quando disponível
             sim_count = int(dados_det.get('placarSim') or 0)
             nao_count = int(dados_det.get('placarNao') or 0)
         except Exception:
@@ -235,10 +280,15 @@ def ajax_import_congress_votes(request):
                 skipped += 1
                 continue
 
+            pv, _ = ProposicaoVotacao.objects.get_or_create(
+                proposicao=proposicao,
+                votacao_sufixo=sufixo_int,
+                defaults={'descricao': ''}
+            )
             obj, was_created = CongressmanVote.objects.update_or_create(
                 congressman=cm,
-                proposicao=proposicao,
-                defaults={'voto': voto_val, 'congress_vote_id': sufixo_int}
+                proposicao_votacao=pv,
+                defaults={'voto': voto_val}
             )
             if was_created:
                 created += 1
@@ -412,7 +462,11 @@ def congressistas_update(request):
 def votacao_obter_votacao(request, pk):
     """Fetch official voting for the proposition linked to a VotacaoDisponivel and store individual votes."""
     votacao = get_object_or_404(VotacaoDisponivel, pk=pk)
-    proposicao = votacao.proposicao
+    proposicao = None
+    try:
+        proposicao = votacao.proposicao_votacao.proposicao
+    except Exception:
+        proposicao = None
     if not proposicao or not proposicao.id_proposicao:
         messages.error(request, 'Proposição sem id_proposicao; não é possível consultar votação oficial.')
         return redirect('gerencial:votacao_edit', pk=pk)
@@ -618,18 +672,16 @@ def votacao_obter_votacao(request, pk):
                     log_step("Skipped vote: no congressman match", {"dep_id": dep_id, "nome_dep": nome_dep, "tipoVoto": voto_tipo, "raw_vote": voto})
                     continue
 
+            pv, _ = ProposicaoVotacao.objects.get_or_create(
+                proposicao=proposicao,
+                votacao_sufixo=congress_vote_numeric_id,
+                defaults={'descricao': ''}
+            )
             obj, was_created = CongressmanVote.objects.update_or_create(
                 congressman=cm,
-                proposicao=proposicao,
-                defaults={'voto': voto_val, 'congress_vote_id': congress_vote_numeric_id}
+                proposicao_votacao=pv,
+                defaults={'voto': voto_val}
             )
-            if congress_vote_numeric_id is not None:
-                try:
-                    if getattr(obj, 'congress_vote_id', None) != congress_vote_numeric_id:
-                        obj.congress_vote_id = congress_vote_numeric_id
-                        obj.save(update_fields=['congress_vote_id'])
-                except Exception:
-                    pass
             if was_created:
                 created += 1
                 log_step("Inserted CongressmanVote", {"congressman_id": cm.id, "id_cadastro": cm.id_cadastro, "voto": voto_val})
@@ -895,9 +947,9 @@ def votacoes_management(request):
                     # Fetch by new primary key (id_proposicao)
                     proposicao = Proposicao.objects.get(pk=proposicao_id)
                     votacao = VotacaoDisponivel.objects.create(
-                        proposicao=proposicao,
+                        proposicao_votacao=None,
                         titulo=titulo,
-                        resumo=resumo or f"Votação sobre {proposicao.titulo}",
+                        resumo=resumo or "Votação",
                         data_hora_votacao=timezone.now(),
                         no_ar_desde=timezone.now(),
                         ativo=True
@@ -906,8 +958,8 @@ def votacoes_management(request):
                 except Proposicao.DoesNotExist:
                     messages.error(request, 'Proposição não encontrada.')
     
-    votacoes = VotacaoDisponivel.objects.select_related('proposicao').order_by('-created_at')
-    proposicoes_sem_votacao = Proposicao.objects.filter(votacaodisponivel__isnull=True)[:20]
+    votacoes = VotacaoDisponivel.objects.select_related('proposicao_votacao__proposicao').order_by('-created_at')
+    proposicoes_sem_votacao = Proposicao.objects.none()
     
     context = {
         'votacoes': votacoes,
@@ -960,9 +1012,9 @@ def votacao_create(request):
                     nao_of = 0
 
                 votacao = VotacaoDisponivel.objects.create(
-                    proposicao=proposicao,
+                    proposicao_votacao=None,
                     titulo=titulo,
-                    resumo=resumo or f"Votação sobre {proposicao.titulo}",
+                    resumo=resumo or "Votação",
                     data_hora_votacao=dt_voto,
                     no_ar_desde=dt_desde,
                     no_ar_ate=dt_ate,
@@ -1152,20 +1204,15 @@ def data_import_export(request):
                         
                         # Create VotacaoDisponivel if we have voting data
                         if data.get('resumo') or data.get('pergunta'):
-                            votacao, votacao_created = VotacaoDisponivel.objects.get_or_create(
-                                proposicao=proposicao,
-                                defaults={
-                                    'titulo': data.get('titulo', f'Votação da Proposição {id_proposicao}'),
-                                    'resumo': data.get('resumo', data.get('pergunta', '')),
-                                    'data_hora_votacao': timezone.now(),
-                                    'no_ar_desde': timezone.now(),
-                                    'ativo': True,
-                                }
+                            # Criar uma votação disponível desvinculada (por enquanto) de ProposicaoVotacao
+                            votacao = VotacaoDisponivel.objects.create(
+                                proposicao_votacao=None,
+                                titulo=data.get('titulo', f'Votação da Proposição {id_proposicao}'),
+                                resumo=data.get('resumo', data.get('pergunta', '')),
+                                data_hora_votacao=timezone.now(),
+                                no_ar_desde=timezone.now(),
+                                ativo=True,
                             )
-                            
-                            if not votacao_created and data.get('resumo'):
-                                votacao.resumo = data['resumo']
-                                votacao.save()
                     
                     except Exception as e:
                         errors.append(f'Erro ao processar proposição {item.get("idProposicao", "desconhecida")}: {str(e)}')
@@ -1641,12 +1688,22 @@ def ajax_proposicao_votacoes(request):
     # 1) Consulta cache local
     cached = list(ProposicaoVotacao.objects.filter(proposicao=proposicao).order_by('votacao_sufixo'))
     if cached:
+        # Precompute counts for all cached votações to avoid N queries
+        counts_qs = (
+            CongressmanVote.objects
+            .filter(proposicao_votacao__in=cached)
+            .values('proposicao_votacao_id')
+            .annotate(cnt=Count('id'))
+        )
+        counts_map = {row['proposicao_votacao_id']: row['cnt'] for row in counts_qs}
+
         dados = [
             {
                 'id': f"{prop_id_int}-{pv.votacao_sufixo}",
                 'descricao': pv.descricao or '',
                 'dataHora': '',
                 'resultado': '',
+                'votes_count': int(counts_map.get(pv.id, 0)),
             }
             for pv in cached
         ]
@@ -1670,6 +1727,7 @@ def ajax_proposicao_votacoes(request):
 
         # Inserir no cache local
         to_create = []
+        sufixos = []
         for item in filtered:
             full_id = item.get('id') or item.get('idVotacao') or ''
             sufixo = None
@@ -1683,6 +1741,7 @@ def ajax_proposicao_votacoes(request):
                 sufixo = None
             if sufixo is None:
                 continue
+            sufixos.append(sufixo)
             to_create.append(ProposicaoVotacao(
                 proposicao=proposicao,
                 votacao_sufixo=sufixo,
@@ -1696,15 +1755,40 @@ def ajax_proposicao_votacoes(request):
         except Exception:
             pass
 
-        dados = [
-            {
-                'id': (item.get('id') or item.get('idVotacao') or ''),
+        # Mapear counts para sufixos existentes
+        pv_qs = ProposicaoVotacao.objects.filter(proposicao=proposicao, votacao_sufixo__in=sufixos)
+        counts_qs = (
+            CongressmanVote.objects
+            .filter(proposicao_votacao__in=pv_qs)
+            .values('proposicao_votacao_id')
+            .annotate(cnt=Count('id'))
+        )
+        counts_map_by_pv_id = {row['proposicao_votacao_id']: row['cnt'] for row in counts_qs}
+        # Criar mapa sufixo -> pv.id
+        pv_id_by_sufixo = {pv.votacao_sufixo: pv.id for pv in pv_qs}
+
+        dados = []
+        for item in filtered:
+            full_id = item.get('id') or item.get('idVotacao') or ''
+            # Extrair sufixo numérico da votação
+            sufixo_val = None
+            try:
+                if isinstance(full_id, str) and '-' in full_id:
+                    sufixo_val = int(full_id.split('-')[-1])
+                elif isinstance(full_id, int):
+                    sufixo_val = full_id
+            except Exception:
+                sufixo_val = None
+            pv_id = pv_id_by_sufixo.get(sufixo_val)
+            votes_count = int(counts_map_by_pv_id.get(pv_id, 0))
+
+            dados.append({
+                'id': full_id,
                 'descricao': item.get('descricao') or item.get('descrição') or '',
                 'dataHora': item.get('dataHoraRegistro') or item.get('dataHora') or '',
                 'resultado': item.get('resultado') or '',
-            }
-            for item in filtered
-        ]
+                'votes_count': votes_count,
+            })
         return JsonResponse({'ok': True, 'source': 'api', 'dados': dados})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': f'Erro ao consultar API: {e}', 'api_url': api_url}, status=502)

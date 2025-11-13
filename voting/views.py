@@ -27,7 +27,7 @@ class VotacoesDisponiveisView(ListView):
             no_ar_desde__lte=now
         ).filter(
             Q(no_ar_ate__isnull=True) | Q(no_ar_ate__gte=now)
-        ).select_related('proposicao').order_by('-no_ar_desde')
+        ).select_related('proposicao_votacao__proposicao').order_by('-no_ar_desde')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -144,7 +144,13 @@ class MeusVotosView(LoginRequiredMixin, ListView):
     paginate_by = 20
     
     def get_queryset(self):
-        return Voto.objects.filter(user=self.request.user).select_related('votacao__proposicao').order_by('-created_at')
+        # Use updated path via ProposicaoVotacao -> Proposicao
+        return (
+            Voto.objects
+            .filter(user=self.request.user)
+            .select_related('votacao__proposicao_votacao__proposicao')
+            .order_by('-created_at')
+        )
 
 class RankingView(ListView):
     """Show voting statistics and rankings"""
@@ -207,22 +213,22 @@ class PersonalizedRankingView(LoginRequiredMixin, ListView):
                     Case(
                         # When user voted SIM and congressman voted 1 (SIM)
                         When(
-                            congressmanvote__proposicao__voto__user=user,
-                            congressmanvote__proposicao__voto__voto='SIM',
+                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__user=user,
+                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__voto='SIM',
                             congressmanvote__voto=1,
                             then=1
                         ),
                         # When user voted NAO and congressman voted -1 (NAO)
                         When(
-                            congressmanvote__proposicao__voto__user=user,
-                            congressmanvote__proposicao__voto__voto='NAO',
+                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__user=user,
+                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__voto='NAO',
                             congressmanvote__voto=-1,
                             then=1
                         ),
                         # When user voted ABSTENCAO and congressman voted 0 (ABSTENCAO)
                         When(
-                            congressmanvote__proposicao__voto__user=user,
-                            congressmanvote__proposicao__voto__voto='ABSTENCAO',
+                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__user=user,
+                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__voto='ABSTENCAO',
                             congressmanvote__voto=0,
                             then=1
                         ),
@@ -234,7 +240,7 @@ class PersonalizedRankingView(LoginRequiredMixin, ListView):
             ),
             total_votes_compared=Count(
                 'congressmanvote',
-                filter=Q(congressmanvote__proposicao__voto__user=user)
+                filter=Q(congressmanvote__proposicao_votacao__votacaodisponivel__voto__user=user)
             )
         ).filter(total_votes_compared__gt=0).order_by('-total_score', 'nome')
         
@@ -285,13 +291,13 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
         accumulated_points = 0
         
         # Get all propositions where both user and congressman voted
-        user_votes = Voto.objects.filter(user=user).select_related('votacao__proposicao')
+        user_votes = Voto.objects.filter(user=user).select_related('votacao__proposicao_votacao__proposicao')
         
         for user_vote in user_votes:
             try:
                 congressman_vote = CongressmanVote.objects.get(
                     congressman=congressman,
-                    proposicao=user_vote.votacao.proposicao
+                    proposicao_votacao=user_vote.votacao.proposicao_votacao
                 )
                 
                 # Calculate points based on vote agreement
@@ -307,8 +313,8 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
                 
                 voting_details.append({
                     'titulo': user_vote.votacao.titulo,
-                    'ementa': user_vote.votacao.proposicao.ementa,
-                    'id_proposicao': user_vote.votacao.proposicao.id_proposicao,
+    'ementa': user_vote.votacao.proposicao_votacao.proposicao.ementa,
+    'id_proposicao': user_vote.votacao.proposicao_votacao.proposicao.id_proposicao,
                     'data_votacao': user_vote.votacao.data_hora_votacao,
                     'voto_congressman': congressman_vote.get_voto_display_text(),
                     'voto_user': user_vote.get_voto_display(),
@@ -360,19 +366,19 @@ class VotacoesPesquisaView(ListView):
             return qs
         else:
             # Default: search VotacaoDisponivel table
-            qs = VotacaoDisponivel.objects.select_related('proposicao').order_by('-no_ar_desde')
+            qs = VotacaoDisponivel.objects.select_related('proposicao_votacao__proposicao').order_by('-no_ar_desde')
             if q:
                 qs = qs.filter(
                     Q(titulo__icontains=q) |
                     Q(resumo__icontains=q) |
-                    Q(proposicao__titulo__icontains=q) |
-                    Q(proposicao__ementa__icontains=q)
+                    Q(proposicao_votacao__proposicao__titulo__icontains=q) |
+                    Q(proposicao_votacao__proposicao__ementa__icontains=q)
                 )
             if tipo:
-                qs = qs.filter(proposicao__tipo=tipo)
+                qs = qs.filter(proposicao_votacao__proposicao__tipo=tipo)
             if ano:
                 try:
-                    qs = qs.filter(proposicao__ano=int(ano))
+                    qs = qs.filter(proposicao_votacao__proposicao__ano=int(ano))
                 except ValueError:
                     pass
             if ativo == 'sim':
@@ -423,11 +429,17 @@ def votos_oficiais_app_public(request):
     votos_data = []
     if votacao_id:
         try:
-            votacao = VotacaoDisponivel.objects.select_related('proposicao').get(pk=int(votacao_id))
+            # Ensure we load the linked proposição through proposicao_votacao to satisfy template access
+            # and avoid FieldError from invalid select_related path
+            votacao = (
+                VotacaoDisponivel.objects
+                .select_related('proposicao_votacao__proposicao')
+                .get(pk=int(votacao_id))
+            )
             registros = (
                 CongressmanVote.objects
                 .select_related('congressman')
-                .filter(proposicao=votacao.proposicao)
+                .filter(proposicao_votacao=votacao.proposicao_votacao)
             )
             for r in registros:
                 votos_data.append({

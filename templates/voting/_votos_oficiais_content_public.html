@@ -1,0 +1,323 @@
+{% comment %} 
+  Public-specific partial: shows votes, filters and stats only.
+  Admin lookup/import controls are intentionally removed to avoid shared templates.  
+{% endcomment %}
+<div class="vb-votos-oficiais">
+<style>
+  /* Scoped styles for public page */
+  .vb-votos-oficiais .card { border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 12px; }
+  .vb-votos-oficiais .card-header { background: #f8f9fa; border-bottom: 1px solid #dee2e6; padding: 10px 15px; }
+  .vb-votos-oficiais .card-header .card-title { margin: 0; color: #495057; }
+  .vb-votos-oficiais .card-body { padding: 15px; }
+  .vb-votos-oficiais .table td, .vb-votos-oficiais .table th { padding: 8px 12px; vertical-align: middle; }
+  .vb-votos-oficiais .table tbody tr:hover { background-color: #f1f3f5; }
+  .vb-votos-oficiais th[data-field] { cursor: pointer; }
+  .vb-votos-oficiais .sort-icon, .vb-votos-oficiais .sort-hint { margin-left: 6px; }
+</style>
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h2 class="card-title mb-0">Votação oficial</h2>
+    {% if votacao %}
+      <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Voltar à votação
+      </a>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    {% if votacao %}
+<div class="text-muted">Votação: {{ votacao.titulo }} — {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}</div>
+    {% else %}
+      <div class="alert alert-info" style="margin:0;">
+        Informe o parâmetro <code>votacao_id</code> na URL para carregar os votos oficiais.
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 10px;">
+  <div class="filters" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
+    <input type="text" id="f-nome" placeholder="Filtrar por nome" class="form-control">
+    <select id="f-partido" class="form-select"><option value="">Todos os partidos</option></select>
+    <select id="f-uf" class="form-select"><option value="">Todas as UFs</option></select>
+    <select id="f-voto" class="form-select">
+      <option value="">Todos os votos</option>
+      <option value="Sim">Sim</option>
+      <option value="Não">Não</option>
+      <option value="Abstenção">Abstenção</option>
+      <option value="Não compareceu">Não compareceu</option>
+    </select>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-header"><h4 class="card-title">Lista de Congressistas e Votos</h4></div>
+      <div class="card-body">
+        <table class="table table-sm table-hover" id="table-list" style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              {# Add sortable header icons similar to stats tables #}
+              <th style="padding:6px;" data-field="nome">Nome <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+              <th style="padding:6px;" data-field="partido">Partido <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+              <th style="padding:6px;" data-field="uf">UF <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+              <th style="padding:6px;" data-field="voto">Voto <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-header"><h4 class="card-title">Contagem por Partido</h4></div>
+      <div class="card-body">
+      <table class="table table-sm table-hover" id="table-partido" style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="padding:6px;">Partido</th>
+            <th style="padding:6px;" data-field="Sim">Sim <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Não">Não <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Abstenção">Abstenção <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Não compareceu">Não compareceu <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h4 class="card-title">Contagem por Estado</h4></div>
+      <div class="card-body">
+      <table class="table table-sm table-hover" id="table-uf" style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="padding:6px;">UF</th>
+            <th style="padding:6px;" data-field="Sim">Sim <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Não">Não <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Abstenção">Abstenção <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+            <th style="padding:6px;" data-field="Não compareceu">Não compareceu <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Data comes from backend as JSON to enable client-side filtering
+  const raw = {{ votos_json|default:'[]'|safe }};
+  const state = { data: raw, filtered: raw };
+  const sortState = {
+    partido: { field: null, dir: 'desc' },
+    uf: { field: null, dir: 'desc' }
+  };
+  // Sorting state for the main list, controlled by the div-based sort controls above
+  const listSortState = { field: null, dir: 'asc' };
+
+  function uniq(arr) { return Array.from(new Set(arr.filter(Boolean))).sort(); }
+  function renderOptions(sel, values) {
+    const el = document.getElementById(sel);
+    const cur = el.value;
+    const base = el.querySelector('option');
+    el.innerHTML = '';
+    if (base) el.appendChild(base);
+    values.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v; el.appendChild(o);
+    });
+    el.value = cur;
+  }
+
+  function computeStats(items, key) {
+    const map = {};
+    items.forEach(x => {
+      const k = (x[key] || '').trim();
+      if (!k) return;
+      map[k] = map[k] || { 'Sim':0, 'Não':0, 'Abstenção':0, 'Não compareceu':0 };
+      const v = x.voto || '';
+      if (map[k][v] !== undefined) map[k][v]++;
+    });
+    return map;
+  }
+
+  function asArray(statsMap) {
+    return Object.keys(statsMap).map(k => {
+      const s = statsMap[k];
+      const total = (s['Sim']||0) + (s['Não']||0) + (s['Abstenção']||0) + (s['Não compareceu']||0);
+      const pct = {
+        'Sim': total ? Math.round((s['Sim']||0) * 100 / total) : 0,
+        'Não': total ? Math.round((s['Não']||0) * 100 / total) : 0,
+        'Abstenção': total ? Math.round((s['Abstenção']||0) * 100 / total) : 0,
+        'Não compareceu': total ? Math.round((s['Não compareceu']||0) * 100 / total) : 0,
+      };
+      return { key: k, counts: s, total, pct };
+    });
+  }
+
+  function sortStats(arr, sort) {
+    if (!sort || !sort.field) return arr.sort((a,b) => a.key.localeCompare(b.key));
+    const asc = sort.dir === 'asc';
+    return arr.sort((a,b) => {
+      const ap = a.pct[sort.field] || 0;
+      const bp = b.pct[sort.field] || 0;
+      if (ap !== bp) return asc ? (ap - bp) : (bp - ap);
+      return a.key.localeCompare(b.key);
+    });
+  }
+
+  function renderStatsTable(tableId, statsMap, sort) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    tbody.innerHTML = '';
+    const rows = sortStats(asArray(statsMap), sort);
+    rows.forEach(r => {
+      function fmt(count, pct) { return `${count} (${pct}%)`; }
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td style=\"padding:6px;\">${r.key}</td>`+
+        `<td style=\"padding:6px;\">${fmt(r.counts['Sim']||0, r.pct['Sim'])}</td>`+
+        `<td style=\"padding:6px;\">${fmt(r.counts['Não']||0, r.pct['Não'])}</td>`+
+        `<td style=\"padding:6px;\">${fmt(r.counts['Abstenção']||0, r.pct['Abstenção'])}</td>`+
+        `<td style=\"padding:6px;\">${fmt(r.counts['Não compareceu']||0, r.pct['Não compareceu'])}</td>`;
+      tbody.appendChild(tr);
+    });
+    updateSortIcons(tableId, sort);
+  }
+
+  function updateSortIcons(tableId, sort) {
+    document.querySelectorAll(`#${tableId} thead th[data-field]`).forEach(th => {
+      const f = th.getAttribute('data-field');
+      const icon = th.querySelector('i.sort-icon');
+      const hint = th.querySelector('i.sort-hint');
+      if (!icon || !hint) return;
+      if (sort && sort.field === f) {
+        icon.className = `sort-icon bi ${sort.dir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill'}`;
+        icon.style.display = 'inline-block';
+        hint.style.display = 'none';
+      } else {
+        icon.style.display = 'none';
+        hint.style.display = 'inline-block';
+      }
+    });
+  }
+
+  function applyFilters() {
+    const nome = document.getElementById('f-nome').value.toLowerCase();
+    const tokens = nome.split(/\s+/).filter(Boolean);
+    const partido = document.getElementById('f-partido').value;
+    const uf = document.getElementById('f-uf').value;
+    const voto = document.getElementById('f-voto').value;
+    state.filtered = state.data.filter(x => {
+      const nomeLower = (x.nome||'').toLowerCase();
+      const nomeMatch = tokens.length === 0 ? true : tokens.every(t => nomeLower.includes(t));
+      return (nomeMatch) &&
+             (!partido || x.partido === partido) &&
+             (!uf || x.uf === uf) &&
+             (!voto || x.voto === voto);
+    });
+    renderList();
+    renderStats();
+  }
+
+  function renderList() {
+    const tbody = document.querySelector('#table-list tbody');
+    tbody.innerHTML = '';
+    const rows = sortList(state.filtered.slice(), listSortState);
+    rows.forEach(x => {
+      const idc = x.id_cadastro ? String(x.id_cadastro) : '';
+      const href = idc ? `https://www.camara.leg.br/deputados/${idc}` : '';
+      const nameHtml = href ? `<a href="${href}" target="deputado">${x.nome||''}</a>` : (x.nome||'');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td style=\"padding:6px;\">${nameHtml}</td>`+
+        `<td style=\"padding:6px;\">${x.partido||''}</td>`+
+        `<td style=\"padding:6px;\">${x.uf||''}</td>`+
+        `<td style=\"padding:6px;\">${x.voto||''}</td>`;
+      tbody.appendChild(tr);
+    });
+    updateSortIcons('table-list', listSortState);
+  }
+
+  // Sort helper for the list based on the selected field
+  function sortList(arr, sort) {
+    if (!sort || !sort.field) return arr;
+    const asc = sort.dir === 'asc';
+    const field = sort.field;
+    return arr.sort((a,b) => {
+      const av = String((a[field]||'')).toLowerCase();
+      const bv = String((b[field]||'')).toLowerCase();
+      if (av !== bv) return asc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+      // Tie-break on name for stable, predictable ordering
+      const an = String((a.nome||'')).toLowerCase();
+      const bn = String((b.nome||'')).toLowerCase();
+      if (an !== bn) return asc ? (an > bn ? 1 : -1) : (an < bn ? 1 : -1);
+      return 0;
+    });
+  }
+
+  // Bind click handlers on the list table header to toggle field and direction
+  function bindListSorting() {
+    document.querySelectorAll('#table-list thead th[data-field]').forEach(th => {
+      th.addEventListener('click', () => {
+        const f = th.getAttribute('data-field');
+        if (listSortState.field === f) {
+          listSortState.dir = listSortState.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          listSortState.field = f; listSortState.dir = 'asc';
+        }
+        renderList();
+      });
+    });
+  }
+
+  function bindSorting() {
+    document.querySelectorAll('#table-partido thead th[data-field]').forEach(th => {
+      th.addEventListener('click', () => {
+        const f = th.getAttribute('data-field');
+        if (sortState.partido.field === f) {
+          sortState.partido.dir = sortState.partido.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortState.partido.field = f; sortState.partido.dir = 'desc';
+        }
+        renderStats();
+      });
+    });
+    document.querySelectorAll('#table-uf thead th[data-field]').forEach(th => {
+      th.addEventListener('click', () => {
+        const f = th.getAttribute('data-field');
+        if (sortState.uf.field === f) {
+          sortState.uf.dir = sortState.uf.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortState.uf.field = f; sortState.uf.dir = 'desc';
+        }
+        renderStats();
+      });
+    });
+  }
+
+  function renderStats() {
+    const byPartido = computeStats(state.filtered, 'partido');
+    const byUf = computeStats(state.filtered, 'uf');
+    renderStatsTable('table-partido', byPartido, sortState.partido);
+    renderStatsTable('table-uf', byUf, sortState.uf);
+  }
+
+  function init() {
+    renderOptions('f-partido', uniq(state.data.map(x => x.partido)));
+    renderOptions('f-uf', uniq(state.data.map(x => x.uf)));
+    ['f-nome','f-partido','f-uf','f-voto'].forEach(id => {
+      document.getElementById(id).addEventListener('input', applyFilters);
+      document.getElementById(id).addEventListener('change', applyFilters);
+    });
+    bindSorting();
+    bindListSorting();
+    applyFilters();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</div>

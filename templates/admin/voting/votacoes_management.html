@@ -196,7 +196,7 @@
         <div class="votacao-item">
             <div class="votacao-info">
                 <h4>{{ votacao.titulo }}</h4>
-                <small>{{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}</small><br>
+        <small>{{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}</small><br>
                 <small>Criada em: {{ votacao.created_at|date:"d/m/Y H:i" }}</small>
             </div>
             <div class="votacao-actions">

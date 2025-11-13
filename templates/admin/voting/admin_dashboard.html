@@ -265,7 +265,7 @@
     <div class="stats-row">
         <div class="stats-label">
             <strong>{{ votacao.titulo }}</strong><br>
-            <small>{{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}</small>
+        <small>{{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}</small>
         </div>
         <div class="stats-value">
             {% if votacao.ativo %}Ativa{% else %}Inativa{% endif %}

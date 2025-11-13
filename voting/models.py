@@ -58,12 +58,13 @@ class ProposicaoVotacao(models.Model):
 
 class VotacaoDisponivel(models.Model):
     """Model for available voting sessions"""
-    # Explicitly reference Proposicao by its new primary key id_proposicao
-    proposicao = models.ForeignKey(
-        Proposicao,
-        to_field='id_proposicao',
+    # Link directly to a specific official voting entry for the proposição
+    proposicao_votacao = models.ForeignKey(
+        'voting.ProposicaoVotacao',
         on_delete=models.CASCADE,
-        verbose_name="Proposição"
+        blank=True,
+        null=True,
+        verbose_name="Votação da Proposição"
     )
     titulo = models.CharField(max_length=500, verbose_name="Título da Votação")
     resumo = models.TextField(verbose_name="Resumo")
@@ -163,26 +164,30 @@ class CongressmanVote(models.Model):
     ]
     
     congressman = models.ForeignKey(Congressman, on_delete=models.CASCADE, verbose_name="Congressista")
-    # Explicitly reference Proposicao by its new primary key id_proposicao
-    proposicao = models.ForeignKey(
-        Proposicao,
-        to_field='id_proposicao',
+    # Tie the vote to a specific official voting of a proposição
+    proposicao_votacao = models.ForeignKey(
+        'voting.ProposicaoVotacao',
         on_delete=models.CASCADE,
-        verbose_name="Proposição"
+        blank=True,
+        null=True,
+        verbose_name="Votação da Proposição"
     )
     voto = models.IntegerField(choices=VOTO_CHOICES, blank=True, null=True, verbose_name="Voto")
-    congress_vote_id = models.IntegerField(blank=True, null=True, verbose_name="ID Votação da Câmara")
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         verbose_name = "Voto do Congressista"
         verbose_name_plural = "Votos dos Congressistas"
-        unique_together = ['congressman', 'proposicao']
+        unique_together = ['congressman', 'proposicao_votacao']
         ordering = ['-created_at']
     
     def __str__(self):
         voto_display = self.get_voto_display() if self.voto is not None else "Não Compareceu"
-        return f"{self.congressman.nome} - {voto_display} em {self.proposicao.titulo[:30]}"
+        try:
+            titulo = self.proposicao_votacao.proposicao.titulo[:30]
+        except Exception:
+            titulo = "Proposição"
+        return f"{self.congressman.nome} - {voto_display} em {titulo}"
     
     def get_voto_display_text(self):
         """Get human-readable vote display"""

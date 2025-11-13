@@ -79,7 +79,7 @@
                                     <div class="flex-grow-1">
                                         <h6 class="mb-1">
                                             <a href="{% url 'voting:votacao_detail' votacao.pk %}" class="text-decoration-none">
-                                                {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}
+{{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
                                             </a>
                                         </h6>
                                         <p class="mb-1 text-muted small">{{ votacao.titulo|truncatechars:80 }}</p>

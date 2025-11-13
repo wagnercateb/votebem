@@ -684,7 +684,7 @@
                 {% for votacao in votacoes_disponiveis %}
                 <tr>
                     <td>{{ votacao.id }}</td>
-                    <td>{{ votacao.proposicao_id }}</td>
+<td>{{ votacao.proposicao_votacao.proposicao_id }}</td>
                     <td>{{ votacao.dataHoraVotacao|date:"d/m/Y H:i" }}</td>
                     <td>{{ votacao.descricao|truncatechars:80 }}</td>
                     <td>{{ votacao.aprovacao }}</td>

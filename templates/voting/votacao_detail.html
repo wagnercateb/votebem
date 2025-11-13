@@ -11,12 +11,12 @@
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
-                        {% if votacao.proposicao.id_proposicao %}
-                            <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
-                                {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}
+{% if votacao.proposicao_votacao.proposicao.id_proposicao %}
+<a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+{{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
                             </a>
                         {% else %}
-                            {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}
+{{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
                         {% endif %}
                     </h5>
                     {% if user_vote %}
@@ -75,13 +75,13 @@
                     <h6>Detalhes da proposição na Câmara</h6>
                     <p><strong>Ementa:</strong> {{ votacao.proposicao.ementa }}</p>
                     <!-- Botão para ver proposição original na Câmara -->
-                    {% if votacao.proposicao.id_proposicao %}
-                        <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao.id_proposicao }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm mt-2">
+{% if votacao.proposicao_votacao.proposicao.id_proposicao %}
+<a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm mt-2">
                             Ver proposição original
                         </a>
                     {% endif %}
-                    {% if votacao.proposicao.autor %}
-                        <p><strong>Autor:</strong> {{ votacao.proposicao.autor }}</p>
+{% if votacao.proposicao_votacao.proposicao.autor %}
+<p><strong>Autor:</strong> {{ votacao.proposicao_votacao.proposicao.autor }}</p>
                     {% endif %}
                 </div>
             </div>

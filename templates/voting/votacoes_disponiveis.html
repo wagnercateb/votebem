@@ -25,12 +25,12 @@
                         <div class="card h-100 {% if votacao.id in user_votes %}border-success{% endif %}">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
-                                    {% if votacao.proposicao.id_proposicao %}
-                                        <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
-                                            {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}
+{% if votacao.proposicao_votacao.proposicao.id_proposicao %}
+<a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+{{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
                                         </a>
                                     {% else %}
-                                        {{ votacao.proposicao.tipo }} {{ votacao.proposicao.numero }}/{{ votacao.proposicao.ano }}
+{{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
                                     {% endif %}
                                 </h6>
                                 {% if votacao.id in user_votes %}
@@ -54,8 +54,8 @@
                                 <!-- Título agora usa 'proposicao.titulo' e linka para a tela de detalhes interna -->
                                 <h6 class="card-title">
                                     <a href="{% url 'voting:votacao_detail' votacao.id %}" class="text-decoration-none">
-                                        {% if votacao.proposicao.titulo %}
-                                            {{ votacao.proposicao.titulo|truncatechars:60 }}
+{% if votacao.proposicao_votacao.proposicao.titulo %}
+{{ votacao.proposicao_votacao.proposicao.titulo|truncatechars:60 }}
                                         {% else %}
                                             {{ votacao.titulo|truncatechars:60 }}
                                         {% endif %}

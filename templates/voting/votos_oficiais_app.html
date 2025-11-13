@@ -5,7 +5,8 @@
 {% block extra_css %}{% endblock %}
 
 {% block content %}
-{% include 'voting/_votos_oficiais_content.html' %}
+{# Use public-specific partial to avoid sharing with admin page #}
+{% include 'voting/_votos_oficiais_content_public.html' %}
 {% endblock %}
 
 {% block extra_js %}{% endblock %}

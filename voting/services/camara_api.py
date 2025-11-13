@@ -249,7 +249,29 @@ class CamaraAPIService:
         detailed_data = self.get_votacao_details(votacao_data['id'])
         if detailed_data and 'dados' in detailed_data:
             votacao_data.update(detailed_data['dados'])
-        
+
+        # Determine the sufixo (numeric voting id) and ensure ProposicaoVotacao exists
+        full_id = votacao_data.get('id') or votacao_data.get('idVotacao')
+        sufixo = None
+        try:
+            if isinstance(full_id, str) and '-' in full_id:
+                sufixo = int(str(full_id).split('-')[-1])
+            elif isinstance(full_id, int):
+                sufixo = int(full_id)
+        except Exception:
+            sufixo = None
+
+        pv = None
+        if sufixo is not None:
+            from ..models import ProposicaoVotacao
+            pv, _ = ProposicaoVotacao.objects.get_or_create(
+                proposicao=proposicao,
+                votacao_sufixo=sufixo,
+                defaults={
+                    'descricao': (votacao_data.get('descricao') or '')
+                }
+            )
+
         # Parse date
         data_hora_str = votacao_data.get('dataHoraInicio', '')
         data_hora_votacao = None
@@ -260,29 +282,27 @@ class CamaraAPIService:
                 data_hora_votacao = timezone.make_aware(data_hora_votacao)
             except ValueError:
                 logger.warning(f"Could not parse date: {data_hora_str}")
-        
+
         # Extract voting results
-        aprovacao = votacao_data.get('aprovacao', 0)
         sim_oficial = votacao_data.get('placarSim', 0)
         nao_oficial = votacao_data.get('placarNao', 0)
-        
-        votacao_db_data = {
-            'proposicao': proposicao,
-            'titulo': votacao_data.get('descricao', '')[:200],
-            'resumo': votacao_data.get('descricao', ''),
-            'data_hora_votacao': data_hora_votacao or timezone.now(),
-            'sim_oficial': sim_oficial,
-            'nao_oficial': nao_oficial,
-            'ativo': False,  # API votings are historical, not active for public voting
-        }
-        
-        # Create or update voting
+
+        # Create or update voting linked to ProposicaoVotacao
+        # Use proposicao_votacao as the lookup key; update other fields
+        titulo = (votacao_data.get('descricao') or '')[:200]
+        resumo = (votacao_data.get('descricao') or '')
         votacao, created = VotacaoDisponivel.objects.update_or_create(
-            proposicao=proposicao,
-            titulo=votacao_db_data['titulo'],
-            defaults=votacao_db_data
+            proposicao_votacao=pv,
+            defaults={
+                'titulo': titulo,
+                'resumo': resumo,
+                'data_hora_votacao': data_hora_votacao or timezone.now(),
+                'sim_oficial': sim_oficial,
+                'nao_oficial': nao_oficial,
+                'ativo': False,  # API votings are historical, not active for public voting
+            }
         )
-        
+
         return votacao
     
     def get_recent_proposicoes(self, days: int = 7) -> List[Dict]:

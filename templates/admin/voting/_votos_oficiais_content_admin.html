@@ -14,7 +14,7 @@
 </style>
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <h2 class="card-title mb-0">Votação oficial</h2>
+    <h2 class="card-title mb-0">Votação oficial - Obter votos dos congressistas</h2>
     {% if votacao %}
       <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-arrow-left"></i> Voltar à votação
@@ -25,7 +25,7 @@
     {% if votacao %}
 <div class="text-muted">Votação: {{ votacao.titulo }} — {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}</div>
     {% else %}
-      <!-- Form de busca e carregamento
+      <!-- Form de busca e carregamento (ADMIN)
            - Botão [Carregar]: busca votações via API por Proposição ID e lista resultados filtrados
            - Botão [Carregar votação]: submete "votacao_id" (comportamento original) -->
       <form id="vb-votos-form" method="get" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -82,79 +82,6 @@
 </div>
 {% endif %}
 
-<div class="card" style="margin-bottom: 10px;">
-  <div class="filters" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
-    <input type="text" id="f-nome" placeholder="Filtrar por nome" class="form-control">
-    <select id="f-partido" class="form-select"><option value="">Todos os partidos</option></select>
-    <select id="f-uf" class="form-select"><option value="">Todas as UFs</option></select>
-    <select id="f-voto" class="form-select">
-      <option value="">Todos os votos</option>
-      <option value="Sim">Sim</option>
-      <option value="Não">Não</option>
-      <option value="Abstenção">Abstenção</option>
-      <option value="Não compareceu">Não compareceu</option>
-    </select>
-  </div>
-</div>
-
-<div class="row g-3">
-  <div class="col-12 col-lg-6">
-    <div class="card">
-      <div class="card-header"><h4 class="card-title">Lista de Congressistas e Votos</h4></div>
-      <div class="card-body">
-        <table class="table table-sm table-hover" id="table-list" style="width:100%; border-collapse:collapse;">
-          <thead>
-            <tr>
-              <th style="padding:6px;">Nome</th>
-              <th style="padding:6px;">Partido</th>
-              <th style="padding:6px;">UF</th>
-              <th style="padding:6px;">Voto</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-12 col-lg-6">
-    <div class="card" style="margin-bottom:10px;">
-      <div class="card-header"><h4 class="card-title">Contagem por Partido</h4></div>
-      <div class="card-body">
-      <table class="table table-sm table-hover" id="table-partido" style="width:100%; border-collapse:collapse;">
-        <thead>
-          <tr>
-            <th style="padding:6px;">Partido</th>
-            <th style="padding:6px;" data-field="Sim">Sim <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
-            <th style="padding:6px;" data-field="Não">Não <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
-            <th style="padding:6px;" data-field="Abstenção">Abstenção <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
-            <th style="padding:6px;" data-field="Não compareceu">Não compareceu <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header"><h4 class="card-title">Contagem por Estado</h4></div>
-      <div class="card-body">
-      <table class="table table-sm table-hover" id="table-uf" style="width:100%; border-collapse:collapse;">
-        <thead>
-          <tr>
-            <th style="padding:6px;">UF</th>
-            <th style="padding:6px;" data-field="Sim">Sim <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
-            <th style="padding:6px;" data-field="Não">Não <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
-            <th style="padding:6px;" data-field="Abstenção">Abstenção <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
-            <th style="padding:6px;" data-field="Não compareceu">Não compareceu <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      </div>
-    </div>
-  </div>
-</div>
 
 <script>
   const raw = {{ votos_json|default:'[]'|safe }};
@@ -164,7 +91,7 @@
     uf: { field: null, dir: 'desc' }
   };
 
-  // --- Busca de votações por Proposição ID na página /gerencial/ ---
+  // --- Busca de votações por Proposição ID na página /gerencial/ (ADMIN) ---
   (function initProposicaoLookup(){
     const form = document.getElementById('vb-votos-form');
     const btnCarregarProposicao = document.getElementById('btn-carregar-proposicao');
@@ -195,10 +122,8 @@
       }
     } catch (_) { /* ignore */ }
 
-    // Ao enviar, buscar votações da proposição e não submeter o formulário
+    // Buscar votações da proposição sem submeter o formulário
     form.addEventListener('submit', function(ev){
-      // Se já existe um votacao_id preenchido, opcionalmente poderíamos submeter,
-      // mas conforme solicitação, o [Carregar] deve consultar a lista pela proposição.
       ev.preventDefault();
       const propId = (propInput && propInput.value) ? propInput.value.trim() : '';
       if (!propId) {
@@ -207,7 +132,6 @@
         listTbody.innerHTML = '';
         return;
       }
-      // Consultar endpoint interno (cache-first: DB -> API -> DB insert)
       let url = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(propId)}`;
       status.textContent = 'Consultando votações (cache), aguarde...';
       card.style.display = 'block'; help.style.display = 'none'; err.style.display = 'none';
@@ -220,12 +144,7 @@
         })
         .then(json => {
           const dados = Array.isArray(json?.dados) ? json.dados : [];
-          // Filtro por descrição contendo "em primeiro turno", "em segundo turno" ou "Emenda Aglutinativa" (case-insensitive)
-          const needles = [
-            'em primeiro turno',
-            'em segundo turno',
-            'emenda aglutinativa'
-          ];
+          const needles = [ 'em primeiro turno', 'em segundo turno', 'emenda aglutinativa' ];
           const filtered = dados.filter(item => {
             const d = (item?.descricao || item?.descrição || '').toLowerCase();
             return needles.some(n => d.includes(n));
@@ -248,7 +167,6 @@
             const resultado = item?.resultado || '';
             const votosCount = Number(item.votes_count || 0);
             const tr = document.createElement('tr');
-            // Build a link that includes both proposicao_id and consulta_id (desired param)
             const baseGerencial = `${window.location.origin}/gerencial/`;
             const hrefFull = `${baseGerencial}?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(id)}`;
             tr.innerHTML = `<td style=\"padding:6px;\"><a href=\"${hrefFull}\" data-id=\"${id}\" class=\"vb-votacao-id\">${id}</a></td>`+
@@ -258,7 +176,6 @@
                            `<td style=\"padding:6px;\">${votosCount}</td>`;
             listTbody.appendChild(tr);
           });
-          // Click on ID: prevent navigation and only fill the Votação ID textbox
           listTbody.querySelectorAll('a.vb-votacao-id').forEach(a => {
             a.addEventListener('click', (e) => {
               e.preventDefault();
@@ -270,12 +187,8 @@
               }
             });
           });
-
-          // Click nos IDs para preencher o textbox "votação id" e mostrar o botão
-          // Allow default navigation; inputs will be prefilled from URL on load
         })
         .catch(err0 => {
-          // Show detailed error with the URL we called, to aid troubleshooting
           status.textContent = '';
           help.style.display = 'none'; err.style.display = 'block';
           listTbody.innerHTML = '';
@@ -284,7 +197,7 @@
         });
     });
 
-    // Botão para carregar votação: agora chama endpoint interno que importa e salva votos
+    // Botão para importar votos oficiais
     if (btnCarregarVotacao) {
       btnCarregarVotacao.addEventListener('click', function(ev){
         ev.preventDefault();
@@ -330,7 +243,6 @@
             const updated = Number(json.updated||0);
             const skipped = Number(json.skipped||0);
             status.textContent = `Importação concluída. Criados: ${created}, Atualizados: ${updated}, Ignorados: ${skipped}.`;
-            // Atualiza UI com os votos retornados
             state.data = Array.isArray(json.votos) ? json.votos : [];
             applyFilters();
             if (hintLoading) hintLoading.style.display = 'none';
@@ -348,6 +260,7 @@
   })();
 
 
+  // ---- Common filtering and rendering logic (shared behavior) ----
   function uniq(arr) { return Array.from(new Set(arr.filter(Boolean))).sort(); }
   function renderOptions(sel, values) {
     const el = document.getElementById(sel);
@@ -468,7 +381,6 @@
   }
 
   function bindSorting() {
-    // Partido table sorting toggle
     document.querySelectorAll('#table-partido thead th[data-field]').forEach(th => {
       th.addEventListener('click', () => {
         const f = th.getAttribute('data-field');
@@ -480,7 +392,6 @@
         renderStats();
       });
     });
-    // UF table sorting toggle
     document.querySelectorAll('#table-uf thead th[data-field]').forEach(th => {
       th.addEventListener('click', () => {
         const f = th.getAttribute('data-field');

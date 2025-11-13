@@ -35,8 +35,9 @@ class ProposicaoVotacaoAdmin(admin.ModelAdmin):
 @admin.register(VotacaoDisponivel)
 class VotacaoDisponivelAdmin(admin.ModelAdmin):
     list_display = ['titulo_truncado', 'proposicao_link', 'ativo', 'no_ar_desde', 'no_ar_ate', 'total_votos_populares', 'votos_oficiais']
-    list_filter = ['ativo', 'no_ar_desde', 'no_ar_ate', 'proposicao__tipo']
-    search_fields = ['proposicao__titulo', 'titulo', 'proposicao__id_proposicao']
+    # Atualizado: referenciar via proposicao_votacao -> proposicao
+    list_filter = ['ativo', 'no_ar_desde', 'no_ar_ate', 'proposicao_votacao__proposicao__tipo']
+    search_fields = ['proposicao_votacao__proposicao__titulo', 'titulo', 'proposicao_votacao__proposicao__id_proposicao']
     readonly_fields = ['created_at', 'updated_at']
     list_editable = ['ativo']
     date_hierarchy = 'no_ar_desde'
@@ -46,8 +47,12 @@ class VotacaoDisponivelAdmin(admin.ModelAdmin):
     titulo_truncado.short_description = 'Título da Votação'
     
     def proposicao_link(self, obj):
-        url = reverse('admin:voting_proposicao_change', args=[obj.proposicao.pk])
-        return format_html('<a href="{}">{}</a>', url, str(obj.proposicao)[:50])
+        # Exibe link para a Proposição via ProposicaoVotacao, se disponível
+        if obj.proposicao_votacao and obj.proposicao_votacao.proposicao:
+            prop = obj.proposicao_votacao.proposicao
+            url = reverse('admin:voting_proposicao_change', args=[prop.pk])
+            return format_html('<a href="{}">{}</a>', url, str(prop)[:50])
+        return "—"
     proposicao_link.short_description = 'Proposição'
     
     def total_votos_populares(self, obj):
@@ -61,8 +66,9 @@ class VotacaoDisponivelAdmin(admin.ModelAdmin):
 @admin.register(Voto)
 class VotoAdmin(admin.ModelAdmin):
     list_display = ['user', 'votacao_link', 'voto', 'created_at']
-    list_filter = ['voto', 'created_at', 'votacao__proposicao__tipo']
-    search_fields = ['user__username', 'user__email', 'votacao__proposicao__titulo']
+    # Atualizado: caminho via votacao -> proposicao_votacao -> proposicao
+    list_filter = ['voto', 'created_at', 'votacao__proposicao_votacao__proposicao__tipo']
+    search_fields = ['user__username', 'user__email', 'votacao__proposicao_votacao__proposicao__titulo']
     readonly_fields = ['created_at']
     date_hierarchy = 'created_at'
     
@@ -72,7 +78,8 @@ class VotoAdmin(admin.ModelAdmin):
     votacao_link.short_description = 'Votação'
     
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('user', 'votacao__proposicao')
+        # Otimiza com select_related seguindo nova relação
+        return super().get_queryset(request).select_related('user', 'votacao__proposicao_votacao__proposicao')
 
 @admin.register(Congressman)
 class CongressmanAdmin(admin.ModelAdmin):
@@ -97,14 +104,19 @@ class CongressmanAdmin(admin.ModelAdmin):
 @admin.register(CongressmanVote)
 class CongressmanVoteAdmin(admin.ModelAdmin):
     list_display = ['congressman', 'proposicao_link', 'voto_display', 'created_at']
-    list_filter = ['voto', 'created_at', 'congressman__partido', 'congressman__uf', 'proposicao__tipo']
-    search_fields = ['congressman__nome', 'proposicao__titulo', 'proposicao__id_proposicao']
+    # Atualizado: referenciar tipo/título via proposicao_votacao -> proposicao
+    list_filter = ['voto', 'created_at', 'congressman__partido', 'congressman__uf', 'proposicao_votacao__proposicao__tipo']
+    search_fields = ['congressman__nome', 'proposicao_votacao__proposicao__titulo', 'proposicao_votacao__proposicao__id_proposicao']
     readonly_fields = ['created_at']
     date_hierarchy = 'created_at'
     
     def proposicao_link(self, obj):
-        url = reverse('admin:voting_proposicao_change', args=[obj.proposicao.pk])
-        return format_html('<a href="{}">{}</a>', url, str(obj.proposicao)[:50])
+        # Link seguro para a Proposição através da relação nova
+        if obj.proposicao_votacao and obj.proposicao_votacao.proposicao:
+            prop = obj.proposicao_votacao.proposicao
+            url = reverse('admin:voting_proposicao_change', args=[prop.pk])
+            return format_html('<a href="{}">{}</a>', url, str(prop)[:50])
+        return "—"
     proposicao_link.short_description = 'Proposição'
     
     def voto_display(self, obj):
@@ -112,4 +124,5 @@ class CongressmanVoteAdmin(admin.ModelAdmin):
     voto_display.short_description = 'Voto'
     
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('congressman', 'proposicao')
+        # Ajusta select_related para nova FK
+        return super().get_queryset(request).select_related('congressman', 'proposicao_votacao__proposicao')

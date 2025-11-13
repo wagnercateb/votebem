@@ -204,7 +204,7 @@ def import_dummy_data():
                     no_ar_ate = now + timedelta(days=30)     # Available for 30 more days
                     
                     votacao, created = VotacaoDisponivel.objects.get_or_create(
-                        proposicao=proposicao,
+                        proposicao_votacao=None,
                         defaults={
                             'titulo': votacao_titulo,
                             'resumo': votacao_resumo,
