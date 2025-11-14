@@ -19,18 +19,22 @@
   <div class="card-header d-flex justify-content-between align-items-center">
     <h2 class="card-title mb-0">Votação oficial</h2>
     {% if votacao %}
+      <!-- Atualiza rótulo para deixar claro que volta à página VoteBem -->
       <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Voltar à votação
+        <i class="bi bi-arrow-left"></i> Voltar para votação Votebem
       </a>
     {% endif %}
   </div>
   <div class="card-body">
-    {% if votacao %}
-<div class="text-muted">Votação: {{ votacao.titulo }} — {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}</div>
+    {# Mostrar o título da proposição logo abaixo do título da página #}
+    {% if pv and pv.proposicao and pv.proposicao.titulo %}
+      <div class="text-muted mb-2">Proposição: {{ pv.proposicao.titulo }}</div>
+    {% elif votacao and votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao and votacao.proposicao_votacao.proposicao.titulo %}
+      <div class="text-muted mb-2">Proposição: {{ votacao.proposicao_votacao.proposicao.titulo }}</div>
     {% endif %}
+    {% comment %} Show description only when a proposição/votação context (pv) exists {% endcomment %}
     {% if pv %}
-<!-- Apenas mostrando a descrição conforme solicitação; ocultados sim_oficial/nao_oficial -->
-<div class="text-muted">Descrição: {{ pv.descricao|default:"(sem descrição)" }}</div>
+      <div class="text-muted"><b>Descrição: {{ pv.descricao|default:"(sem descrição)" }}</b></div>
     {% endif %}
   </div>
 </div>

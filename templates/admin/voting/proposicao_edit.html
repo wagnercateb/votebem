@@ -208,7 +208,7 @@
 
 {% if votacoes %}
 <div class="info-section">
-    <h3>Votações Relacionadas ({{ votacoes.count }})</h3>
+    <h3>Votações Votebem Relacionadas ({{ votacoes.count }})</h3>
     <ul class="votacoes-list">
         {% for votacao in votacoes %}
         <li>
@@ -224,12 +224,6 @@
         </li>
         {% endfor %}
     </ul>
-</div>
-{% else %}
-<div class="info-section">
-    <h3>Votações Relacionadas</h3>
-    <p>Esta proposição ainda não possui votações criadas.</p>
-<a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ proposicao.id_proposicao }}" class="btn btn-primary">Criar Votação</a>
 </div>
 {% endif %}
 

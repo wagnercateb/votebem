@@ -199,13 +199,22 @@
             <li><a href="{% url 'gerencial:proposicoes_list' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Exibe a lista de proposições cadastradas no aplicativo">Listar Todas as Proposições</a></li>
             <li><a href="/admin/voting/proposicao/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre o formulário de criação no Django Admin">Adicionar via Django</a></li>
             <li><a href="{% url 'gerencial:proposicao_add' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre o formulário de criação de proposição no aplicativo">Adicionar via App</a></li>
+            <!-- Link ajustado para manter o mesmo estilo dos demais itens -->
+            <li>
+                <a href="{% url 'gerencial:proposicoes_atualizar_temas' %}"
+                   data-bs-toggle="tooltip"
+                   data-bs-placement="top"
+                   title="Busca e vincula temas oficiais para proposições sem temas">
+                    Atualizar temas de proposições
+                </a>
+            </li>
             <li><a href="{% url 'gerencial:proposicao_import' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Importa uma proposição informando o ID da Câmara">Adicionar via ID</a></li>
             <li><a href="{% url 'gerencial:proposicoes_statistics' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Mostra métricas e estatísticas das proposições">Estatísticas de Proposições</a></li>
         </ul>
     </div>
     
     <div class="action-card">
-        <h3>Gerenciar Votações</h3>
+        <h3>Gerenciar Votações Votebem</h3>
         <ul class="action-list">
             <!-- Ajuste de rótulo para indicar Django Admin -->
             <li><a href="/admin/voting/votacaovotebem/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista todas as votações disponíveis no Django Admin">Listar Todas as Votações via Django</a></li>

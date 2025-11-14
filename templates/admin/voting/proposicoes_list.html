@@ -289,7 +289,7 @@
                     {% if proposicao.has_votacao %}
                         <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-success">Votações</a>
                     {% else %}
-<a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ proposicao.pk }}" class="btn btn-secondary">Criar Votação</a>
+<a href="http://localhost:8000/gerencial/?proposicao_id=2270800" class="btn btn-secondary">Criar Votação</a>
                     {% endif %}
                 </td>
             </tr>
@@ -327,7 +327,7 @@
 <div style="margin: 30px 0; text-align: center;">
     <a href="{% url 'gerencial:proposicoes_statistics' %}" class="btn btn-secondary">Voltar às Estatísticas</a>
     <a href="{% url 'gerencial:dashboard' %}" class="btn btn-primary">Voltar ao Painel Principal</a>
-    <a href="{% url 'gerencial:proposicao_add' %}" class="btn btn-success">Adicionar Nova Proposição</a>
+    <a href="{% url 'gerencial:proposicao_add' %}" class="btn btn-success">Adicionar Novas Proposições</a>
 </div>
 
 {% endblock %}

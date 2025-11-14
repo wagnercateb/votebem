@@ -16,8 +16,9 @@
   <div class="card-header d-flex justify-content-between align-items-center">
     <h2 class="card-title mb-0">Votação oficial</h2>
     {% if votacao %}
+      <!-- Atualiza rótulo para refletir que volta à página de votação VoteBem -->
       <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Voltar à votação
+        <i class="bi bi-arrow-left"></i> Voltar para votação Votebem
       </a>
     {% endif %}
   </div>
@@ -335,6 +336,8 @@
             applyFilters();
             if (hintLoading) hintLoading.style.display = 'none';
             if (hintText) hintText.style.display = 'inline';
+            // Após finalizar a importação, atualiza a página para refletir todos os dados
+            window.location.reload();
           })
           .catch(e => {
             status.textContent = '';

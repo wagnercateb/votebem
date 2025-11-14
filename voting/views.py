@@ -66,6 +66,22 @@ class VotacaoDetailView(DetailView):
         context['total_votos'] = votacao.get_total_votos_populares()
         context['votos_sim'] = votacao.get_votos_sim_populares()
         context['votos_nao'] = votacao.get_votos_nao_populares()
+
+        # Related votações from the same proposição (via proposicao_votacao -> proposicao)
+        try:
+            proposicao_id = getattr(votacao.proposicao_votacao.proposicao, 'id_proposicao', None)
+        except Exception:
+            proposicao_id = None
+        related_votacoes = []
+        if proposicao_id:
+            related_votacoes = (
+                VotacaoVoteBem.objects
+                .select_related('proposicao_votacao__proposicao')
+                .filter(proposicao_votacao__proposicao_id=proposicao_id)
+                .exclude(id=votacao.id)
+                .order_by('id')[:2]
+            )
+        context['related_votacoes'] = related_votacoes
         
         return context
 

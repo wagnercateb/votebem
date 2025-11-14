@@ -40,6 +40,69 @@ def admin_dashboard(request):
 
 
 @staff_member_required
+def proposicoes_atualizar_temas(request):
+    """Atualiza vínculos de temas para proposições que não possuem nenhum tema vinculado.
+
+    1) Buscar IDs de `voting_proposicao` sem correspondência na `voting_proposicao_tema`.
+    2) Para cada ID, chamar API: https://dadosabertos.camara.leg.br/api/v2/proposicoes/<id>/temas
+    3) Extrair `codTema` e inserir em `voting_proposicao_tema` (tema_id = codTema; proposicao_id = id).
+    """
+    from django.db.models import Exists, OuterRef
+    from .models import Proposicao, ProposicaoTema, Tema
+
+    proposicoes_sem_tema = Proposicao.objects.annotate(
+        has_tema=Exists(
+            ProposicaoTema.objects.filter(proposicao_id=OuterRef('id_proposicao'))
+        )
+    ).filter(has_tema=False)
+
+    updated_props = 0
+    created_links = 0
+    for prop in proposicoes_sem_tema:
+        prop_id = prop.id_proposicao
+        try:
+            url = f"https://dadosabertos.camara.leg.br/api/v2/proposicoes/{prop_id}/temas"
+            resp = requests.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            temas = data.get('dados', [])
+        except Exception:
+            # Falha ao obter temas para esta proposição, continuar
+            continue
+
+        for item in temas:
+            cod = item.get('codTema') or item.get('cod') or item.get('cod_tema')
+            if cod is None:
+                continue
+            try:
+                codigo_int = int(cod)
+            except Exception:
+                continue
+
+            # Verifica existência do Tema por codigo
+            try:
+                tema_obj = Tema.objects.get(codigo=codigo_int)
+            except Tema.DoesNotExist:
+                # Se o tema não existe na referência, não cria vínculo
+                continue
+
+            _, created = ProposicaoTema.objects.get_or_create(
+                proposicao_id=prop_id,
+                tema_id=tema_obj.codigo,
+            )
+            if created:
+                created_links += 1
+
+        updated_props += 1
+
+    messages.success(
+        request,
+        f"Atualização concluída: {updated_props} proposições processadas, {created_links} vínculos criados."
+    )
+    return redirect('gerencial:dashboard')
+
+
+@staff_member_required
 def votos_oficiais_app(request):
     """Subpágina embutível de Votação oficial com filtros e estatísticas client-side.
     Aceita query param `votacao_id` para carregar votos de uma votação específica.
@@ -182,7 +245,17 @@ def ajax_import_congress_votes(request):
             )
             pv.sim_oficial = int(sim_count or 0)
             pv.nao_oficial = int(nao_count or 0)
-            pv.save(update_fields=['sim_oficial', 'nao_oficial'])
+            # Set data_votacao from API details (dataHoraRegistro)
+            try:
+                registro_str = (dados_det.get('dataHoraRegistro') or '').strip()
+                if registro_str:
+                    from datetime import datetime
+                    from django.utils import timezone
+                    dt_reg = datetime.fromisoformat(registro_str.replace('Z', '+00:00'))
+                    pv.data_votacao = timezone.make_aware(dt_reg)
+            except Exception:
+                pass
+            pv.save(update_fields=['sim_oficial', 'nao_oficial', 'data_votacao'])
 
             # Criar/atualizar VotacaoVoteBem para permitir linkagem em UI
             try:
@@ -724,7 +797,17 @@ def votacao_obter_votacao(request, pk):
             )
             pv_counts.sim_oficial = sim_count
             pv_counts.nao_oficial = nao_count
-            pv_counts.save(update_fields=['sim_oficial', 'nao_oficial'])
+            # Set data_votacao using dataHoraRegistro when available in contexto
+            try:
+                registro_str = (dados_det.get('dataHoraRegistro') or '').strip()
+                if registro_str:
+                    from datetime import datetime
+                    from django.utils import timezone
+                    dt_reg = datetime.fromisoformat(registro_str.replace('Z', '+00:00'))
+                    pv_counts.data_votacao = timezone.make_aware(dt_reg)
+            except Exception:
+                pass
+            pv_counts.save(update_fields=['sim_oficial', 'nao_oficial', 'data_votacao'])
             log_step("Saved official counts on ProposicaoVotacao", {"proposicao_id": proposicao.pk, "votacao_sufixo": congress_vote_numeric_id, "sim_oficial": sim_count, "nao_oficial": nao_count})
         except Exception:
             pass
@@ -790,11 +873,15 @@ def proposicoes_list(request):
     
     # Apply filters
     if search:
-        proposicoes = proposicoes.filter(
-            Q(titulo__icontains=search) |
-            Q(ementa__icontains=search) |
-            Q(id_proposicao__icontains=search)
-        )
+        # AND across each word in the search, regardless of order.
+        # Each word must match in at least one of the fields.
+        terms = [t for t in re.split(r"\s+", search.strip()) if t]
+        for term in terms:
+            proposicoes = proposicoes.filter(
+                Q(titulo__icontains=term) |
+                Q(ementa__icontains=term) |
+                Q(id_proposicao__icontains=term)
+            )
     
     if tipo_filter:
         proposicoes = proposicoes.filter(tipo=tipo_filter)
@@ -983,7 +1070,12 @@ def votacao_edit(request, pk):
 
     except VotacaoVoteBem.DoesNotExist:
         # Novo caminho: listar/gerenciar votações pela proposição (pk como id_proposicao)
-        proposicao = get_object_or_404(Proposicao, pk=pk)
+        # Em vez de 404 direto, mostre mensagem amigável e redirecione
+        try:
+            proposicao = Proposicao.objects.get(pk=pk)
+        except Proposicao.DoesNotExist:
+            messages.error(request, f'Proposição com ID {pk} não encontrada.')
+            return redirect('gerencial:proposicoes_list')
         # Seleciona todas as votações disponíveis associadas via ProposicaoVotacao
         votacoes = (
             VotacaoVoteBem.objects
@@ -1007,19 +1099,8 @@ def votacoes_management(request):
     """
     if request.method == 'POST':
         action = request.POST.get('action')
-        votacao_id = request.POST.get('votacao_id')
         
-        if action == 'toggle_active' and votacao_id:
-            try:
-                votacao = VotacaoDisponivel.objects.get(id=votacao_id)
-                votacao.ativo = not votacao.ativo
-                votacao.save()
-                status = "ativada" if votacao.ativo else "desativada"
-                messages.success(request, f'Votação "{votacao.titulo}" foi {status} com sucesso.')
-            except VotacaoDisponivel.DoesNotExist:
-                messages.error(request, 'Votação não encontrada.')
-        
-        elif action == 'create_votacao':
+        if action == 'create_votacao':
             proposicao_id = request.POST.get('proposicao_id')
             titulo = request.POST.get('titulo')
             resumo = request.POST.get('resumo')
@@ -1041,6 +1122,14 @@ def votacoes_management(request):
                     messages.error(request, 'Proposição não encontrada.')
     
     votacoes = VotacaoVoteBem.objects.select_related('proposicao_votacao__proposicao').order_by('-created_at')
+    # Anotar status "ativa agora" considerando janela no_ar_desde/no_ar_ate
+    try:
+        for v in votacoes:
+            # Usa método do modelo para garantir regra única
+            v.is_active_now = v.is_active()
+    except Exception:
+        for v in votacoes:
+            v.is_active_now = bool(v.ativo)
     proposicoes_sem_votacao = Proposicao.objects.none()
     
     context = {
@@ -1487,7 +1576,7 @@ def proposicao_add(request):
     current_year = datetime.now().year
     
     context = {
-        'title': 'Adicionar Nova Proposição',
+        'title': 'Adicionar Novas Proposições',
         'current_year': current_year,
     }
     

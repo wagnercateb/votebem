@@ -50,6 +50,8 @@ class ProposicaoVotacao(models.Model):
     # Eles são populados somente quando os dados oficiais são buscados
     sim_oficial = models.IntegerField(default=0, verbose_name="Votos SIM Oficiais")
     nao_oficial = models.IntegerField(default=0, verbose_name="Votos NÃO Oficiais")
+    # Data/Hora do registro da votação na API (dados oficiais)
+    data_votacao = models.DateTimeField(blank=True, null=True, verbose_name="Data/Hora do Registro da Votação")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -208,3 +210,55 @@ class CongressmanVote(models.Model):
         elif self.voto == -1:
             return "Não"
         return "Desconhecido"
+
+# ------------------------------------------------------------
+# Temas (referências oficiais de temas de proposições)
+# - Table name must be exactly 'voting_temas'
+# - Fields:
+#   - codigo: integer code from Câmara API (e.g., 34, 35, ...)
+#   - nome: textual name of the theme
+#   - descricao: textual description (often empty in the source)
+# ------------------------------------------------------------
+class Tema(models.Model):
+    codigo = models.IntegerField(db_index=True, unique=True)
+    nome = models.TextField()
+    descricao = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'voting_temas'
+        verbose_name = 'Tema'
+        verbose_name_plural = 'Temas'
+
+    def __str__(self):
+        return f"{self.codigo} - {self.nome}"
+
+# ------------------------------------------------------------
+# N:N entre Proposição e Tema (voting_proposicao_tema)
+# - Armazena vínculos dos códigos de tema (codTema) às proposições.
+# - Usa ForeignKey para Proposicao (to_field=id_proposicao) e
+#   Tema (to_field=codigo) com colunas explícitas solicitadas.
+# ------------------------------------------------------------
+class ProposicaoTema(models.Model):
+    proposicao = models.ForeignKey(
+        Proposicao,
+        to_field='id_proposicao',
+        on_delete=models.CASCADE,
+        db_column='proposicao_id',
+        verbose_name='Proposição'
+    )
+    tema = models.ForeignKey(
+        Tema,
+        to_field='codigo',
+        on_delete=models.CASCADE,
+        db_column='tema_id',
+        verbose_name='Tema (código)'
+    )
+
+    class Meta:
+        db_table = 'voting_proposicao_tema'
+        unique_together = ['proposicao', 'tema']
+        verbose_name = 'Proposição-Tema'
+        verbose_name_plural = 'Proposições-Temas'
+
+    def __str__(self):
+        return f"Prop {self.proposicao_id} ⇄ Tema {self.tema_id}"

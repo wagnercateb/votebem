@@ -272,16 +272,24 @@ class CamaraAPIService:
                 }
             )
 
-        # Parse date
-        data_hora_str = votacao_data.get('dataHoraInicio', '')
+        # Parse dates: inicio for VotacaoVoteBem, registro for ProposicaoVotacao
+        data_hora_inicio_str = votacao_data.get('dataHoraInicio', '')
+        data_hora_registro_str = votacao_data.get('dataHoraRegistro', '')
         data_hora_votacao = None
-        if data_hora_str:
+        data_hora_registro = None
+        if data_hora_inicio_str:
             try:
                 # API returns dates in ISO format: 2023-12-01T14:30:00
-                data_hora_votacao = datetime.fromisoformat(data_hora_str.replace('Z', '+00:00'))
+                data_hora_votacao = datetime.fromisoformat(data_hora_inicio_str.replace('Z', '+00:00'))
                 data_hora_votacao = timezone.make_aware(data_hora_votacao)
             except ValueError:
-                logger.warning(f"Could not parse date: {data_hora_str}")
+                logger.warning(f"Could not parse dataHoraInicio: {data_hora_inicio_str}")
+        if data_hora_registro_str:
+            try:
+                data_hora_registro = datetime.fromisoformat(data_hora_registro_str.replace('Z', '+00:00'))
+                data_hora_registro = timezone.make_aware(data_hora_registro)
+            except ValueError:
+                logger.warning(f"Could not parse dataHoraRegistro: {data_hora_registro_str}")
 
         # Extract voting results
         sim_oficial = votacao_data.get('placarSim', 0)
@@ -296,7 +304,10 @@ class CamaraAPIService:
             if pv is not None:
                 pv.sim_oficial = int(sim_oficial or 0)
                 pv.nao_oficial = int(nao_oficial or 0)
-                pv.save(update_fields=['sim_oficial', 'nao_oficial'])
+                # Also store the registration datetime from API
+                if data_hora_registro:
+                    pv.data_votacao = data_hora_registro
+                pv.save(update_fields=['sim_oficial', 'nao_oficial', 'data_votacao'])
         except Exception:
             pass
 

@@ -85,6 +85,17 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
     # Detect proposicao_id if not explicitly provided
     pid = proposicao_id or _extract_proposicao_id_from_context(context)
 
+    # Fallback: read from request querystring if available
+    if not pid:
+        try:
+            request = context.get('request')
+            if request:
+                qid = request.GET.get('proposicao_id')
+                if qid:
+                    pid = int(qid)
+        except Exception:
+            pass
+
     # Build URLs or leave None when unavailable (for disabled state in UI)
     obter_votacoes_url = f"/gerencial/?proposicao_id={pid}" if pid else None
     editar_votacoes_url = f"/gerencial/votacao/{pid}/edit/" if pid else None

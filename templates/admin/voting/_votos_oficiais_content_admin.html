@@ -16,14 +16,15 @@
   <div class="card-header d-flex justify-content-between align-items-center">
     <h2 class="card-title mb-0">Votação oficial - Obter votos dos congressistas</h2>
     {% if votacao %}
+      <!-- Atualiza rótulo para “Voltar para votação Votebem” no contexto admin -->
       <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Voltar à votação
+        <i class="bi bi-arrow-left"></i> Voltar para votação Votebem
       </a>
     {% endif %}
   </div>
   <div class="card-body">
     {% if votacao %}
-<div class="text-muted">Votação: {{ votacao.titulo }} — {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}</div>
+      {# Removido: linha informativa em texto-muted "Votação: ..." #}
     {% else %}
       <!-- Form de busca e carregamento (ADMIN)
            - Botão [Carregar]: busca votações via API por Proposição ID e lista resultados filtrados
@@ -338,6 +339,8 @@
             applyFilters();
             if (hintLoading) hintLoading.style.display = 'none';
             if (hintText) hintText.style.display = 'inline';
+            // Após finalizar a importação, atualiza a página para refletir todos os dados
+            window.location.reload();
           })
           .catch(e => {
             status.textContent = '';

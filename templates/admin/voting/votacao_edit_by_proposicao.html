@@ -1,6 +1,7 @@
 {% extends 'admin/voting/base_administrativo.html' %}
 {% load static %}
-{% load voting_components %}
+{# Removed voting_components as action bar anchors are being hidden on this page #}
+{# {% load voting_components %} #}
 
 {# Página de gestão de votações por proposição (novo modelo) #}
 {% block title %}{{ title }}{% endblock %}
@@ -160,8 +161,7 @@
                 {% endfor %}
             {% endif %}
 
-            {# Action bar with quick links: obter votações, votos oficiais, editar votações VoteBem #}
-            {% proposicao_action_bar %}
+            {# Action bar removed per request to hide anchor buttons on this page #}
 
             <div class="d-flex justify-content-between align-items-center mb-3">
                 {% comment %} <h2>{{ proposicao.tipo }} {{ proposicao.numero }}/{{ proposicao.ano }}</h2> {% endcomment %}
