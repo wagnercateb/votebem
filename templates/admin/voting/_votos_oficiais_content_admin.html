@@ -61,8 +61,10 @@
             <th style="padding:6px;">ID</th>
             <th style="padding:6px;">Data/Hora</th>
             <th style="padding:6px;">Descrição</th>
-            <th style="padding:6px;">Resultado</th>
+            <!-- Renamed column to reflect VoteBem actions instead of textual result -->
+            <th style="padding:6px;">Votebem</th>
             <th style="padding:6px;">Qtd. registros</th>
+            <th style="padding:6px;">Prioridade</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -119,6 +121,79 @@
       }
       if (pParam && propInput) {
         propInput.value = pParam;
+        // Auto-load votações da base local quando já há proposicao_id na URL
+        const propId = String(pParam).trim();
+        if (propId) {
+          const urlDbOnly = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(propId)}&db_only=1`;
+          status.textContent = 'Carregando votações do banco (sem consultar API)...';
+          card.style.display = 'block'; help.style.display = 'none'; err.style.display = 'none';
+          listTbody.innerHTML = '';
+          fetch(urlDbOnly, { headers: { 'Accept': 'application/json' } })
+            .then(r => {
+              if (!r.ok) throw new Error('HTTP ' + r.status);
+              return r.json();
+            })
+            .then(json => {
+              const dados = Array.isArray(json?.dados) ? json.dados : [];
+              // Em carregamento automático (somente banco), não filtrar por descrição
+              const filtered = dados;
+              if (filtered.length === 0) {
+                status.textContent = `Nenhuma votação registrada no banco para a proposição ${propId}.`;
+                help.style.display = 'block'; err.style.display = 'none';
+                listTbody.innerHTML = '';
+                return;
+              }
+              status.textContent = `Foram encontradas ${filtered.length} votações (base local).`;
+              help.style.display = 'none'; err.style.display = 'none';
+              listTbody.innerHTML = '';
+              // Render each voting row; when a VoteBem ID exists, show edit button
+              filtered.forEach(item => {
+                const id = item.id || item?.idVotacao || '';
+                const dataHora = item.dataHoraRegistro || item.dataHora || '';
+                const descricao = item.descricao || item?.descrição || '';
+                // resultado textual from Câmara (not shown anymore in this column)
+                const resultado = item?.resultado || '';
+                const votosCount = Number(item.votes_count || 0);
+                const tr = document.createElement('tr');
+                const baseGerencial = `/gerencial/`;
+                const hrefFull = `${baseGerencial}?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(id)}`;
+                const prioridadeVal = (item.prioridade === null || item.prioridade === undefined) ? '' : String(item.prioridade);
+                const pvId = item.pv_id || '';
+                const vbId = item.vb_id || '';
+                const prioridadeCell = pvId ? `<input type=\"number\" class=\"form-control form-control-sm vb-pv-prioridade\" value=\"${prioridadeVal}\" data-pv-id=\"${pvId}\" placeholder=\"\" style=\"max-width:90px;\" />` : `<span class=\"text-muted\">—</span>`;
+                // Link para página pública usando o ID de ProposicaoVotacao (pv_id) quando disponível; caso contrário, usa vb_id
+                const votosCell = (votosCount > 0 && (pvId || vbId)) ? `<a href=\"/voting/votos/oficiais/?votacao_id=${pvId || vbId}\" target=\"votos\">${votosCount}</a>` : `${votosCount}`;
+                // Votebem cell: when vbId exists, show edit button; else show em dash
+                const votebemCell = vbId
+                  ? `<a href=\"/gerencial/votacao/${vbId}/edit/\" class=\"btn btn-sm btn-outline-primary\" target=\"vb-edit\" title=\"Editar votação VoteBem #${vbId}\"><i class=\"bi bi-pencil-square\"></i> Editar</a>`
+                  : `<span class=\"text-muted\">—</span>`;
+                tr.innerHTML = `<td style=\"padding:6px;\"><a href=\"${hrefFull}\" data-id=\"${id}\" class=\"vb-votacao-id\">${id}</a></td>`+
+                               `<td style=\"padding:6px;\">${dataHora || ''}</td>`+
+                               `<td style=\"padding:6px;\">${descricao || ''}</td>`+
+                               `<td style=\"padding:6px;\">${votebemCell}</td>`+
+                               `<td style=\"padding:6px;\">${votosCell}</td>`+
+                               `<td style=\"padding:6px;\">${prioridadeCell}</td>`;
+                listTbody.appendChild(tr);
+              });
+              bindPrioridadeEditors();
+              listTbody.querySelectorAll('a.vb-votacao-id').forEach(a => {
+                a.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  const idSel = a.getAttribute('data-id');
+                  if (votacaoInput) {
+                    votacaoInput.value = idSel || '';
+                    btnCarregarVotacao.style.display = (idSel ? 'inline-block' : 'none');
+                    btnCarregarVotacao.focus();
+                  }
+                });
+              });
+            })
+            .catch(e => {
+              status.textContent = 'Falha ao carregar do banco (somente cache).';
+              help.style.display = 'none'; err.style.display = 'block';
+              listTbody.innerHTML = '';
+            });
+      }
       }
     } catch (_) { /* ignore */ }
 
@@ -160,22 +235,37 @@
           status.textContent = `Foram encontradas ${filtered.length} votações relevantes.`;
           help.style.display = 'none'; err.style.display = 'none';
           listTbody.innerHTML = '';
+          // Render each voting row; when a VoteBem ID exists, show edit button
           filtered.forEach(item => {
             const id = item.id || item?.idVotacao || '';
             const dataHora = item.dataHoraRegistro || item.dataHora || '';
             const descricao = item.descricao || item?.descrição || '';
+            // resultado textual from Câmara (not shown anymore in this column)
             const resultado = item?.resultado || '';
             const votosCount = Number(item.votes_count || 0);
             const tr = document.createElement('tr');
-            const baseGerencial = `${window.location.origin}/gerencial/`;
+            const baseGerencial = `/gerencial/`;
             const hrefFull = `${baseGerencial}?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(id)}`;
+            const prioridadeVal = (item.prioridade === null || item.prioridade === undefined) ? '' : String(item.prioridade);
+            const pvId = item.pv_id || '';
+            const vbId = item.vb_id || '';
+            const prioridadeCell = pvId ? `<input type=\"number\" class=\"form-control form-control-sm vb-pv-prioridade\" value=\"${prioridadeVal}\" data-pv-id=\"${pvId}\" placeholder=\"\" style=\"max-width:90px;\" />` : `<span class=\"text-muted\">—</span>`;
+            // Link para página pública usando o ID de ProposicaoVotacao (pv_id) quando disponível; caso contrário, usa vb_id
+            const votosCell = (votosCount > 0 && (pvId || vbId)) ? `<a href=\"/voting/votos/oficiais/?votacao_id=${pvId || vbId}\" target=\"votos\">${votosCount}</a>` : `${votosCount}`;
+            // Votebem cell: when vbId exists, show edit button; else show em dash
+            const votebemCell = vbId
+              ? `<a href=\"/gerencial/votacao/${vbId}/edit/\" class=\"btn btn-sm btn-outline-primary\" target=\"vb-edit\" title=\"Editar votação VoteBem #${vbId}\"><i class=\"bi bi-pencil-square\"></i> Editar</a>`
+              : `<span class=\"text-muted\">—</span>`;
             tr.innerHTML = `<td style=\"padding:6px;\"><a href=\"${hrefFull}\" data-id=\"${id}\" class=\"vb-votacao-id\">${id}</a></td>`+
                            `<td style=\"padding:6px;\">${dataHora || ''}</td>`+
                            `<td style=\"padding:6px;\">${descricao || ''}</td>`+
-                           `<td style=\"padding:6px;\">${resultado || ''}</td>`+
-                           `<td style=\"padding:6px;\">${votosCount}</td>`;
+                           `<td style=\"padding:6px;\">${votebemCell}</td>`+
+                           `<td style=\"padding:6px;\">${votosCell}</td>`+
+                           `<td style=\"padding:6px;\">${prioridadeCell}</td>`;
             listTbody.appendChild(tr);
           });
+          // Bind save handlers for prioridade inputs (if any)
+          bindPrioridadeEditors();
           listTbody.querySelectorAll('a.vb-votacao-id').forEach(a => {
             a.addEventListener('click', (e) => {
               e.preventDefault();
@@ -192,8 +282,9 @@
           status.textContent = '';
           help.style.display = 'none'; err.style.display = 'block';
           listTbody.innerHTML = '';
-          const safeUrl = url;
-          err.innerHTML = `<div class="alert alert-danger" style="margin:0;">Ocorreu um erro ao consultar a API da Câmara. Verifique o ID e tente novamente. URL: <a href="${safeUrl}" target="api">${safeUrl}</a></div>`;
+          // Show correct Câmara API URL reference for troubleshooting (consulta por proposição)
+          const camaraUrl = `https://dadosabertos.camara.leg.br/api/v2/votacoes?idProposicao=${encodeURIComponent(propId)}&idOrgao=180`;
+          err.innerHTML = `<div class="alert alert-danger" style="margin:0;">Ocorreu um erro ao consultar a API da Câmara. Verifique o ID e tente novamente. API (consulta por proposição): <a href="${camaraUrl}" target="api">${camaraUrl}</a></div>`;
         });
     });
 
@@ -259,11 +350,72 @@
     }
   })();
 
+  // --- Helper: CSRF token from cookie
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  // --- Bind editors for prioridade cells
+  function bindPrioridadeEditors() {
+    const inputs = document.querySelectorAll('#vb-votacoes-list .vb-pv-prioridade');
+    inputs.forEach(inp => {
+      const handler = () => {
+        const pvId = inp.getAttribute('data-pv-id');
+        const val = inp.value;
+        if (!pvId) return;
+        const formData = new URLSearchParams();
+        formData.append('pv_id', pvId);
+        formData.append('prioridade', val);
+        fetch(`${window.location.origin}/gerencial/ajax/proposicao-votacao/update-prioridade/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken') || ''
+          },
+          body: formData.toString(),
+          credentials: 'same-origin'
+        }).then(async r => {
+          const ct = r.headers.get('Content-Type') || '';
+          if (!r.ok) {
+            // Read text to avoid JSON parse errors when server returns HTML (e.g., login redirect)
+            const text = await r.text();
+            throw new Error(`HTTP ${r.status} (${ct}); ${text.slice(0, 120)}`);
+          }
+          return r.json();
+        }).then(json => {
+          if (!json?.ok) {
+            console.error('Erro ao atualizar prioridade:', json?.error);
+            inp.classList.add('is-invalid');
+          } else {
+            inp.classList.remove('is-invalid');
+            inp.classList.add('is-valid');
+            setTimeout(() => inp.classList.remove('is-valid'), 1200);
+          }
+        }).catch(e => {
+          console.error('Falha de rede ao atualizar prioridade:', e);
+          // Hint for common auth issue: staff session required
+          const hint = document.getElementById('vb-votacoes-error');
+          if (hint) {
+            hint.style.display = 'block';
+            hint.textContent = 'Falha ao salvar prioridade. Verifique se você está logado como staff e se o CSRF está válido.';
+          }
+          inp.classList.add('is-invalid');
+        });
+      };
+      inp.addEventListener('change', handler);
+      inp.addEventListener('blur', handler);
+      inp.addEventListener('keyup', (ev) => { if (ev.key === 'Enter') handler(); });
+    });
+  }
+
 
   // ---- Common filtering and rendering logic (shared behavior) ----
   function uniq(arr) { return Array.from(new Set(arr.filter(Boolean))).sort(); }
   function renderOptions(sel, values) {
     const el = document.getElementById(sel);
+    if (!el) return; // Safeguard when element is not present on the page
     const cur = el.value;
     const base = el.querySelector('option');
     el.innerHTML = '';
@@ -314,6 +466,7 @@
 
   function renderStatsTable(tableId, statsMap, sort) {
     const tbody = document.querySelector(`#${tableId} tbody`);
+    if (!tbody) return; // Guard when stats tables are not present
     tbody.innerHTML = '';
     const rows = sortStats(asArray(statsMap), sort);
     rows.forEach(r => {
@@ -347,11 +500,15 @@
   }
 
   function applyFilters() {
-    const nome = document.getElementById('f-nome').value.toLowerCase();
+    const nomeEl = document.getElementById('f-nome');
+    const partidoEl = document.getElementById('f-partido');
+    const ufEl = document.getElementById('f-uf');
+    const votoEl = document.getElementById('f-voto');
+    const nome = ((nomeEl && nomeEl.value) ? nomeEl.value : '').toLowerCase();
     const tokens = nome.split(/\s+/).filter(Boolean);
-    const partido = document.getElementById('f-partido').value;
-    const uf = document.getElementById('f-uf').value;
-    const voto = document.getElementById('f-voto').value;
+    const partido = (partidoEl ? partidoEl.value : '');
+    const uf = (ufEl ? ufEl.value : '');
+    const voto = (votoEl ? votoEl.value : '');
     state.filtered = state.data.filter(x => {
       const nomeLower = (x.nome||'').toLowerCase();
       const nomeMatch = tokens.length === 0 ? true : tokens.every(t => nomeLower.includes(t));
@@ -366,6 +523,7 @@
 
   function renderList() {
     const tbody = document.querySelector('#table-list tbody');
+    if (!tbody) return; // Guard when list table is not present
     tbody.innerHTML = '';
     state.filtered.forEach(x => {
       const idc = x.id_cadastro ? String(x.id_cadastro) : '';
@@ -416,8 +574,10 @@
     renderOptions('f-partido', uniq(state.data.map(x => x.partido)));
     renderOptions('f-uf', uniq(state.data.map(x => x.uf)));
     ['f-nome','f-partido','f-uf','f-voto'].forEach(id => {
-      document.getElementById(id).addEventListener('input', applyFilters);
-      document.getElementById(id).addEventListener('change', applyFilters);
+      const el = document.getElementById(id);
+      if (!el) return; // Guard when filter controls are not present
+      el.addEventListener('input', applyFilters);
+      el.addEventListener('change', applyFilters);
     });
     bindSorting();
     applyFilters();

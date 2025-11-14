@@ -1,4 +1,5 @@
 {% extends "admin/voting/base_administrativo.html" %}
+{% load voting_components %}
 
 {% block title %}{{ title }} - VoteBem{% endblock %}
 
@@ -153,6 +154,9 @@
 <h1>{{ title }}</h1>
 <p>Edite as informações da proposição abaixo.</p>
 
+{# Reusable proposição action bar #}
+{% proposicao_action_bar %}
+
 <div class="edit-container">
     <form method="post">
         {% csrf_token %}
@@ -225,7 +229,7 @@
 <div class="info-section">
     <h3>Votações Relacionadas</h3>
     <p>Esta proposição ainda não possui votações criadas.</p>
-<a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ proposicao.pk }}" class="btn btn-primary">Criar Votação</a>
+<a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ proposicao.id_proposicao }}" class="btn btn-primary">Criar Votação</a>
 </div>
 {% endif %}
 
@@ -233,7 +237,7 @@
 <div style="margin: 30px 0; text-align: center;">
     <a href="{% url 'gerencial:proposicoes_list' %}" class="btn btn-secondary">Voltar à Lista</a>
     <a href="{% url 'gerencial:proposicoes_statistics' %}" class="btn btn-primary">Ver Estatísticas</a>
-    {% if proposicao.votacoes.exists %}
+    {% if votacoes %}
     <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-success">Gerenciar Votações</a>
     {% endif %}
 </div>

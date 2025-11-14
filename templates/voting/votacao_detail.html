@@ -12,7 +12,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
 {% if votacao.proposicao_votacao.proposicao.id_proposicao %}
-<a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+{% comment %} <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none"> {% endcomment %}
 {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
                             </a>
                         {% else %}
@@ -215,13 +215,13 @@
                 <div class="row text-center">
                     <div class="col-6">
                         <div class="text-success">
-                            <h4>{{ votacao.sim_oficial }}</h4>
+                            <h4>{% if votacao.proposicao_votacao %}{{ votacao.proposicao_votacao.sim_oficial|default:0 }}{% else %}0{% endif %}</h4>
                             <small>SIM</small>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="text-danger">
-                            <h4>{{ votacao.nao_oficial }}</h4>
+                            <h4>{% if votacao.proposicao_votacao %}{{ votacao.proposicao_votacao.nao_oficial|default:0 }}{% else %}0{% endif %}</h4>
                             <small>NÃO</small>
                         </div>
                     </div>

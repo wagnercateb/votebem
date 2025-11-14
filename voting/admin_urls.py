@@ -53,4 +53,6 @@ urlpatterns = [
     path('ajax/proposicao-votacoes/', admin_views.ajax_proposicao_votacoes, name='ajax_proposicao_votacoes')
     ,
     path('ajax/import-congress-votes/', admin_views.ajax_import_congress_votes, name='ajax_import_congress_votes')
+    ,
+    path('ajax/proposicao-votacao/update-prioridade/', admin_views.ajax_update_proposicao_votacao_prioridade, name='ajax_update_proposicao_votacao_prioridade')
 ]

@@ -12,7 +12,7 @@ import json
 import logging
 import re
 import requests
-from .models import Proposicao, ProposicaoVotacao, VotacaoDisponivel, Voto, Congressman, CongressmanVote
+from .models import Proposicao, ProposicaoVotacao, VotacaoVoteBem, Voto, Congressman, CongressmanVote
 from django.contrib.auth.models import User
 from .services.camara_api import camara_api, CamaraAPIService
 from votebem.utils.devlog import dev_log  # Dev logger for console + file output
@@ -26,14 +26,14 @@ def admin_dashboard(request):
     """
     context = {
         'total_proposicoes': Proposicao.objects.count(),
-        'total_votacoes_disponiveis': VotacaoDisponivel.objects.count(),
-        'votacoes_ativas': VotacaoDisponivel.objects.filter(ativo=True).count(),
+        'total_votacoes_disponiveis': VotacaoVoteBem.objects.count(),
+        'votacoes_ativas': VotacaoVoteBem.objects.filter(ativo=True).count(),
         'total_votos_populares': Voto.objects.count(),
         'total_congressistas': Congressman.objects.count(),
         'total_votos_congressistas': CongressmanVote.objects.count(),
         'total_usuarios': User.objects.count(),
         'ultima_proposicao': Proposicao.objects.first(),
-        'votacoes_recentes': VotacaoDisponivel.objects.filter(ativo=True)[:5],
+        'votacoes_recentes': VotacaoVoteBem.objects.filter(ativo=True)[:5],
     }
     
     return render(request, 'admin/voting/admin_dashboard.html', context)
@@ -49,7 +49,7 @@ def votos_oficiais_app(request):
     votos_data = []
     if votacao_id:
         try:
-            votacao = VotacaoDisponivel.objects.select_related('proposicao_votacao__proposicao').get(pk=int(votacao_id))
+            votacao = VotacaoVoteBem.objects.select_related('proposicao_votacao__proposicao').get(pk=int(votacao_id))
             # Votação oficial: por votação específica da proposição
             registros = (
                 CongressmanVote.objects
@@ -173,6 +173,32 @@ def ajax_import_congress_votes(request):
                 elif tipo in ('não', 'nao'):
                     nao_count += 1
 
+        # Atualizar campos oficiais na ProposicaoVotacao e garantir VotacaoVoteBem associado
+        try:
+            pv, _ = ProposicaoVotacao.objects.get_or_create(
+                proposicao=proposicao,
+                votacao_sufixo=sufixo_int,
+                defaults={'descricao': (dados_det.get('descricao') or '')}
+            )
+            pv.sim_oficial = int(sim_count or 0)
+            pv.nao_oficial = int(nao_count or 0)
+            pv.save(update_fields=['sim_oficial', 'nao_oficial'])
+
+            # Criar/atualizar VotacaoVoteBem para permitir linkagem em UI
+            try:
+                VotacaoVoteBem.objects.update_or_create(
+                    proposicao_votacao=pv,
+                    defaults={
+                        'titulo': (dados_det.get('descricao') or '')[:200],
+                        'resumo': (dados_det.get('descricao') or ''),
+                        'ativo': False,
+                    }
+                )
+            except Exception:
+                pass
+        except Exception:
+            pass
+
         # Mapear e inserir/atualizar votes em CongressmanVote
         from unicodedata import normalize
         def norm(s: str) -> str:
@@ -283,7 +309,7 @@ def ajax_import_congress_votes(request):
             pv, _ = ProposicaoVotacao.objects.get_or_create(
                 proposicao=proposicao,
                 votacao_sufixo=sufixo_int,
-                defaults={'descricao': ''}
+                defaults={'descricao': (dados_det.get('descricao') or '')}
             )
             obj, was_created = CongressmanVote.objects.update_or_create(
                 congressman=cm,
@@ -689,12 +715,17 @@ def votacao_obter_votacao(request, pk):
                 updated += 1
                 log_step("Updated CongressmanVote", {"congressman_id": cm.id, "id_cadastro": cm.id_cadastro, "voto": voto_val})
 
-        # Update official counts on votacao
+        # Update official counts on ProposicaoVotacao (not on VotacaoDisponivel)
         try:
-            votacao.sim_oficial = sim_count
-            votacao.nao_oficial = nao_count
-            votacao.save(update_fields=['sim_oficial', 'nao_oficial'])
-            log_step("Saved official counts on VotacaoDisponivel", {"sim_oficial": sim_count, "nao_oficial": nao_count})
+            pv_counts, _ = ProposicaoVotacao.objects.get_or_create(
+                proposicao=proposicao,
+                votacao_sufixo=congress_vote_numeric_id,
+                defaults={'descricao': ''}
+            )
+            pv_counts.sim_oficial = sim_count
+            pv_counts.nao_oficial = nao_count
+            pv_counts.save(update_fields=['sim_oficial', 'nao_oficial'])
+            log_step("Saved official counts on ProposicaoVotacao", {"proposicao_id": proposicao.pk, "votacao_sufixo": congress_vote_numeric_id, "sim_oficial": sim_count, "nao_oficial": nao_count})
         except Exception:
             pass
 
@@ -714,12 +745,27 @@ def proposicoes_statistics(request):
     """
     Display statistics about propositions similar to PHP admin
     """
+    # Aggregations
+    por_tipo = Proposicao.objects.values('tipo').annotate(count=Count('id_proposicao')).order_by('-count')
+    por_ano = Proposicao.objects.values('ano').annotate(count=Count('id_proposicao')).order_by('-ano')
+    por_estado = Proposicao.objects.values('estado').annotate(count=Count('id_proposicao')).order_by('-count')
+
+    # Counts respecting the new relationships (Proposicao -> ProposicaoVotacao -> VotacaoVoteBem)
+    total = Proposicao.objects.count()
+    com_votacao = (
+        Proposicao.objects
+        .filter(votacoes_oficiais__votacaovotebem__isnull=False)
+        .distinct()
+        .count()
+    )
+    sem_votacao = max(total - com_votacao, 0)
+
     stats = {
-        'por_tipo': Proposicao.objects.values('tipo').annotate(count=Count('id')).order_by('-count'),
-        'por_ano': Proposicao.objects.values('ano').annotate(count=Count('id')).order_by('-ano'),
-        'por_estado': Proposicao.objects.values('estado').annotate(count=Count('id')).order_by('-count'),
-        'com_votacao': Proposicao.objects.filter(votacaodisponivel__isnull=False).distinct().count(),
-        'sem_votacao': Proposicao.objects.filter(votacaodisponivel__isnull=True).count(),
+        'por_tipo': por_tipo,
+        'por_ano': por_ano,
+        'por_estado': por_estado,
+        'com_votacao': com_votacao,
+        'sem_votacao': sem_votacao,
     }
     
     return render(request, 'admin/voting/proposicoes_statistics.html', {'stats': stats})
@@ -764,19 +810,26 @@ def proposicoes_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Annotate preferred votação id for each proposição on the current page
-    # Choose an active votação if present; otherwise use the first available
+    # Annotate preferred votação info for each proposição on the current page
+    # Prefer an active votação if present; otherwise use the first available
     try:
         for p in page_obj:
-            qs = VotacaoDisponivel.objects.filter(proposicao_id=p.id)
+            # Preferida: tentativa de identificar votação disponível associada (novo modelo VotacaoVoteBem)
+            qs = VotacaoVoteBem.objects.filter(proposicao_votacao__proposicao_id=p.id_proposicao)
             preferred = qs.filter(ativo=True).order_by('id').first() or qs.order_by('id').first()
             p.preferred_votacao_id = preferred.id if preferred else None
             p.has_votacao = qs.exists()
+            p.preferred_votacao_is_active = bool(preferred.ativo) if preferred else False
+
+            # Flag: existe algum registro em ProposicaoVotacao para esta proposição?
+            p.has_proposicao_votacao = ProposicaoVotacao.objects.filter(proposicao_id=p.id_proposicao).exists()
     except Exception:
         # In case of any unexpected error, ensure attributes exist to avoid template errors
         for p in page_obj:
             p.preferred_votacao_id = None
             p.has_votacao = False
+            p.has_proposicao_votacao = False
+            p.preferred_votacao_is_active = False
     
     # Get filter options
     tipos_disponiveis = Proposicao.objects.values_list('tipo', flat=True).distinct().order_by('tipo')
@@ -845,8 +898,14 @@ def proposicao_edit(request, pk):
             except Exception as e:
                 messages.error(request, f'Erro ao salvar proposição: {str(e)}')
     
-    # Buscar votações relacionadas
-    votacoes = proposicao.votacaodisponivel_set.all()
+    # Buscar votações relacionadas via nova relação Proposicao -> ProposicaoVotacao -> VotacaoVoteBem
+    # Seleciona VotacaoVoteBem vinculadas à proposição por meio de ProposicaoVotacao
+    votacoes = (
+        VotacaoVoteBem.objects
+        .select_related('proposicao_votacao__proposicao')
+        .filter(proposicao_votacao__proposicao_id=proposicao.id_proposicao)
+        .order_by('-no_ar_desde')
+    )
     
     context = {
         'proposicao': proposicao,
@@ -858,65 +917,88 @@ def proposicao_edit(request, pk):
 
 @staff_member_required
 def votacao_edit(request, pk):
-    """Edit a votacao disponivel"""
-    votacao = get_object_or_404(VotacaoDisponivel, pk=pk)
-    
-    if request.method == 'POST':
-        # Handle form submission
-        votacao.titulo = request.POST.get('titulo', votacao.titulo)
-        votacao.resumo = request.POST.get('resumo', votacao.resumo)
-        
-        # Handle datetime fields
-        data_hora_votacao = request.POST.get('data_hora_votacao')
-        if data_hora_votacao:
+    """Edita uma votação disponível OU lista as votações por proposição.
+
+    - Se existir VotacaoVoteBem com id=pk: renderiza a página de edição tradicional.
+    - Caso contrário: interpreta pk como id_proposicao e lista todas as votações
+      (VotacaoDisponivel) vinculadas via ProposicaoVotacao para essa proposição,
+      permitindo editar cada uma individualmente.
+    """
+
+    try:
+        # Caminho tradicional: editar uma única VotacaoVoteBem por ID
+        votacao = VotacaoVoteBem.objects.get(pk=pk)
+
+        if request.method == 'POST':
+            # Handle form submission
+            votacao.titulo = request.POST.get('titulo', votacao.titulo)
+            votacao.resumo = request.POST.get('resumo', votacao.resumo)
+
+            # Handle datetime fields
+            data_hora_votacao = request.POST.get('data_hora_votacao')
+            if data_hora_votacao:
+                try:
+                    votacao.data_hora_votacao = timezone.datetime.fromisoformat(data_hora_votacao.replace('T', ' '))
+                except ValueError:
+                    pass
+
+            no_ar_desde = request.POST.get('no_ar_desde')
+            if no_ar_desde:
+                try:
+                    votacao.no_ar_desde = timezone.datetime.fromisoformat(no_ar_desde.replace('T', ' '))
+                except ValueError:
+                    pass
+
+            no_ar_ate = request.POST.get('no_ar_ate')
+            if no_ar_ate:
+                try:
+                    votacao.no_ar_ate = timezone.datetime.fromisoformat(no_ar_ate.replace('T', ' '))
+                except ValueError:
+                    pass
+            else:
+                votacao.no_ar_ate = None
+
+            # Official counts are stored on ProposicaoVotacao and populated via import; ignore any POST for them
+
+            # Handle boolean field
+            votacao.ativo = request.POST.get('ativo') == 'on'
+
             try:
-                votacao.data_hora_votacao = timezone.datetime.fromisoformat(data_hora_votacao.replace('T', ' '))
-            except ValueError:
-                pass
-        
-        no_ar_desde = request.POST.get('no_ar_desde')
-        if no_ar_desde:
-            try:
-                votacao.no_ar_desde = timezone.datetime.fromisoformat(no_ar_desde.replace('T', ' '))
-            except ValueError:
-                pass
-        
-        no_ar_ate = request.POST.get('no_ar_ate')
-        if no_ar_ate:
-            try:
-                votacao.no_ar_ate = timezone.datetime.fromisoformat(no_ar_ate.replace('T', ' '))
-            except ValueError:
-                pass
-        else:
-            votacao.no_ar_ate = None
-        
-        # Handle integer fields
-        try:
-            votacao.sim_oficial = int(request.POST.get('sim_oficial', 0))
-            votacao.nao_oficial = int(request.POST.get('nao_oficial', 0))
-        except ValueError:
-            pass
-        
-        # Handle boolean field
-        votacao.ativo = request.POST.get('ativo') == 'on'
-        
-        try:
-            votacao.save()
-            messages.success(request, 'Votação atualizada com sucesso!')
-            return redirect('gerencial:votacao_edit', pk=pk)
-        except Exception as e:
-            messages.error(request, f'Erro ao salvar votação: {str(e)}')
-    
-    # Get related votes count
-    total_votos = votacao.get_total_votos_populares() if hasattr(votacao, 'get_total_votos_populares') else 0
-    
-    context = {
-        'votacao': votacao,
-        'total_votos': total_votos,
-        'title': f'Editar Votação: {votacao.titulo[:50]}...'
-    }
-    
-    return render(request, 'admin/voting/votacao_edit.html', context)
+                votacao.save()
+                messages.success(request, 'Votação atualizada com sucesso!')
+                return redirect('gerencial:votacao_edit', pk=pk)
+            except Exception as e:
+                messages.error(request, f'Erro ao salvar votação: {str(e)}')
+
+        # Get related votes count
+        total_votos = votacao.get_total_votos_populares() if hasattr(votacao, 'get_total_votos_populares') else 0
+
+        context = {
+            'votacao': votacao,
+            'total_votos': total_votos,
+            'title': f'Editar Votação: {votacao.titulo[:50]}...'
+        }
+
+        return render(request, 'admin/voting/votacao_edit.html', context)
+
+    except VotacaoVoteBem.DoesNotExist:
+        # Novo caminho: listar/gerenciar votações pela proposição (pk como id_proposicao)
+        proposicao = get_object_or_404(Proposicao, pk=pk)
+        # Seleciona todas as votações disponíveis associadas via ProposicaoVotacao
+        votacoes = (
+            VotacaoVoteBem.objects
+            .select_related('proposicao_votacao__proposicao')
+            .filter(proposicao_votacao__proposicao_id=pk)
+            .order_by('-no_ar_desde')
+        )
+
+        context = {
+            'proposicao': proposicao,
+            'votacoes': votacoes,
+            'title': f'Votações Votebem da Proposição: {proposicao.tipo} {proposicao.numero}/{proposicao.ano}',
+        }
+
+        return render(request, 'admin/voting/votacao_edit_by_proposicao.html', context)
 
 @staff_member_required
 def votacoes_management(request):
@@ -958,7 +1040,7 @@ def votacoes_management(request):
                 except Proposicao.DoesNotExist:
                     messages.error(request, 'Proposição não encontrada.')
     
-    votacoes = VotacaoDisponivel.objects.select_related('proposicao_votacao__proposicao').order_by('-created_at')
+    votacoes = VotacaoVoteBem.objects.select_related('proposicao_votacao__proposicao').order_by('-created_at')
     proposicoes_sem_votacao = Proposicao.objects.none()
     
     context = {
@@ -973,19 +1055,35 @@ def votacao_create(request):
     """Dedicated page to create a new votação, with optional prefill by proposição."""
     if request.method == 'POST':
         proposicao_id = request.POST.get('proposicao_id')
+        proposicao_votacao_id = request.POST.get('proposicao_votacao_id')
         titulo = request.POST.get('titulo')
         resumo = request.POST.get('resumo')
         data_hora_votacao = request.POST.get('data_hora_votacao')
         no_ar_desde = request.POST.get('no_ar_desde')
         no_ar_ate = request.POST.get('no_ar_ate')
         ativo = request.POST.get('ativo') == 'on'
-        sim_oficial = request.POST.get('sim_oficial')
-        nao_oficial = request.POST.get('nao_oficial')
-
-        if proposicao_id and titulo:
+        # If the proposição has official votações, force selecting one before creation
+        if proposicao_id and not proposicao_votacao_id:
             try:
-                # Fetch by new primary key (id_proposicao)
-                proposicao = Proposicao.objects.get(pk=proposicao_id)
+                if ProposicaoVotacao.objects.filter(proposicao_id=proposicao_id).exists():
+                    messages.error(request, 'Selecione a votação oficial da proposição antes de criar a votação.')
+                else:
+                    # No official votações available; allow creation without linking
+                    pass
+            except Exception:
+                # Silently allow if lookup fails; creation block below will handle DoesNotExist
+                pass
+
+        if (proposicao_id or proposicao_votacao_id) and titulo and (proposicao_votacao_id or not ProposicaoVotacao.objects.filter(proposicao_id=proposicao_id).exists()):
+            try:
+                # Opcional: buscar proposição pela nova PK (id_proposicao)
+                proposicao = None
+                if proposicao_id:
+                    proposicao = Proposicao.objects.get(pk=proposicao_id)
+                # Se informado, vincular à ProposicaoVotacao específica
+                pv = None
+                if proposicao_votacao_id:
+                    pv = ProposicaoVotacao.objects.get(pk=int(proposicao_votacao_id))
 
                 # Parse datetimes, default to now if invalid or missing
                 try:
@@ -1001,31 +1099,21 @@ def votacao_create(request):
                 except Exception:
                     dt_ate = None
 
-                # Parse integers
-                try:
-                    sim_of = int(sim_oficial or 0)
-                except ValueError:
-                    sim_of = 0
-                try:
-                    nao_of = int(nao_oficial or 0)
-                except ValueError:
-                    nao_of = 0
-
-                votacao = VotacaoDisponivel.objects.create(
-                    proposicao_votacao=None,
+                votacao = VotacaoVoteBem.objects.create(
+                    proposicao_votacao=pv,
                     titulo=titulo,
                     resumo=resumo or "Votação",
                     data_hora_votacao=dt_voto,
                     no_ar_desde=dt_desde,
                     no_ar_ate=dt_ate,
                     ativo=ativo,
-                    sim_oficial=sim_of,
-                    nao_oficial=nao_of,
                 )
                 messages.success(request, f'Votação "{votacao.titulo}" criada com sucesso.')
                 return redirect('gerencial:votacao_edit', pk=votacao.pk)
             except Proposicao.DoesNotExist:
                 messages.error(request, 'Proposição não encontrada.')
+            except ProposicaoVotacao.DoesNotExist:
+                messages.error(request, 'Votação oficial da proposição não encontrada.')
         else:
             messages.error(request, 'Preencha os campos obrigatórios.')
 
@@ -1039,8 +1127,7 @@ def votacao_create(request):
         'no_ar_desde': timezone.now().strftime('%Y-%m-%dT%H:%M'),
         'no_ar_ate': '',
         'ativo': True,
-        'sim_oficial': 0,
-        'nao_oficial': 0,
+        # Contagens oficiais não pertencem a VotacaoVoteBem; são mantidas em ProposicaoVotacao durante importação
         'proposicao_display': ''
     }
     proposicao_id = request.GET.get('proposicao_id')
@@ -1053,6 +1140,15 @@ def votacao_create(request):
             prefill['titulo'] = f"Votação: {proposicao.titulo}"
             prefill['resumo'] = (proposicao.ementa or '').strip()
             prefill['proposicao_display'] = f"{proposicao.tipo} {proposicao.numero}/{proposicao.ano} - {proposicao.titulo}"
+            # Listar ProposicaoVotacao ainda sem VotacaoVoteBem vinculada
+            pv_candidates = (
+                ProposicaoVotacao.objects
+                .filter(proposicao_id=proposicao.pk)
+                # Atualizado: relação reversa é 'votacaovotebem' após renomeação do modelo
+                .filter(votacaovotebem__isnull=True)
+                .order_by('votacao_sufixo')
+            )
+            prefill['pv_candidates'] = pv_candidates
         except Proposicao.DoesNotExist:
             messages.error(request, 'Proposição para preenchimento não encontrada.')
 
@@ -1292,8 +1388,8 @@ def data_import_export(request):
                 if votos_invalidos > 0:
                     issues.append(f'{votos_invalidos} votos sem usuário válido')
                 
-                # Check for active votations without propositions
-                votacoes_sem_proposicao = VotacaoDisponivel.objects.filter(proposicao__isnull=True).count()
+                # Check for active votations without linked ProposicaoVotacao (after refactor)
+                votacoes_sem_proposicao = VotacaoVoteBem.objects.filter(proposicao_votacao__isnull=True).count()
                 if votacoes_sem_proposicao > 0:
                     issues.append(f'{votacoes_sem_proposicao} votações sem proposição')
                 
@@ -1462,9 +1558,9 @@ def camara_admin(request):
         dev_log(f"DEBUG: All POST data: {dict(request.POST)}")
         
         if action == 'exibeUltimaProposicao':
-            # Show last proposition inserted
+            # Show last proposition inserted (use primary key field id_proposicao)
             try:
-                ultima_proposicao = Proposicao.objects.latest('id')
+                ultima_proposicao = Proposicao.objects.latest('id_proposicao')
                 context['ultima_proposicao'] = ultima_proposicao
                 context['action_result'] = 'ultima_proposicao'
             except Proposicao.DoesNotExist:
@@ -1475,24 +1571,36 @@ def camara_admin(request):
             from django.db.models import Count
             stats = {
                 'total': Proposicao.objects.count(),
-                'por_tipo': list(Proposicao.objects.values('tipo').annotate(count=Count('id')).order_by('-count')),
-                'por_ano': list(Proposicao.objects.values('ano').annotate(count=Count('id')).order_by('-ano')),
-                'por_estado': list(Proposicao.objects.values('estado').annotate(count=Count('id')).order_by('-count')),
+                'por_tipo': list(Proposicao.objects.values('tipo').annotate(count=Count('id_proposicao')).order_by('-count')),
+                'por_ano': list(Proposicao.objects.values('ano').annotate(count=Count('id_proposicao')).order_by('-ano')),
+                'por_estado': list(Proposicao.objects.values('estado').annotate(count=Count('id_proposicao')).order_by('-count')),
             }
             context['stats'] = stats
             context['action_result'] = 'estatisticas'
             
         elif action == 'listarProposicoesVotadas':
             # List propositions that have been voted
-            proposicoes_votadas = Proposicao.objects.filter(
-                votacaodisponivel__isnull=False
-            ).distinct().order_by('-ano', '-numero')[:50]
+            # Ajustado para novo relacionamento: Proposicao -> ProposicaoVotacao -> VotacaoVoteBem
+            # Filtra proposições que possuem ao menos uma VotacaoVoteBem vinculada via ProposicaoVotacao
+            from django.db.models import Count
+            proposicoes_votadas = (
+                Proposicao.objects
+                .filter(votacoes_oficiais__votacaovotebem__isnull=False)
+                .annotate(total_votacoes=Count('votacoes_oficiais__votacaovotebem', distinct=True))
+                .distinct()
+                .order_by('-ano', '-numero')[:50]
+            )
             context['proposicoes_votadas'] = proposicoes_votadas
             context['action_result'] = 'proposicoes_votadas'
             
         elif action == 'listarVotacoesDisponiveis':
-            # List available votings
-            votacoes = VotacaoDisponivel.objects.filter(ativo=True).order_by('-data_hora_votacao')[:50]
+            # List available votings (VoteBem)
+            votacoes = (
+                VotacaoVoteBem.objects
+                .filter(ativo=True)
+                .select_related('proposicao_votacao__proposicao')
+                .order_by('-data_hora_votacao')[:50]
+            )
             context['votacoes_disponiveis'] = votacoes
             context['action_result'] = 'votacoes_disponiveis'
             
@@ -1609,7 +1717,9 @@ def camara_admin(request):
     
     # Get last proposition ID for JavaScript
     try:
-        ultima_proposicao_id = Proposicao.objects.latest('id').id_proposicao or Proposicao.objects.latest('id').id
+        # Proposicao uses 'id_proposicao' as primary key; use created_at for latest
+        ultima = Proposicao.objects.latest('created_at')
+        ultima_proposicao_id = ultima.id_proposicao
         context['ultima_proposicao_id'] = ultima_proposicao_id
     except Proposicao.DoesNotExist:
         context['ultima_proposicao_id'] = 0
@@ -1650,6 +1760,8 @@ def ajax_proposicao_votacoes(request):
     2) Caso contrário, consulta API da Câmara, filtra, insere em ProposicaoVotacao e retorna.
     """
     prop_id = request.GET.get('proposicao_id')
+    db_only_raw = request.GET.get('db_only')
+    db_only = str(db_only_raw).lower() in ('1', 'true', 'yes', 'y')
     if not prop_id:
         return JsonResponse({'ok': False, 'error': 'Parâmetro proposicao_id é obrigatório.'}, status=400)
     try:
@@ -1659,6 +1771,9 @@ def ajax_proposicao_votacoes(request):
 
     # Tenta localizar/garantir Proposicao
     proposicao = Proposicao.objects.filter(id_proposicao=prop_id_int).first()
+    # Quando db_only, não consultar API para criar proposição ausente
+    if proposicao is None and db_only:
+        return JsonResponse({'ok': True, 'source': 'db', 'dados': []})
     if proposicao is None:
         # Buscar detalhes mínimos para criar Proposicao e poder relacionar
         try:
@@ -1697,18 +1812,42 @@ def ajax_proposicao_votacoes(request):
         )
         counts_map = {row['proposicao_votacao_id']: row['cnt'] for row in counts_qs}
 
+        # Mapear VotacaoVoteBem (se existir) para cada ProposicaoVotacao
+        vb_map = {}
+        try:
+            vb_rows = (
+                VotacaoVoteBem.objects
+                .filter(proposicao_votacao__in=cached)
+                .order_by('-no_ar_desde')
+                .values('id', 'proposicao_votacao_id')
+            )
+            for r in vb_rows:
+                # Se houver múltiplas, escolher a mais recente (primeira encontrada)
+                pv_id = r['proposicao_votacao_id']
+                if pv_id not in vb_map:
+                    vb_map[pv_id] = r['id']
+        except Exception:
+            vb_map = {}
+
         dados = [
             {
                 'id': f"{prop_id_int}-{pv.votacao_sufixo}",
+                'pv_id': pv.id,
                 'descricao': pv.descricao or '',
                 'dataHora': '',
                 'resultado': '',
                 'votes_count': int(counts_map.get(pv.id, 0)),
+                'vb_id': vb_map.get(pv.id),
+                'prioridade': pv.prioridade,
             }
             for pv in cached
         ]
         return JsonResponse({'ok': True, 'source': 'db', 'dados': dados})
 
+    # 2) Fallback: Câmara API (omitido quando db_only)
+    if db_only:
+        # Não consultar API; retornar vazio para fluxo "somente banco"
+        return JsonResponse({'ok': True, 'source': 'db', 'dados': []})
     # 2) Fallback: Câmara API
     try:
         #url correta: https://dadosabertos.camara.leg.br/api/v2/votacoes?idProposicao=2270800&idOrgao=180&ordem=DESC&ordenarPor=dataHoraRegistro
@@ -1746,6 +1885,7 @@ def ajax_proposicao_votacoes(request):
                 proposicao=proposicao,
                 votacao_sufixo=sufixo,
                 descricao=item.get('descricao') or item.get('descrição') or '',
+                prioridade=None,
             ))
 
         # Evitar conflitos com unique_together
@@ -1767,6 +1907,22 @@ def ajax_proposicao_votacoes(request):
         # Criar mapa sufixo -> pv.id
         pv_id_by_sufixo = {pv.votacao_sufixo: pv.id for pv in pv_qs}
 
+        # Mapear vb_id por pv_id
+        vb_id_by_pv_id = {}
+        try:
+            vb_rows = (
+                VotacaoVoteBem.objects
+                .filter(proposicao_votacao__in=pv_qs)
+                .order_by('-no_ar_desde')
+                .values('id', 'proposicao_votacao_id')
+            )
+            for r in vb_rows:
+                pv_id = r['proposicao_votacao_id']
+                if pv_id not in vb_id_by_pv_id:
+                    vb_id_by_pv_id[pv_id] = r['id']
+        except Exception:
+            vb_id_by_pv_id = {}
+
         dados = []
         for item in filtered:
             full_id = item.get('id') or item.get('idVotacao') or ''
@@ -1781,6 +1937,7 @@ def ajax_proposicao_votacoes(request):
                 sufixo_val = None
             pv_id = pv_id_by_sufixo.get(sufixo_val)
             votes_count = int(counts_map_by_pv_id.get(pv_id, 0))
+            vb_id = vb_id_by_pv_id.get(pv_id)
 
             dados.append({
                 'id': full_id,
@@ -1788,7 +1945,50 @@ def ajax_proposicao_votacoes(request):
                 'dataHora': item.get('dataHoraRegistro') or item.get('dataHora') or '',
                 'resultado': item.get('resultado') or '',
                 'votes_count': votes_count,
+                'vb_id': vb_id,
+                'prioridade': None,
             })
         return JsonResponse({'ok': True, 'source': 'api', 'dados': dados})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': f'Erro ao consultar API: {e}', 'api_url': api_url}, status=502)
+
+
+@staff_member_required
+def ajax_update_proposicao_votacao_prioridade(request):
+    """Atualiza o campo prioridade de um registro ProposicaoVotacao (AJAX).
+    Espera POST com 'pv_id' e 'prioridade' (string vazia ou null para remover).
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método não permitido.'}, status=405)
+
+    pv_id = request.POST.get('pv_id')
+    prioridade_raw = request.POST.get('prioridade')
+    if not pv_id:
+        return JsonResponse({'ok': False, 'error': 'Parâmetro pv_id é obrigatório.'}, status=400)
+    try:
+        pv_id_int = int(pv_id)
+    except ValueError:
+        return JsonResponse({'ok': False, 'error': 'pv_id deve ser numérico.'}, status=400)
+
+    try:
+        pv = ProposicaoVotacao.objects.get(pk=pv_id_int)
+    except ProposicaoVotacao.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Registro não encontrado.'}, status=404)
+
+    # Converter prioridade; valores vazios ou não numéricos (exceto string vazia) geram erro
+    prioridade_val = None
+    if prioridade_raw is not None:
+        pr = prioridade_raw.strip()
+        if pr == '':
+            prioridade_val = None
+        else:
+            try:
+                prioridade_val = int(pr)
+            except ValueError:
+                return JsonResponse({'ok': False, 'error': 'prioridade deve ser inteiro ou vazio.'}, status=400)
+
+    # Atualizar e salvar
+    pv.prioridade = prioridade_val
+    pv.save(update_fields=['prioridade'])
+
+    return JsonResponse({'ok': True, 'pv_id': pv.id, 'prioridade': pv.prioridade})

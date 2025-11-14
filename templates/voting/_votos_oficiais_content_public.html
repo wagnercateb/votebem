@@ -27,10 +27,10 @@
   <div class="card-body">
     {% if votacao %}
 <div class="text-muted">Votação: {{ votacao.titulo }} — {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}</div>
-    {% else %}
-      <div class="alert alert-info" style="margin:0;">
-        Informe o parâmetro <code>votacao_id</code> na URL para carregar os votos oficiais.
-      </div>
+    {% endif %}
+    {% if pv %}
+<!-- Apenas mostrando a descrição conforme solicitação; ocultados sim_oficial/nao_oficial -->
+<div class="text-muted">Descrição: {{ pv.descricao|default:"(sem descrição)" }}</div>
     {% endif %}
   </div>
 </div>

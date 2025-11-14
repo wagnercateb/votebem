@@ -571,11 +571,11 @@
             <tbody>
                 <tr>
 <td>{{ ultima_proposicao.pk }}</td>
-                    <td>{{ ultima_proposicao.siglaTipo }}</td>
+                    <td>{{ ultima_proposicao.tipo }}</td>
                     <td>{{ ultima_proposicao.numero }}</td>
                     <td>{{ ultima_proposicao.ano }}</td>
                     <td>{{ ultima_proposicao.ementa|truncatechars:100 }}</td>
-                    <td>{{ ultima_proposicao.statusProposicao.descricaoSituacao }}</td>
+                    <td>{{ ultima_proposicao.estado }}</td>
                 </tr>
             </tbody>
         </table>
@@ -583,32 +583,14 @@
 </div>
 {% endif %}
 
-{% if estatisticas %}
+{% if stats %}
 <div class="results-section">
     <h3>📊 Estatísticas das Proposições</h3>
     <div class="row">
         <div class="col-md-3">
             <div class="stat-card">
-                <div class="stat-number">{{ estatisticas.total_proposicoes }}</div>
+                <div class="stat-number">{{ stats.total }}</div>
                 <div class="stat-label">Total de Proposições</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number">{{ estatisticas.proposicoes_votadas }}</div>
-                <div class="stat-label">Proposições Votadas</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number">{{ estatisticas.total_votacoes }}</div>
-                <div class="stat-label">Total de Votações</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number">{{ estatisticas.proposicoes_sem_ementa }}</div>
-                <div class="stat-label">Sem Ementa</div>
             </div>
         </div>
     </div>
@@ -653,7 +635,7 @@
                 {% for proposicao in proposicoes_votadas %}
                 <tr>
 <td>{{ proposicao.pk }}</td>
-                    <td>{{ proposicao.siglaTipo }}</td>
+                    <td>{{ proposicao.tipo }}</td>
                     <td>{{ proposicao.numero }}</td>
                     <td>{{ proposicao.ano }}</td>
                     <td>{{ proposicao.ementa|truncatechars:80 }}</td>
@@ -685,7 +667,7 @@
                 <tr>
                     <td>{{ votacao.id }}</td>
 <td>{{ votacao.proposicao_votacao.proposicao_id }}</td>
-                    <td>{{ votacao.dataHoraVotacao|date:"d/m/Y H:i" }}</td>
+                    <td>{{ votacao.data_hora_votacao|date:"d/m/Y H:i" }}</td>
                     <td>{{ votacao.descricao|truncatechars:80 }}</td>
                     <td>{{ votacao.aprovacao }}</td>
                 </tr>
@@ -712,9 +694,9 @@
                 </tr>
             </thead>
             <tbody>
-                {% for proposicao in tramitacao_result %}
+                {% for proposicao in tramitacao_result.proposicoes %}
                 <tr>
-<td>{{ proposicao.pk }}</td>
+<td>{{ proposicao.id }}</td>
                     <td>{{ proposicao.siglaTipo }}</td>
                     <td>{{ proposicao.numero }}</td>
                     <td>{{ proposicao.ano }}</td>

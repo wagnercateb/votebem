@@ -44,6 +44,12 @@ class ProposicaoVotacao(models.Model):
     )
     votacao_sufixo = models.IntegerField(verbose_name='ID da Votação (sufixo)')
     descricao = models.TextField(blank=True, null=True, verbose_name='Descrição da Votação')
+    # Prioridade de exibição/ordem para esta votação da proposição (opcional)
+    prioridade = models.IntegerField(blank=True, null=True, verbose_name='Prioridade')
+    # Campos de contagem oficial devem residir aqui e não em VotacaoDisponivel
+    # Eles são populados somente quando os dados oficiais são buscados
+    sim_oficial = models.IntegerField(default=0, verbose_name="Votos SIM Oficiais")
+    nao_oficial = models.IntegerField(default=0, verbose_name="Votos NÃO Oficiais")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -56,7 +62,7 @@ class ProposicaoVotacao(models.Model):
     def __str__(self):
         return f"{self.proposicao.id_proposicao}-{self.votacao_sufixo}"
 
-class VotacaoDisponivel(models.Model):
+class VotacaoVoteBem(models.Model):
     """Model for available voting sessions"""
     # Link directly to a specific official voting entry for the proposição
     proposicao_votacao = models.ForeignKey(
@@ -64,6 +70,7 @@ class VotacaoDisponivel(models.Model):
         on_delete=models.CASCADE,
         blank=True,
         null=True,
+        related_name='votacaovotebem',
         verbose_name="Votação da Proposição"
     )
     titulo = models.CharField(max_length=500, verbose_name="Título da Votação")
@@ -71,15 +78,13 @@ class VotacaoDisponivel(models.Model):
     data_hora_votacao = models.DateTimeField(verbose_name="Data/Hora da Votação Original")
     no_ar_desde = models.DateTimeField(verbose_name="No Ar Desde")
     no_ar_ate = models.DateTimeField(blank=True, null=True, verbose_name="No Ar Até")
-    sim_oficial = models.IntegerField(default=0, verbose_name="Votos SIM Oficiais")
-    nao_oficial = models.IntegerField(default=0, verbose_name="Votos NÃO Oficiais")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        verbose_name = "Votação Disponível"
-        verbose_name_plural = "Votações Disponíveis"
+        verbose_name = "Votação VoteBem"
+        verbose_name_plural = "Votações VoteBem"
         ordering = ['-no_ar_desde']
     
     def __str__(self):
@@ -96,15 +101,18 @@ class VotacaoDisponivel(models.Model):
     
     def get_total_votos_populares(self):
         """Get total popular votes for this voting session"""
-        return self.voto_set.count()
+        # Reverse relation uses related_name='voto' (not the default 'voto_set')
+        return self.voto.count()
     
     def get_votos_sim_populares(self):
         """Get popular SIM votes count"""
-        return self.voto_set.filter(voto='SIM').count()
+        # Count related votes with value 'SIM' via related_name='voto'
+        return self.voto.filter(voto='SIM').count()
     
     def get_votos_nao_populares(self):
         """Get popular NÃO votes count"""
-        return self.voto_set.filter(voto='NAO').count()
+        # Count related votes with value 'NAO' via related_name='voto'
+        return self.voto.filter(voto='NAO').count()
 
 class Voto(models.Model):
     """Model for individual votes"""
@@ -115,7 +123,7 @@ class Voto(models.Model):
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Usuário")
-    votacao = models.ForeignKey(VotacaoDisponivel, on_delete=models.CASCADE, verbose_name="Votação")
+    votacao = models.ForeignKey(VotacaoVoteBem, on_delete=models.CASCADE, related_name='voto', verbose_name="Votação")
     voto = models.CharField(max_length=10, choices=VOTO_CHOICES, verbose_name="Voto")
     created_at = models.DateTimeField(auto_now_add=True)
     

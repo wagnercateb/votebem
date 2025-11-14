@@ -17,14 +17,15 @@
     .result-item:hover { background: #f8f9fa; }
     .result-hint, .result-empty { padding: 6px 8px; color: #6c757d; }
     .search-box { width: 100%; padding: 6px; border: 1px solid #ced4da; border-radius: 4px; }
-    textarea#resumo { width: 100%; min-height: 220px; resize: both; }
+    textarea#resumo { width: 100%; min-height: 220px; resize: both; direction: ltr; text-align: left; }
+    textarea#titulo { direction: ltr; text-align: left; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div style="margin-bottom: 10px;">
-    <h1 style="margin-bottom: 3px; font-size: 1.8em;">Criar Nova Votação</h1>
-    <p style="margin-bottom: 0; color: #6c757d; font-size: 0.9em;">Preencha os dados abaixo para criar uma votação para uma proposição.</p>
+    <h1 style="margin-bottom: 3px; font-size: 1.8em;">Criar Nova Votação Votebem{% if prefill.proposicao_id %} — Proposição {{ prefill.proposicao_id }}{% endif %}</h1>
+    <p style="margin-bottom: 0; color: #6c757d; font-size: 0.9em;">Preencha os dados abaixo para criar uma votação votebem para uma votação oficial.</p>
     <div style="margin-top:8px;"><a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-secondary">Voltar ao Gerenciamento</a></div>
     {% if messages %}
         {% for message in messages %}
@@ -37,16 +38,25 @@
     {% endif %}
 </div>
 
-<div class="create-container">
+<div class="create-container" dir="ltr">
     <form method="post">
         {% csrf_token %}
 
+        {# Dropdown de ProposicaoVotacao sem VotacaoVoteBem, AGORA dentro do formulário para enviar no POST #}
+        {% if prefill.pv_candidates %}
+        <div class="form-group" style="margin-top:8px;">
+            <label for="proposicao_votacao_id">Selecionar votação oficial (sem votação VoteBem disponível)</label>
+            <select id="proposicao_votacao_id" name="proposicao_votacao_id" class="form-select" style="width:100%;" required>
+                <option value="">Selecione...</option>
+                {% for pv in prefill.pv_candidates %}
+                    <option value="{{ pv.id }}">{{ pv.votacao_sufixo }} — {{ pv.descricao|default:"(sem descrição)" }}</option>
+                {% endfor %}
+            </select>
+            <small class="text-muted">Registros em voting_proposicaovotacao ainda sem Votação Disponível ligada.</small>
+        </div>
+        {% endif %}
+
         <div class="form-group">
-            <label for="proposicao_search">Buscar Proposição:</label>
-            <div class="results-container">
-                <input type="text" id="proposicao_search" class="search-box" placeholder="Digite para buscar proposições..." value="{{ prefill.proposicao_search }}">
-                <div id="proposicao_results" class="results-dropdown" style="display:none;"></div>
-            </div>
             <input type="hidden" name="proposicao_id" id="proposicao_id" value="{{ prefill.proposicao_id }}">
             {% if prefill.proposicao_display %}
             <div style="margin-top:6px; color:#495057;">
@@ -56,13 +66,13 @@
         </div>
 
         <div class="form-group">
-            <label for="titulo">Título da Votação *</label>
-            <input type="text" name="titulo" id="titulo" required maxlength="500" value="{{ prefill.titulo }}">
+            <label for="titulo">Título da Votação Votebem *</label>
+            <textarea name="titulo" id="titulo" required rows="2" style="width:100%; resize: vertical;" dir="ltr">{{ prefill.titulo }}</textarea>
         </div>
 
         <div class="form-group">
             <label for="resumo">Resumo *</label>
-            <textarea name="resumo" id="resumo" required>{{ prefill.resumo }}</textarea>
+            <textarea name="resumo" id="resumo" required dir="ltr">{{ prefill.resumo }}</textarea>
         </div>
 
         <div class="row">
@@ -93,32 +103,30 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="form-group">
-                <label for="sim_oficial">Votos SIM Oficiais</label>
-                <input type="number" id="sim_oficial" name="sim_oficial" min="0" value="{{ prefill.sim_oficial }}">
-            </div>
-
-            <div class="form-group">
-                <label for="nao_oficial">Votos NÃO Oficiais</label>
-                <input type="number" id="nao_oficial" name="nao_oficial" min="0" value="{{ prefill.nao_oficial }}">
-            </div>
-        </div>
+        {# Contagens oficiais removidas do formulário: são mantidas em ProposicaoVotacao e populadas somente via import #}
 
         <button type="submit" class="btn btn-primary">Criar Votação</button>
     </form>
 </div>
 
 <script>
+// Remove caracteres de controle bidi que podem inverter a direção do texto
+function sanitizeBidi(str) {
+    return (str || '').replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
+}
 function selectProposicao(id, titulo) {
     document.getElementById('proposicao_id').value = id;
-    document.getElementById('titulo').value = 'Votação: ' + titulo;
-    document.getElementById('proposicao_search').value = titulo;
+    const cleaned = sanitizeBidi(titulo);
+    document.getElementById('titulo').value = 'Votação: ' + cleaned;
+    const searchEl = document.getElementById('proposicao_search');
+    if (searchEl) searchEl.value = cleaned;
     const dd = document.getElementById('proposicao_results');
     if (dd) dd.style.display = 'none';
 }
 
-document.getElementById('proposicao_search').addEventListener('input', function() {
+const searchInput = document.getElementById('proposicao_search');
+if (searchInput) {
+searchInput.addEventListener('input', function() {
     const query = this.value.trim();
     const dropdown = document.getElementById('proposicao_results');
     if (!dropdown) return;
@@ -145,10 +153,11 @@ document.getElementById('proposicao_search').addEventListener('input', function(
                 dropdown.querySelectorAll('.result-item').forEach(el => {
                     el.addEventListener('click', () => {
                         const id = el.getAttribute('data-id');
-                        const text = el.getAttribute('data-text');
+                        const text = sanitizeBidi(el.getAttribute('data-text'));
                         document.getElementById('proposicao_id').value = id;
                         document.getElementById('titulo').value = 'Votação: ' + text;
-                        document.getElementById('proposicao_search').value = text;
+                        const si = document.getElementById('proposicao_search');
+                        if (si) si.value = text;
                         dropdown.style.display = 'none';
                     });
                 });
@@ -159,6 +168,7 @@ document.getElementById('proposicao_search').addEventListener('input', function(
             });
     }, 300);
 });
+}
 
 document.addEventListener('click', function(e) {
     const dropdown = document.getElementById('proposicao_results');
@@ -166,6 +176,20 @@ document.addEventListener('click', function(e) {
     if (!dropdown || !input) return;
     if (!dropdown.contains(e.target) && e.target !== input) {
         dropdown.style.display = 'none';
+    }
+});
+
+// Exibir o botão de criação somente se uma votação oficial for selecionada
+// Aplica-se quando a lista de pv_candidates está presente
+document.addEventListener('DOMContentLoaded', function() {
+    const pvSelect = document.getElementById('proposicao_votacao_id');
+    const submitBtn = document.querySelector('button[type="submit"]');
+    if (pvSelect && submitBtn) {
+        const toggleButton = () => {
+            submitBtn.style.display = pvSelect.value ? 'inline-block' : 'none';
+        };
+        toggleButton();
+        pvSelect.addEventListener('change', toggleButton);
     }
 });
 </script>

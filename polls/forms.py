@@ -38,9 +38,11 @@ class EnqueteForm(forms.ModelForm):
             Submit('submit', 'Salvar Enquete', css_class='btn btn-primary')
         )
         
-        # Filter proposicoes to only show those with active voting sessions
+        # Filter proposicoes to only show those with active VoteBem voting sessions
+        # New relationship: Proposicao -> ProposicaoVotacao (related_name='votacoes_oficiais')
+        #                    -> VotacaoVoteBem (related_name='votacaovotebem')
         self.fields['proposicao'].queryset = Proposicao.objects.filter(
-            votacaodisponivel__ativo=True
+            votacoes_oficiais__votacaovotebem__ativo=True
         ).distinct()
         self.fields['proposicao'].empty_label = "Selecione uma proposição"
 

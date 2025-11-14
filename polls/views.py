@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from django.db.models import Q
 from .models import Enquete, RespostaEnquete
-from voting.models import Proposicao, VotacaoDisponivel
+from voting.models import Proposicao, VotacaoVoteBem
 from .forms import EnqueteForm, RespostaEnqueteForm
 
 class EnqueteListView(ListView):
@@ -72,9 +72,11 @@ class EnqueteDetailView(DetailView):
         votacao_relacionada = None
         proposicao_url = None
         if enquete.proposicao:
+            # Buscar votação relacionada via novo relacionamento:
+            # Proposicao -> ProposicaoVotacao -> VotacaoVoteBem
             votacao_relacionada = (
-                VotacaoDisponivel.objects
-                .filter(proposicao=enquete.proposicao)
+                VotacaoVoteBem.objects
+                .filter(proposicao_votacao__proposicao=enquete.proposicao)
                 .order_by('-ativo', '-no_ar_desde', '-created_at')
                 .first()
             )

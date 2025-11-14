@@ -92,7 +92,7 @@ django_votebem/
 │   ├── urls.py
 │   └── ...
 ├── voting/                  # App de votações
-│   ├── models.py           # Modelos: Proposicao, VotacaoDisponivel, Voto
+│   ├── models.py           # Modelos: Proposicao, VotacaoVoteBem, Voto
 │   ├── views.py            # Views para listagem e votação
 │   ├── urls.py
 │   └── ...

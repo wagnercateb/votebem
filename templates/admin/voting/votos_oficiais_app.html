@@ -1,4 +1,5 @@
 {% extends "admin/voting/base_administrativo.html" %}
+{% load voting_components %}
 
 {% block title %}Votação oficial via App{% endblock %}
 
@@ -9,6 +10,8 @@
 {% block extra_css %}{% endblock %}
 
 {% block content %}
+{# Barra de ações da proposição: oferece navegação rápida para obter votações, ver votos oficiais e editar votações VoteBem. Usa o proposicao_id pré-preenchido quando disponível. #}
+{% proposicao_action_bar proposicao_id=prefill_proposicao_id %}
 {# Use admin-specific partial to avoid sharing with public page #}
 {% include 'admin/voting/_votos_oficiais_content_admin.html' %}
 {% endblock %}

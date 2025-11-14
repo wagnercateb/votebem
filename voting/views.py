@@ -7,14 +7,14 @@ from django.db.models import Count, Q, Sum, Case, When, IntegerField, F
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
-from .models import VotacaoDisponivel, Voto, Proposicao, Congressman, CongressmanVote
+from .models import VotacaoVoteBem, Voto, Proposicao, ProposicaoVotacao, Congressman, CongressmanVote
 from .forms import VotoForm
 from users.models import UserProfile
 import json
 
 class VotacoesDisponiveisView(ListView):
     """List available voting sessions"""
-    model = VotacaoDisponivel
+    model = VotacaoVoteBem
     template_name = 'voting/votacoes_disponiveis.html'
     context_object_name = 'votacoes'
     paginate_by = 20
@@ -22,7 +22,7 @@ class VotacoesDisponiveisView(ListView):
     def get_queryset(self):
         # Only show active voting sessions
         now = timezone.now()
-        return VotacaoDisponivel.objects.filter(
+        return VotacaoVoteBem.objects.filter(
             ativo=True,
             no_ar_desde__lte=now
         ).filter(
@@ -43,7 +43,7 @@ class VotacoesDisponiveisView(ListView):
 
 class VotacaoDetailView(DetailView):
     """Detail view for a specific voting session"""
-    model = VotacaoDisponivel
+    model = VotacaoVoteBem
     template_name = 'voting/votacao_detail.html'
     context_object_name = 'votacao'
     
@@ -73,7 +73,7 @@ class VotarView(LoginRequiredMixin, View):
     """Handle voting action"""
     
     def post(self, request, votacao_id):
-        votacao = get_object_or_404(VotacaoDisponivel, id=votacao_id)
+        votacao = get_object_or_404(VotacaoVoteBem, id=votacao_id)
         
         # Check if voting is still active
         if not votacao.is_active():
@@ -109,7 +109,7 @@ class DeleteVotoView(LoginRequiredMixin, View):
     """Handle deletion of the user's own vote for a specific voting session"""
 
     def post(self, request, votacao_id):
-        votacao = get_object_or_404(VotacaoDisponivel, id=votacao_id)
+        votacao = get_object_or_404(VotacaoVoteBem, id=votacao_id)
 
         # Only allow deleting the authenticated user's own vote
         try:
@@ -154,13 +154,13 @@ class MeusVotosView(LoginRequiredMixin, ListView):
 
 class RankingView(ListView):
     """Show voting statistics and rankings"""
-    model = VotacaoDisponivel
+    model = VotacaoVoteBem
     template_name = 'voting/ranking.html'
     context_object_name = 'votacoes'
     paginate_by = 10
     
     def get_queryset(self):
-        return VotacaoDisponivel.objects.annotate(
+        return VotacaoVoteBem.objects.annotate(
             total_votos=Count('voto')
         ).filter(total_votos__gt=0).order_by('-total_votos')
     
@@ -213,22 +213,22 @@ class PersonalizedRankingView(LoginRequiredMixin, ListView):
                     Case(
                         # When user voted SIM and congressman voted 1 (SIM)
                         When(
-                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__user=user,
-                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__voto='SIM',
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__user=user,
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__voto='SIM',
                             congressmanvote__voto=1,
                             then=1
                         ),
                         # When user voted NAO and congressman voted -1 (NAO)
                         When(
-                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__user=user,
-                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__voto='NAO',
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__user=user,
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__voto='NAO',
                             congressmanvote__voto=-1,
                             then=1
                         ),
                         # When user voted ABSTENCAO and congressman voted 0 (ABSTENCAO)
                         When(
-                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__user=user,
-                            congressmanvote__proposicao_votacao__votacaodisponivel__voto__voto='ABSTENCAO',
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__user=user,
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__voto='ABSTENCAO',
                             congressmanvote__voto=0,
                             then=1
                         ),
@@ -240,7 +240,7 @@ class PersonalizedRankingView(LoginRequiredMixin, ListView):
             ),
             total_votes_compared=Count(
                 'congressmanvote',
-                filter=Q(congressmanvote__proposicao_votacao__votacaodisponivel__voto__user=user)
+                filter=Q(congressmanvote__proposicao_votacao__votacaovotebem__voto__user=user)
             )
         ).filter(total_votes_compared__gt=0).order_by('-total_score', 'nome')
         
@@ -336,7 +336,7 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
 
 class VotacoesPesquisaView(ListView):
     """Public search/list that supports Votações and Proposições via 'target' param (DRY)."""
-    model = VotacaoDisponivel
+    model = VotacaoVoteBem
     template_name = 'voting/votacoes_pesquisa.html'
     context_object_name = 'votacoes'
     paginate_by = 25
@@ -365,8 +365,8 @@ class VotacoesPesquisaView(ListView):
                     pass
             return qs
         else:
-            # Default: search VotacaoDisponivel table
-            qs = VotacaoDisponivel.objects.select_related('proposicao_votacao__proposicao').order_by('-no_ar_desde')
+            # Default: search VotacaoVoteBem table
+            qs = VotacaoVoteBem.objects.select_related('proposicao_votacao__proposicao').order_by('-no_ar_desde')
             if q:
                 qs = qs.filter(
                     Q(titulo__icontains=q) |
@@ -403,11 +403,11 @@ class VotacoesPesquisaView(ListView):
             )
         else:
             tipos = list(
-                VotacaoDisponivel.objects.values_list('proposicao__tipo', flat=True)
+                VotacaoVoteBem.objects.values_list('proposicao_votacao__proposicao__tipo', flat=True)
                 .distinct()
             )
             anos = list(
-                VotacaoDisponivel.objects.values_list('proposicao__ano', flat=True)
+                VotacaoVoteBem.objects.values_list('proposicao_votacao__proposicao__ano', flat=True)
                 .distinct()
             )
 
@@ -422,25 +422,58 @@ class VotacoesPesquisaView(ListView):
         context['votacoes'] = context.get('object_list', [])
         return context
 
-# Public subpage with official votes, filters and stats (client-side). Accepts GET `votacao_id`.
+"""
+Public subpage with official votes, filters and stats (client-side).
+Accepts GET `votacao_id`, which can be either:
+- `VotacaoVoteBem.id` (preferred), or
+- `ProposicaoVotacao.id` (fallback when no VoteBem exists).
+"""
 def votos_oficiais_app_public(request):
     votacao_id = request.GET.get('votacao_id')
     votacao = None
+    pv = None
     votos_data = []
     if votacao_id:
         try:
-            # Ensure we load the linked proposição through proposicao_votacao to satisfy template access
-            # and avoid FieldError from invalid select_related path
-            votacao = (
-                VotacaoDisponivel.objects
-                .select_related('proposicao_votacao__proposicao')
-                .get(pk=int(votacao_id))
-            )
-            registros = (
-                CongressmanVote.objects
-                .select_related('congressman')
-                .filter(proposicao_votacao=votacao.proposicao_votacao)
-            )
+            vid = int(votacao_id)
+        except (TypeError, ValueError):
+            vid = None
+
+        if vid is not None:
+            # Try loading by VotacaoVoteBem.id first
+            try:
+                votacao = (
+                    VotacaoVoteBem.objects
+                    .select_related('proposicao_votacao__proposicao')
+                    .get(pk=vid)
+                )
+                pv = votacao.proposicao_votacao
+                registros = (
+                    CongressmanVote.objects
+                    .select_related('congressman')
+                    .filter(proposicao_votacao=votacao.proposicao_votacao)
+                )
+            except VotacaoVoteBem.DoesNotExist:
+                # Fallback: treat id as ProposicaoVotacao.id
+                try:
+                    pv = ProposicaoVotacao.objects.select_related('proposicao').get(pk=vid)
+                    # If any VotacaoVoteBem exists for this PV, use it to populate header
+                    votacao = (
+                        VotacaoVoteBem.objects
+                        .select_related('proposicao_votacao__proposicao')
+                        .filter(proposicao_votacao=pv)
+                        .first()
+                    )
+                    registros = (
+                        CongressmanVote.objects
+                        .select_related('congressman')
+                        .filter(proposicao_votacao=pv)
+                    )
+                except ProposicaoVotacao.DoesNotExist:
+                    registros = []
+            except Exception:
+                registros = []
+            # Serialize votes
             for r in registros:
                 votos_data.append({
                     'nome': r.congressman.nome,
@@ -449,11 +482,10 @@ def votos_oficiais_app_public(request):
                     'uf': r.congressman.uf or '',
                     'voto': r.get_voto_display_text(),
                 })
-        except Exception:
-            votacao = None
 
     context = {
         'votacao': votacao,
+        'pv': pv,
         'votos_json': json.dumps(votos_data, ensure_ascii=False),
     }
     return render(request, 'voting/votos_oficiais_app.html', context)

@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Any
 from django.conf import settings
 from django.utils import timezone
 from django.db import transaction
-from ..models import Proposicao, VotacaoDisponivel
+from ..models import Proposicao, VotacaoVoteBem
 import logging
 from votebem.utils.devlog import dev_log
 
@@ -241,7 +241,7 @@ class CamaraAPIService:
         
         return votacoes_created
     
-    def _sync_single_votacao(self, proposicao: Proposicao, votacao_data: Dict) -> VotacaoDisponivel:
+    def _sync_single_votacao(self, proposicao: Proposicao, votacao_data: Dict) -> VotacaoVoteBem:
         """
         Sync a single voting from API data
         """
@@ -291,14 +291,21 @@ class CamaraAPIService:
         # Use proposicao_votacao as the lookup key; update other fields
         titulo = (votacao_data.get('descricao') or '')[:200]
         resumo = (votacao_data.get('descricao') or '')
-        votacao, created = VotacaoDisponivel.objects.update_or_create(
+        # Save official counts on ProposicaoVotacao (not on VotacaoVoteBem)
+        try:
+            if pv is not None:
+                pv.sim_oficial = int(sim_oficial or 0)
+                pv.nao_oficial = int(nao_oficial or 0)
+                pv.save(update_fields=['sim_oficial', 'nao_oficial'])
+        except Exception:
+            pass
+
+        votacao, created = VotacaoVoteBem.objects.update_or_create(
             proposicao_votacao=pv,
             defaults={
                 'titulo': titulo,
                 'resumo': resumo,
                 'data_hora_votacao': data_hora_votacao or timezone.now(),
-                'sim_oficial': sim_oficial,
-                'nao_oficial': nao_oficial,
                 'ativo': False,  # API votings are historical, not active for public voting
             }
         )

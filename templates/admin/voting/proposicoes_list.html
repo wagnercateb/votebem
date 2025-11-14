@@ -268,27 +268,25 @@
                 </td>
                 <td>{{ proposicao.estado|default:"Não informado" }}</td>
                 <td>
-                    {% if proposicao.votacaodisponivel_set.exists %}
-                        {% for votacao in proposicao.votacaodisponivel_set.all %}
-                            {% if votacao.ativo %}
-                                <span class="badge badge-success">Ativa</span>
-                            {% else %}
-                                <span class="badge badge-warning">Inativa</span>
-                            {% endif %}
-                        {% endfor %}
-                        {# Button: Ver official votes for preferred votação (opens new tab) #}
-                        {% if proposicao.preferred_votacao_id %}
-                            <a href="http://127.0.0.1:8000/voting/votos/oficiais/?votacao_id={{ proposicao.preferred_votacao_id }}" target="_blank" class="btn btn-info btn-sm" style="margin-top:6px;">Ver</a>
+                    {# Usa flags calculadas na view conforme o novo modelo #}
+                    {% if proposicao.has_votacao %}
+                        {% if proposicao.preferred_votacao_is_active %}
+                            <span class="badge badge-success">Ativa</span>
+                        {% else %}
+                            <span class="badge badge-warning">Inativa</span>
+                        {% endif %}
+                        {% if proposicao.id_proposicao %}
+                            {# Link admin: usar proposicao_id na rota (será ajustado no backend depois) #}
+                            <a href="http://localhost:8000/gerencial/votacao/{{ proposicao.id_proposicao }}/edit/" target="_blank" class="btn btn-info btn-sm" style="margin-top:6px;">Ver</a>
                         {% endif %}
                     {% else %}
                         <span class="badge badge-warning">Sem votação</span>
-                        {# Button: Buscar opens gerencial page with proposicao_id prefilled in new textbox #}
-                        <a href="http://localhost:8000/gerencial/?proposicao_id={{ proposicao.id_proposicao }}" target="_blank" class="btn btn-warning btn-sm" style="margin-top:6px;">Buscar</a>
+                        <a href="http://localhost:8000/gerencial/?proposicao_id={{ proposicao.id_proposicao }}" target="_blank" class="btn {% if proposicao.has_proposicao_votacao %}btn-success{% else %}btn-warning{% endif %} btn-sm" style="margin-top:6px;">Buscar</a>
                     {% endif %}
                 </td>
                 <td class="actions-column">
                     <a href="{% url 'gerencial:proposicao_edit' proposicao.pk %}" class="btn btn-edit">Editar</a>
-                    {% if proposicao.votacaodisponivel_set.exists %}
+                    {% if proposicao.has_votacao %}
                         <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-success">Votações</a>
                     {% else %}
 <a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ proposicao.pk }}" class="btn btn-secondary">Criar Votação</a>

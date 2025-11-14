@@ -1,6 +1,6 @@
 """
 Django management command to import dummy data from dadosIndex.txt into the database.
-This command parses the JavaScript array format and creates Proposicao and VotacaoDisponivel objects.
+This command parses the JavaScript array format and creates Proposicao and VotacaoVoteBem objects.
 """
 
 import json
@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django.db import transaction
-from voting.models import Proposicao, VotacaoDisponivel
+from voting.models import Proposicao, VotacaoVoteBem
 
 
 class Command(BaseCommand):
@@ -174,7 +174,7 @@ class Command(BaseCommand):
                         created_proposicoes += 1
                         self.stdout.write(f'Created Proposicao: {proposicao}')
                     
-                    # Create VotacaoDisponivel if there's voting data
+                    # Create VotacaoVoteBem if there's voting data
                     if resumo or parsed_data.get('pergunta'):
                         votacao_titulo = titulo if titulo else f"Votação da Proposição {id_proposicao}"
                         votacao_resumo = resumo if resumo else parsed_data.get('pergunta', f"Votação sobre a proposição {id_proposicao}")
@@ -185,7 +185,9 @@ class Command(BaseCommand):
                         no_ar_desde = now - timedelta(days=7)    # Available for 7 days
                         no_ar_ate = now + timedelta(days=30)     # Available for 30 more days
                         
-                        votacao, created = VotacaoDisponivel.objects.get_or_create(
+                        # Create available voting without official counts
+                        # Official counts reside on ProposicaoVotacao and are populated via import
+                        votacao, created = VotacaoVoteBem.objects.get_or_create(
                             proposicao_votacao=None,
                             defaults={
                                 'titulo': votacao_titulo,
@@ -193,15 +195,13 @@ class Command(BaseCommand):
                                 'data_hora_votacao': data_votacao,
                                 'no_ar_desde': no_ar_desde,
                                 'no_ar_ate': no_ar_ate,
-                                'sim_oficial': 0,  # Will be updated with real data later
-                                'nao_oficial': 0,
                                 'ativo': True,
                             }
                         )
                         
                         if created:
                             created_votacoes += 1
-                            self.stdout.write(f'Created VotacaoDisponivel: {votacao}')
+                            self.stdout.write(f'Created VotacaoVoteBem: {votacao}')
                     
                 except Exception as e:
                     errors += 1

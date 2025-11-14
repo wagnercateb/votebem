@@ -13,3 +13,5 @@ https://dadosabertos.camara.leg.br/api/v2/votacoes?idProposicao=2270800&ordem=DE
 - lista de votações por órgão e período. orgao=180=plenario 
 (ver lista de orgaos em https://dadosabertos.camara.leg.br/api/v2/orgaos?itens=100&ordem=ASC&ordenarPor=id)
 
+- se puser 01/01/ano, traz todas as votações do plenario no ano
+https://dadosabertos.camara.leg.br/api/v2/votacoes?idOrgao=180&dataInicio=2023-01-01&ordem=DESC&ordenarPor=dataHoraRegistro

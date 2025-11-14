@@ -208,9 +208,9 @@
         <h3>Gerenciar Votações</h3>
         <ul class="action-list">
             <!-- Ajuste de rótulo para indicar Django Admin -->
-            <li><a href="/admin/voting/votacaodisponivel/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista todas as votações disponíveis no Django Admin">Listar Todas as Votações via Django</a></li>
+            <li><a href="/admin/voting/votacaovotebem/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista todas as votações disponíveis no Django Admin">Listar Todas as Votações via Django</a></li>
             <li><a href="{% url 'gerencial:votacoes_management' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Ativa, pausa ou encerra votações no aplicativo">Gerenciar Votações Ativas</a></li>
-            <li><a href="/admin/voting/votacaodisponivel/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Cria uma nova votação pelo Django Admin">Criar Nova Votação via Django</a></li>
+            <li><a href="/admin/voting/votacaovotebem/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Cria uma nova votação pelo Django Admin">Criar Nova Votação via Django</a></li>
         </ul>
     </div>
     
@@ -236,7 +236,7 @@
         <h3>Votação oficial</h3>
         <ul class="action-list">
             <li><a href="/admin/voting/congressmanvote/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista Votação oficial no Django Admin">Votação oficial via Django</a></li>
-            <li><a href="{% url 'gerencial:votos_oficiais_app' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Consulta e analisa Votação oficial no aplicativo">Votação oficial via App</a></li>
+            <li><a href="{% url 'gerencial:votos_oficiais_app' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Obtem uma ou mais votações oficiais usando API da Câmara">Obter votação oficial via App</a></li>
         </ul>
     </div>
     

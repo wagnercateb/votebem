@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 Script to import dummy data from dadosIndex.txt into the Django database.
-This script parses the JavaScript array format and creates Proposicao and VotacaoDisponivel objects.
+This script parses the JavaScript array format and creates Proposicao and VotacaoVoteBem objects.
 """
 
 import os
@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'votebem.settings')
 django.setup()
 
-from voting.models import Proposicao, VotacaoDisponivel
+from voting.models import Proposicao, VotacaoVoteBem
 from django.db import transaction
 
 def parse_html_content(html_content):
@@ -192,7 +192,7 @@ def import_dummy_data():
                     created_proposicoes += 1
                     dev_log(f"Created Proposicao: {proposicao}")
                 
-                # Create VotacaoDisponivel if there's voting data
+                # Create VotacaoVoteBem if there's voting data
                 if resumo or parsed_data.get('pergunta'):
                     votacao_titulo = titulo if titulo else f"Votação da Proposição {id_proposicao}"
                     votacao_resumo = resumo if resumo else parsed_data.get('pergunta', f"Votação sobre a proposição {id_proposicao}")
@@ -202,8 +202,10 @@ def import_dummy_data():
                     data_votacao = now - timedelta(days=30)  # 30 days ago
                     no_ar_desde = now - timedelta(days=7)    # Available for 7 days
                     no_ar_ate = now + timedelta(days=30)     # Available for 30 more days
-                    
-                    votacao, created = VotacaoDisponivel.objects.get_or_create(
+
+                    # Official counts now live on ProposicaoVotacao and are imported later.
+                    # Do not set sim/nao official on VotacaoVoteBem.
+                    votacao, created = VotacaoVoteBem.objects.get_or_create(
                         proposicao_votacao=None,
                         defaults={
                             'titulo': votacao_titulo,
@@ -211,15 +213,13 @@ def import_dummy_data():
                             'data_hora_votacao': data_votacao,
                             'no_ar_desde': no_ar_desde,
                             'no_ar_ate': no_ar_ate,
-                            'sim_oficial': 0,  # Will be updated with real data later
-                            'nao_oficial': 0,
                             'ativo': True,
                         }
                     )
                     
                     if created:
                         created_votacoes += 1
-                        dev_log(f"Created VotacaoDisponivel: {votacao}")
+                        dev_log(f"Created VotacaoVoteBem: {votacao}")
                 
             except Exception as e:
                 errors += 1

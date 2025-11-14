@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
-from .models import Proposicao, ProposicaoVotacao, VotacaoDisponivel, Voto, Congressman, CongressmanVote
+from .models import Proposicao, ProposicaoVotacao, VotacaoVoteBem, Voto, Congressman, CongressmanVote
 
 @admin.register(Proposicao)
 class ProposicaoAdmin(admin.ModelAdmin):
@@ -32,8 +32,8 @@ class ProposicaoVotacaoAdmin(admin.ModelAdmin):
     search_fields = ['proposicao__titulo', 'proposicao__id_proposicao', 'descricao']
     readonly_fields = ['created_at', 'updated_at']
 
-@admin.register(VotacaoDisponivel)
-class VotacaoDisponivelAdmin(admin.ModelAdmin):
+@admin.register(VotacaoVoteBem)
+class VotacaoVoteBemAdmin(admin.ModelAdmin):
     list_display = ['titulo_truncado', 'proposicao_link', 'ativo', 'no_ar_desde', 'no_ar_ate', 'total_votos_populares', 'votos_oficiais']
     # Atualizado: referenciar via proposicao_votacao -> proposicao
     list_filter = ['ativo', 'no_ar_desde', 'no_ar_ate', 'proposicao_votacao__proposicao__tipo']
@@ -60,7 +60,9 @@ class VotacaoDisponivelAdmin(admin.ModelAdmin):
     total_votos_populares.short_description = 'Votos Populares'
     
     def votos_oficiais(self, obj):
-        return f"SIM: {obj.sim_oficial} | NÃO: {obj.nao_oficial}"
+        if obj.proposicao_votacao:
+            return f"SIM: {getattr(obj.proposicao_votacao, 'sim_oficial', 0)} | NÃO: {getattr(obj.proposicao_votacao, 'nao_oficial', 0)}"
+        return "SIM: 0 | NÃO: 0"
     votos_oficiais.short_description = 'Votação oficial'
 
 @admin.register(Voto)
@@ -73,7 +75,7 @@ class VotoAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
     
     def votacao_link(self, obj):
-        url = reverse('admin:voting_votacaodisponivel_change', args=[obj.votacao.pk])
+        url = reverse('admin:voting_votacaovotebem_change', args=[obj.votacao.pk])
         return format_html('<a href="{}">{}</a>', url, str(obj.votacao)[:50])
     votacao_link.short_description = 'Votação'
     
