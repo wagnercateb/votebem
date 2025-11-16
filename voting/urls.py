@@ -5,6 +5,8 @@ app_name = 'voting'
 
 urlpatterns = [
     path('', views.VotacoesDisponiveisView.as_view(), name='votacoes_disponiveis'),
+    # Alias para a rota antiga/esperada: /voting/votacoes_disponiveis/
+    path('votacoes_disponiveis/', views.VotacoesDisponiveisView.as_view(), name='votacoes_disponiveis_legacy'),
     path('pesquisar/', views.VotacoesPesquisaView.as_view(), name='votacoes_pesquisa'),
     path('votacao/<int:pk>/', views.VotacaoDetailView.as_view(), name='votacao_detail'),
     path('votar/<int:votacao_id>/', views.VotarView.as_view(), name='votar'),

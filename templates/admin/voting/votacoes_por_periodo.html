@@ -1,0 +1,232 @@
+{% extends "admin/voting/base_administrativo.html" %}
+
+{% block title %}Votações por Período - VoteBem{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'gerencial:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">Votações por Período</li>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 class="mb-0">Obter votações por período (Câmara API)</h3>
+    <!-- Mensagem final deve aparecer abaixo do título (em <h1>) -->
+    <h1 id="final-msg" class="mt-2" style="display:none;"></h1>
+  </div>
+  <div class="card-body">
+    <p class="text-muted">Informe as datas para buscar votações do órgão `idOrgao=180`. Ao informar a data inicial, a data final será preenchida com +90 dias automaticamente. <b>A API da Câmara dá erro se especificar mais de 3 meses.</b></p>
+    <form id="form-periodo" class="row g-3" onsubmit="return false;">
+      <div class="col-sm-4">
+        <label for="datainicio" class="form-label">Data início</label>
+        <input type="date" class="form-control" id="datainicio" name="datainicio" value="{{ default_inicio }}" required>
+      </div>
+      <div class="col-sm-4">
+        <label for="datafim" class="form-label">Data fim</label>
+        <input type="date" class="form-control" id="datafim" name="datafim" value="{{ default_fim }}" required>
+        <div class="form-text">Por padrão, será preenchido com início + 90 dias.</div>
+      </div>
+      <div class="col-sm-4 d-flex align-items-end">
+        <button id="btn-consultar" type="button" class="btn btn-primary">Consultar votações</button>
+      </div>
+    </form>
+
+    <div id="status" class="text-muted mt-2" aria-live="polite"></div>
+
+    <div class="table-responsive mt-3" id="resultados" style="display:none;">
+      <table class="table table-sm table-hover">
+        <thead>
+          <tr>
+            <th>ID votação</th>
+            <th>Data/Hora</th>
+            <th>Descrição</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-votacoes"></tbody>
+      </table>
+    </div>
+
+    <div id="import-log" class="mt-3" style="display:none;">
+      <div class="card">
+        <div class="card-header">Importação de votos oficiais</div>
+        <div class="card-body">
+          <ul id="log-list" class="mb-0"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Utilitário: somar dias e formatar AAAA-MM-DD
+  function addDaysISO(dateStr, days) {
+    try {
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + days);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    } catch (_) { return ''; }
+  }
+
+  // Preenche data fim automaticamente quando início muda
+  const inpInicio = document.getElementById('datainicio');
+  const inpFim = document.getElementById('datafim');
+  if (inpInicio) {
+    inpInicio.addEventListener('change', () => {
+      if (!inpFim.value) {
+        const auto = addDaysISO(inpInicio.value, 90);
+        if (auto) inpFim.value = auto;
+      }
+    });
+  }
+
+  const btnConsultar = document.getElementById('btn-consultar');
+  const status = document.getElementById('status');
+  // Elemento de mensagem final abaixo do título
+  const finalMsg = document.getElementById('final-msg');
+  const resultados = document.getElementById('resultados');
+  const tbody = document.getElementById('tbody-votacoes');
+  const importLog = document.getElementById('import-log');
+  const logList = document.getElementById('log-list');
+
+  function log(msg) {
+    importLog.style.display = 'block';
+    const li = document.createElement('li');
+    li.textContent = msg;
+    logList.appendChild(li);
+  }
+
+  // Executa a mesma consulta do botão "Carregar" (por proposição), usando somente X de X-Y
+  async function consultarPorProposicao(propId) {
+    if (!propId) return;
+    const url = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(propId)}`;
+    try {
+      const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      const qtd = Array.isArray(j?.dados) ? j.dados.length : 0;
+      log(`Proposição ${propId}: consulta realizada (${qtd} votações retornadas).`);
+    } catch (e) {
+      // Mostrar detalhes técnicos do erro na consulta por proposição
+      const msg = (e && e.message) ? e.message : String(e);
+      log(`Falha na consulta por proposição ${propId}: ${msg}. URL: ${url}`);
+    }
+  }
+
+  function parseIdsFromItem(item) {
+    // Extrai ID completo e também partes (proposição e sufixo) de forma robusta
+    let fullId = item.id || item.idVotacao || '';
+    const desc = (item.descricao || item.descrição || '').toLowerCase();
+    const dataHora = item.dataHoraRegistro || item.dataHora || '';
+    let propId = item.idProposicao || item.id_proposicao || null;
+    let sufixo = null;
+    if (typeof fullId === 'string' && fullId.includes('-')) {
+      try {
+        const parts = fullId.split('-');
+        propId = parseInt(parts[0], 10);
+        sufixo = parseInt(parts[1], 10);
+      } catch (_) {}
+    } else if (typeof fullId === 'number') {
+      sufixo = fullId;
+    } else {
+      // fallback: tentar encontrar um campo de sufixo alternativo
+      sufixo = item.id || item.idVotacao || null;
+    }
+    return { fullId, propId, sufixo, desc, dataHora };
+  }
+
+  function shouldImportByDescricao(desc) {
+    const d = (desc || '').toLowerCase();
+    return (d.includes('aprovad') || d.includes('rejeitad')) &&
+           (d.includes('turno') || d.includes('emenda')) &&
+           d.includes('total') &&
+           !d.includes('requerimento');
+  }
+
+  async function importarVotos(fullId, propId, sufixo) {
+    if (!propId) {
+      log(`Ignorando ${fullId || sufixo}: proposicao_id ausente.`);
+      return;
+    }
+    const url = `${window.location.origin}/gerencial/ajax/import-congress-votes/?proposicao_id=${encodeURIComponent(propId)}&votacao_id=${encodeURIComponent(fullId || '')}&consulta_id=${encodeURIComponent(sufixo || '')}`;
+    try {
+      const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const j = await r.json();
+      if (!r.ok || !j.ok) {
+        log(`Falha ao importar ${fullId}: ${j.error || 'erro'}${j.api_url ? ` (API: ${j.api_url})` : ''}`);
+        return;
+      }
+      log(`Importado ${j.votacao_id}: Criados ${j.created}, Atualizados ${j.updated}, Ignorados ${j.skipped}.`);
+    } catch (e) {
+      // Exibe detalhes técnicos do erro de importação (HTTP/Network), incluindo URL consultada
+      const msg = (e && e.message) ? e.message : String(e);
+      log(`Erro ao importar ${fullId}: ${msg}. URL: ${url}`);
+    }
+  }
+
+  async function consultarPeriodicamente() {
+    const di = (inpInicio && inpInicio.value) ? inpInicio.value : '';
+    let df = (inpFim && inpFim.value) ? inpFim.value : '';
+    if (!di) { status.textContent = 'Informe a data inicial.'; return; }
+    if (!df) { df = addDaysISO(di, 30); inpFim.value = df; }
+    status.textContent = 'Consultando votações, aguarde...';
+    // Ocultar e limpar mensagem final no início do processo
+    if (finalMsg) { finalMsg.style.display = 'none'; finalMsg.textContent = ''; }
+    resultados.style.display = 'none'; tbody.innerHTML = ''; logList.innerHTML = ''; importLog.style.display = 'none';
+    const apiUrl = `https://dadosabertos.camara.leg.br/api/v2/votacoes?idOrgao=180&dataInicio=${encodeURIComponent(di)}&dataFim=${encodeURIComponent(df)}`;
+    try {
+      const resp = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const json = await resp.json();
+      const dados = Array.isArray(json?.dados) ? json.dados : [];
+      const filtrados = dados.filter(it => shouldImportByDescricao(it.descricao || it.descrição));
+      status.textContent = `Foram encontradas ${dados.length} votações; ${filtrados.length} correspondem aos critérios.`;
+      resultados.style.display = 'block';
+      tbody.innerHTML = '';
+      // Render e disponibilizar ação de importação
+      for (const item of filtrados) {
+        const { fullId, propId, sufixo, desc, dataHora } = parseIdsFromItem(item);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${fullId || (propId ? `${propId}-${sufixo||''}` : (sufixo||''))}</td>`+
+                       `<td>${dataHora || ''}</td>`+
+                       `<td>${desc || ''}</td>`+
+                       `<td><button type="button" class="btn btn-success btn-sm btn-import">Carregar votação</button></td>`;
+        const btn = tr.querySelector('.btn-import');
+        btn.addEventListener('click', async () => {
+          // Primeiro, consulta por proposição (usa apenas X de X-Y)
+          await consultarPorProposicao(propId);
+          // Depois, importa votos oficiais
+          await importarVotos(fullId, propId, sufixo);
+        });
+        tbody.appendChild(tr);
+      }
+      // Importar todas automaticamente ao final
+      for (const item of filtrados) {
+        const { fullId, propId, sufixo } = parseIdsFromItem(item);
+        // Executa consulta por proposição antes da importação
+        await consultarPorProposicao(propId);
+        await importarVotos(fullId, propId, sufixo);
+      }
+      // Mensagem de conclusão do processamento automático
+      log('Importação automática finalizada.');
+      status.textContent = 'Consulta e importações concluídas.';
+      // Exibir mensagem final abaixo do título, em <h1>
+      if (finalMsg) { finalMsg.textContent = 'Importação automática finalizada.'; finalMsg.style.display = ''; }
+    } catch (e) {
+      // Mensagem de erro com detalhes técnicos: tipo e mensagem do erro + URL da API
+      const errName = e && e.name ? e.name : 'Erro';
+      const errMsg = e && e.message ? e.message : String(e);
+      status.textContent = `Erro ao consultar a API da Câmara: ${errName} - ${errMsg}. URL: ${apiUrl}`;
+      resultados.style.display = 'none';
+    }
+  }
+
+  if (btnConsultar) {
+    btnConsultar.addEventListener('click', consultarPeriodicamente);
+  }
+</script>
+{% endblock %}

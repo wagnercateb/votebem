@@ -155,18 +155,23 @@
 </style>
 {% endblock %}
 
+{# Suppress default breadcrumbs from base layout to avoid duplication #}
+{% block breadcrumbs %}{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            {# Override page header: show title, then breadcrumb below it. Remove anchor tags per request. #}
+            <div class="mb-4">
                 {# Requested: after "Editar Votação", append the word "Votebem" in the H1 #}
                 {# Prefer explicit composition to ensure consistent wording across contexts #}
                 <h1>Editar Votação Votebem: {{ votacao.titulo|default:title }}</h1>
-                <nav aria-label="breadcrumb">
+                {# Breadcrumb moved below the title and anchors removed as requested #}
+                <nav aria-label="breadcrumb" class="mt-2">
                     <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="{% url 'gerencial:dashboard' %}">Dashboard</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'gerencial:votacoes_management' %}">Votações</a></li>
+                        <li class="breadcrumb-item">Dashboard</li>
+                        <li class="breadcrumb-item">Votações</li>
                         <li class="breadcrumb-item active">Editar Votação</li>
                     </ol>
                 </nav>
@@ -188,7 +193,14 @@
                 {% csrf_token %}
                 
                 <div class="form-group">
-                    <label for="titulo">Título da Votação *</label>
+                    <label for="titulo">Título da Votação *
+                        <small class="ms-2 text-muted">
+                            IDs:
+                            voting_votacaovotebem={{ votacao.id|default:'—' }},
+                            voting_proposicaovotacao={% if votacao.proposicao_votacao %}{{ votacao.proposicao_votacao.id }}{% else %}—{% endif %},
+                            voting_proposicao={% if votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao %}{{ votacao.proposicao_votacao.proposicao.id_proposicao }}{% else %}—{% endif %}
+                        </small>
+                    </label>
                     <input type="text" id="titulo" name="titulo" class="form-control" 
                            value="{{ votacao.titulo }}" required maxlength="500">
                 </div>
@@ -200,7 +212,7 @@
 
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="data_hora_votacao">Data/Hora da Votação Original *</label>
+                        <label for="data_hora_votacao">Data/Hora da Votação Original 3*</label>
                         <input type="datetime-local" id="data_hora_votacao" name="data_hora_votacao" 
                                class="form-control datetime-input" 
                                value="{{ votacao.data_hora_votacao|date:'Y-m-d\TH:i' }}" required>

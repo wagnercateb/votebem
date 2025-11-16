@@ -12,7 +12,7 @@ import json
 import logging
 import re
 import requests
-from .models import Proposicao, ProposicaoVotacao, VotacaoVoteBem, Voto, Congressman, CongressmanVote
+from .models import Proposicao, ProposicaoVotacao, VotacaoVoteBem, Voto, Congressman, CongressmanVote, Referencia
 from django.contrib.auth.models import User
 from .services.camara_api import camara_api, CamaraAPIService
 from votebem.utils.devlog import dev_log  # Dev logger for console + file output
@@ -130,12 +130,40 @@ def votos_oficiais_app(request):
         except Exception:
             votacao = None
 
+    # Compute prop id for header link reliably
+    prefill_prop = request.GET.get('proposicao_id') or ''
+    prop_id_for_header = None
+    try:
+        if votacao and getattr(votacao, 'proposicao_votacao', None) and getattr(votacao.proposicao_votacao, 'proposicao', None):
+            pid = getattr(votacao.proposicao_votacao.proposicao, 'id_proposicao', None)
+            if pid:
+                prop_id_for_header = pid
+    except Exception:
+        prop_id_for_header = None
+    if not prop_id_for_header and prefill_prop:
+        prop_id_for_header = prefill_prop
+
     context = {
         'votacao': votacao,
         'votos_json': json.dumps(votos_data, ensure_ascii=False),
-        'prefill_proposicao_id': request.GET.get('proposicao_id') or '',
+        'prefill_proposicao_id': prefill_prop,
+        'prop_id_for_header': prop_id_for_header,
     }
     return render(request, 'admin/voting/votos_oficiais_app.html', context)
+
+
+@staff_member_required
+def votacoes_por_periodo(request):
+    """Tela administrativa para obter votações oficiais por período (Câmara API).
+    - Exibe inputs `datainicio` e `datafim` com preenchimento automático de 30 dias.
+    - Faz consulta client-side à API pública de votações e permite importar votos
+      para cada votação que se enquadre nos critérios de descrição.
+    """
+    context = {
+        'default_inicio': request.GET.get('datainicio') or '',
+        'default_fim': request.GET.get('datafim') or '',
+    }
+    return render(request, 'admin/voting/votacoes_por_periodo.html', context)
 
 
 @staff_member_required
@@ -906,7 +934,9 @@ def proposicoes_list(request):
             preferred = qs.filter(ativo=True).order_by('id').first() or qs.order_by('id').first()
             p.preferred_votacao_id = preferred.id if preferred else None
             p.has_votacao = qs.exists()
-            p.preferred_votacao_is_active = bool(preferred.ativo) if preferred else False
+            # Use window checks (no_ar_desde/no_ar_ate) in addition to 'ativo'
+            # to determine if the votação is active right now.
+            p.preferred_votacao_is_active = preferred.is_active() if preferred else False
 
             # Flag: existe algum registro em ProposicaoVotacao para esta proposição?
             p.has_proposicao_votacao = ProposicaoVotacao.objects.filter(proposicao_id=p.id_proposicao).exists()
@@ -1576,7 +1606,7 @@ def proposicao_add(request):
     current_year = datetime.now().year
     
     context = {
-        'title': 'Adicionar Novas Proposições',
+        'title': 'Adicionar Proposição Manualmente',
         'current_year': current_year,
     }
     
@@ -1755,7 +1785,8 @@ def camara_admin(request):
                 tempo_max = int(tempo_max)
                 
                 from .services.camara_api import camara_api
-                proposicoes_api = camara_api.get_recent_proposicoes(days=30)[:n_proposicoes]
+                # Fetch only the requested number, avoiding unnecessary pages
+                proposicoes_api = camara_api.get_recent_proposicoes(days=30, limit=n_proposicoes)
                 created_count = 0
                 updated_count = 0
                 
@@ -1769,9 +1800,11 @@ def camara_admin(request):
                     except Exception:
                         continue
                 
-                context['update_n_result'] = f'Processadas {n_proposicoes} proposições: {created_count} criadas, {updated_count} atualizadas.'
+                ids_proposicoes_processadas = ','.join(str(prop.get('id')) for prop in proposicoes_api if isinstance(prop, dict))
+                msg = f'Processadas {n_proposicoes} proposições: {ids_proposicoes_processadas}. {created_count} criadas, {updated_count} atualizadas.'
+                context['update_n_result'] = msg
                 context['action_result'] = 'update_n_result'
-                messages.success(request, f'Processadas {created_count + updated_count} proposições')
+                messages.success(request,msg)
             except ValueError:
                 context['error'] = 'Valores numéricos inválidos fornecidos.'
             except Exception as e:
@@ -2081,3 +2114,131 @@ def ajax_update_proposicao_votacao_prioridade(request):
     pv.save(update_fields=['prioridade'])
 
     return JsonResponse({'ok': True, 'pv_id': pv.id, 'prioridade': pv.prioridade})
+
+
+@staff_member_required
+def ajax_referencias_list(request):
+    """Lista referências (voting_referencias) para um `ProposicaoVotacao` específico.
+    Espera `GET` com `pv_id`.
+    """
+    pv_id = request.GET.get('pv_id')
+    if not pv_id:
+        return JsonResponse({'ok': False, 'error': 'Parâmetro pv_id é obrigatório.'}, status=400)
+    try:
+        pv_id_int = int(pv_id)
+    except ValueError:
+        return JsonResponse({'ok': False, 'error': 'pv_id deve ser numérico.'}, status=400)
+
+    try:
+        pv = ProposicaoVotacao.objects.select_related('proposicao').get(pk=pv_id_int)
+    except ProposicaoVotacao.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Registro ProposicaoVotacao não encontrado.'}, status=404)
+
+    refs = (
+        Referencia.objects
+        .filter(proposicao_votacao=pv)
+        .order_by('-created_at')
+        .values('id', 'url', 'kind', 'created_at')
+    )
+    # Serialize datetime to ISO
+    dados = []
+    for r in refs:
+        c_at = r.get('created_at')
+        dados.append({
+            'id': r['id'],
+            'url': r['url'],
+            'kind': r['kind'],
+            'created_at': c_at.isoformat() if hasattr(c_at, 'isoformat') else str(c_at)
+        })
+    return JsonResponse({'ok': True, 'pv_id': pv.id, 'dados': dados})
+
+
+@staff_member_required
+def ajax_referencias_create(request):
+    """Cria uma referência vinculada a `ProposicaoVotacao`.
+    Espera `POST` com `pv_id`, `url`, `kind`.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método não permitido.'}, status=405)
+
+    pv_id = request.POST.get('pv_id')
+    url = (request.POST.get('url') or '').strip()
+    kind = (request.POST.get('kind') or '').strip()
+    if not pv_id:
+        return JsonResponse({'ok': False, 'error': 'pv_id é obrigatório.'}, status=400)
+    if not url:
+        return JsonResponse({'ok': False, 'error': 'url é obrigatória.'}, status=400)
+    if kind not in dict(Referencia.Kind.choices):
+        return JsonResponse({'ok': False, 'error': 'kind inválido.'}, status=400)
+
+    try:
+        pv = ProposicaoVotacao.objects.get(pk=int(pv_id))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'ProposicaoVotacao inválido.'}, status=404)
+
+    ref = Referencia.objects.create(
+        proposicao_votacao=pv,
+        url=url,
+        kind=kind,
+    )
+    return JsonResponse({
+        'ok': True,
+        'ref': {'id': ref.id, 'url': ref.url, 'kind': ref.kind, 'created_at': ref.created_at.isoformat()},
+    })
+
+
+@staff_member_required
+def ajax_referencias_update(request):
+    """Atualiza uma referência existente.
+    Espera `POST` com `ref_id` e campos opcionais `url`, `kind`.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método não permitido.'}, status=405)
+
+    ref_id = request.POST.get('ref_id')
+    url = request.POST.get('url')
+    kind = request.POST.get('kind')
+    if not ref_id:
+        return JsonResponse({'ok': False, 'error': 'ref_id é obrigatório.'}, status=400)
+
+    try:
+        ref = Referencia.objects.get(pk=int(ref_id))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Referência não encontrada.'}, status=404)
+
+    updates = {}
+    if url is not None:
+        u = url.strip()
+        if not u:
+            return JsonResponse({'ok': False, 'error': 'url não pode ser vazia.'}, status=400)
+        ref.url = u
+        updates['url'] = u
+    if kind is not None:
+        k = kind.strip()
+        if k not in dict(Referencia.Kind.choices):
+            return JsonResponse({'ok': False, 'error': 'kind inválido.'}, status=400)
+        ref.kind = k
+        updates['kind'] = k
+
+    if updates:
+        ref.save(update_fields=list(updates.keys()) + ['updated_at'])
+
+    return JsonResponse({'ok': True, 'ref': {'id': ref.id, 'url': ref.url, 'kind': ref.kind}})
+
+
+@staff_member_required
+def ajax_referencias_delete(request):
+    """Exclui uma referência.
+    Espera `POST` com `ref_id`.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método não permitido.'}, status=405)
+    ref_id = request.POST.get('ref_id')
+    if not ref_id:
+        return JsonResponse({'ok': False, 'error': 'ref_id é obrigatório.'}, status=400)
+    try:
+        ref = Referencia.objects.get(pk=int(ref_id))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Referência não encontrada.'}, status=404)
+    ref.delete()
+    return JsonResponse({'ok': True, 'deleted': True, 'ref_id': int(ref_id)})

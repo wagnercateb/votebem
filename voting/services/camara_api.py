@@ -63,8 +63,15 @@ class CamaraAPIService:
             logger.error(f"Error decoding JSON response: {e}")
             raise Exception(f"Erro ao processar resposta da API: {str(e)}")
     
-    def get_proposicoes_by_date_range(self, data_inicio: str, data_fim: str, 
-                                    ordem: str = "ASC", ordenar_por: str = "id") -> List[Dict]:
+    def get_proposicoes_by_date_range(
+        self,
+        data_inicio: str,
+        data_fim: str,
+        ordem: str = "ASC",
+        ordenar_por: str = "id",
+        limit: Optional[int] = None,
+        itens_por_pagina: Optional[int] = None,
+    ) -> List[Dict]:
         """
         Get propositions that had some activity between two dates
         
@@ -73,6 +80,8 @@ class CamaraAPIService:
             data_fim: End date in YYYY-MM-DD format
             ordem: ASC or DESC
             ordenar_por: Field to order by (id, dataApresentacao, etc.)
+            limit: Optional max number of items to return (early stop)
+            itens_por_pagina: Optional per-page item count for API (defaults to 100)
         
         Returns:
             List of propositions
@@ -82,7 +91,8 @@ class CamaraAPIService:
             'dataFim': data_fim,
             'ordem': ordem,
             'ordenarPor': ordenar_por,
-            'itens': 100  # Maximum items per page
+            # Keep default behavior (100) for backward compatibility; allow override
+            'itens': itens_por_pagina if itens_por_pagina is not None else 100
         }
         
         all_proposicoes = []
@@ -100,11 +110,22 @@ class CamaraAPIService:
                 if not proposicoes:
                     break
                     
-                all_proposicoes.extend(proposicoes)
+                # If a global limit is set, append only the remaining needed items
+                if limit is not None and limit >= 0:
+                    remaining = max(0, limit - len(all_proposicoes))
+                    if remaining <= 0:
+                        break
+                    all_proposicoes.extend(proposicoes[:remaining])
+                else:
+                    all_proposicoes.extend(proposicoes)
                 
                 # Check if there are more pages
                 links = data.get('links', [])
                 has_next = any(link.get('rel') == 'next' for link in links)
+                # Early stop if limit has been reached
+                if limit is not None and len(all_proposicoes) >= limit:
+                    break
+                    
                 if not has_next:
                     break
                     
@@ -323,14 +344,30 @@ class CamaraAPIService:
 
         return votacao
     
-    def get_recent_proposicoes(self, days: int = 7) -> List[Dict]:
+    def get_recent_proposicoes(
+        self,
+        days: int = 7,
+        limit: Optional[int] = None,
+        itens_por_pagina: Optional[int] = None,
+    ) -> List[Dict]:
         """
         Get propositions from the last N days
+        
+        Args:
+            days: Number of days back from today
+            limit: Optional max number of items to return (early stop)
+            itens_por_pagina: Optional per-page item count for API (defaults to 100)
         """
         data_fim = datetime.now().strftime('%Y-%m-%d')
         data_inicio = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
         
-        return self.get_proposicoes_by_date_range(data_inicio, data_fim)
+        # Respect optional limit and itens_por_pagina to avoid fetching unnecessary pages
+        return self.get_proposicoes_by_date_range(
+            data_inicio,
+            data_fim,
+            limit=limit,
+            itens_por_pagina=itens_por_pagina,
+        )
     
     def update_missing_ementas(self) -> int:
         """

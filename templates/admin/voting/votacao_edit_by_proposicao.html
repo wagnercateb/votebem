@@ -182,7 +182,14 @@
                     </div>
                     <div class="btn-group">
                         <a class="btn btn-outline-secondary btn-sm" href="{% url 'gerencial:votacao_edit' votacao.pk %}">
-                            Abrir edição única
+                            Editar só essa
+                        </a>
+                        {# Botão para abrir a página pública da votação em nova aba #}
+                        <a class="btn btn-outline-primary btn-sm" href="http://localhost:8001/voting/votacao/{{ votacao.pk }}/" target="_blank" rel="noopener" title="Abrir votação pública">
+                            Ver Votebem pública
+                        </a>                        {# Botão para abrir a edição oficial da Proposição vinculada (admin gerencial) #}
+                        <a class="btn btn-outline-success btn-sm" href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ proposicao.pk }}" target="_blank" rel="noopener" title="Abrir edição da proposição">
+                            Ver proposição oficial
                         </a>
                     </div>
                 </div>
@@ -203,22 +210,17 @@
 
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="data_hora_votacao_{{ votacao.pk }}">Data/Hora da Votação Original *</label>
-                                <input type="datetime-local" id="data_hora_votacao_{{ votacao.pk }}" name="data_hora_votacao" class="form-control datetime-input" value="{% if votacao.data_hora_votacao %}{{ votacao.data_hora_votacao|date:'Y-m-d\TH:i' }}{% endif %}" required>
-                            </div>
-
-                            <div class="form-group">
                                 <label for="no_ar_desde_{{ votacao.pk }}">No Ar Desde *</label>
                                 <input type="datetime-local" id="no_ar_desde_{{ votacao.pk }}" name="no_ar_desde" class="form-control datetime-input" value="{% if votacao.no_ar_desde %}{{ votacao.no_ar_desde|date:'Y-m-d\TH:i' }}{% endif %}" required>
                             </div>
-                        </div>
-
-                        <div class="form-grid">
                             <div class="form-group">
                                 <label for="no_ar_ate_{{ votacao.pk }}">No Ar Até (opcional)</label>
                                 <input type="datetime-local" id="no_ar_ate_{{ votacao.pk }}" name="no_ar_ate" class="form-control datetime-input" value="{% if votacao.no_ar_ate %}{{ votacao.no_ar_ate|date:'Y-m-d\TH:i' }}{% endif %}">
                                 <small class="text-muted">Deixe em branco para manter ativo indefinidamente</small>
                             </div>
+                        </div>
+
+                        <div class="form-grid">
 
                             <div class="form-group">
                                 <label>&nbsp;</label>

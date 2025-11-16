@@ -235,14 +235,15 @@
                 <th>Proposição</th>
                 <th>Tipo/Número/Ano</th>
                 <th>Estado</th>
-                <th>Votação</th>
+                <th>Votebem</th>
                 <th>Ações</th>
             </tr>
         </thead>
         <tbody>
             {% for proposicao in page_obj %}
             <tr>
-                <td>{{ proposicao.id_proposicao }}</td>
+                <!-- Make ID clickable to internal gerencial route (relative path for portability) -->
+                <td><a href="/gerencial/?proposicao_id={{ proposicao.id_proposicao }}">{{ proposicao.id_proposicao }}</a></td>
                 <td>
                     <div class="proposicao-titulo">
                         {% if proposicao.id_proposicao %}
@@ -276,20 +277,18 @@
                             <span class="badge badge-warning">Inativa</span>
                         {% endif %}
                         {% if proposicao.id_proposicao %}
-                            {# Link admin: usar proposicao_id na rota (será ajustado no backend depois) #}
-                            <a href="http://localhost:8000/gerencial/votacao/{{ proposicao.id_proposicao }}/edit/" target="_blank" class="btn btn-info btn-sm" style="margin-top:6px;">Ver</a>
+                            {# Link admin: usar URL tag para seguir a origem atual #}
+                            <a href="{% url 'gerencial:votacao_edit' proposicao.id_proposicao %}" class="btn btn-info" style="margin-top:6px;">Editar votação</a>
                         {% endif %}
                     {% else %}
                         <span class="badge badge-warning">Sem votação</span>
-                        <a href="http://localhost:8000/gerencial/?proposicao_id={{ proposicao.id_proposicao }}" target="_blank" class="btn {% if proposicao.has_proposicao_votacao %}btn-success{% else %}btn-warning{% endif %} btn-sm" style="margin-top:6px;">Buscar</a>
                     {% endif %}
                 </td>
                 <td class="actions-column">
-                    <a href="{% url 'gerencial:proposicao_edit' proposicao.pk %}" class="btn btn-edit">Editar</a>
-                    {% if proposicao.has_votacao %}
-                        <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-success">Votações</a>
-                    {% else %}
-<a href="http://localhost:8000/gerencial/?proposicao_id=2270800" class="btn btn-secondary">Criar Votação</a>
+                    <a href="{% url 'gerencial:proposicao_edit' proposicao.pk %}" class="btn btn-info">Editar proposição</a>
+                    {% if not proposicao.has_votacao %}
+                    {# Usar URL tag com query param; evita host/porta hardcoded #}
+                    <a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ proposicao.id_proposicao }}" class="btn btn-secondary">Criar Votebem</a>
                     {% endif %}
                 </td>
             </tr>
@@ -323,11 +322,6 @@
 </div>
 {% endif %}
 
-<!-- Action Buttons -->
-<div style="margin: 30px 0; text-align: center;">
-    <a href="{% url 'gerencial:proposicoes_statistics' %}" class="btn btn-secondary">Voltar às Estatísticas</a>
-    <a href="{% url 'gerencial:dashboard' %}" class="btn btn-primary">Voltar ao Painel Principal</a>
-    <a href="{% url 'gerencial:proposicao_add' %}" class="btn btn-success">Adicionar Novas Proposições</a>
-</div>
+<!-- Removido: botões de ação no rodapé da lista de proposições -->
 
 {% endblock %}

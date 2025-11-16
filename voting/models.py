@@ -220,7 +220,9 @@ class CongressmanVote(models.Model):
 #   - descricao: textual description (often empty in the source)
 # ------------------------------------------------------------
 class Tema(models.Model):
-    codigo = models.IntegerField(db_index=True, unique=True)
+    # 'codigo' é o identificador oficial (Câmara) e passa a ser a PK
+    # Tornando-o primary_key, o Django deixará de criar o campo 'id' automático
+    codigo = models.IntegerField(primary_key=True)
     nome = models.TextField()
     descricao = models.TextField(blank=True, null=True)
 
@@ -262,3 +264,59 @@ class ProposicaoTema(models.Model):
 
     def __str__(self):
         return f"Prop {self.proposicao_id} ⇄ Tema {self.tema_id}"
+
+
+# ------------------------------------------------------------
+# Referências externas relacionadas a uma votação de proposição
+# - Tabela deve se chamar exatamente 'voting_referencias'
+# - Relação 1:N com ProposicaoVotacao (uma votação pode ter várias referências)
+# - Armazena URL e um código/enum para o tipo da referência
+#   (web_page, sound, social_media)
+# ------------------------------------------------------------
+class Referencia(models.Model):
+    class Kind(models.TextChoices):
+        # Tipos de referência suportados
+        WEB_PAGE = 'web_page', 'Página Web'
+        SOUND = 'sound', 'Áudio'
+        SOCIAL_MEDIA = 'social_media', 'Rede Social'
+
+    # Vínculo obrigatório à votação oficial da proposição (1:N)
+    proposicao_votacao = models.ForeignKey(
+        'voting.ProposicaoVotacao',
+        on_delete=models.CASCADE,
+        related_name='referencias',
+        verbose_name='Votação da Proposição'
+    )
+
+    # URL de referência (pode ser longa; validação básica via URLField)
+    url = models.URLField(max_length=500, verbose_name='URL da Referência')
+
+    # Código do tipo da referência (choices)
+    kind = models.CharField(
+        max_length=20,
+        choices=Kind.choices,
+        verbose_name='Tipo da Referência'
+    )
+
+    # Metadados comuns
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'voting_referencias'
+        verbose_name = 'Referência de Votação'
+        verbose_name_plural = 'Referências de Votação'
+        ordering = ['-created_at']
+        indexes = [
+            # Índice para consultas por votação
+            models.Index(fields=['proposicao_votacao']),
+            # Índice para filtros por tipo
+            models.Index(fields=['kind']),
+        ]
+
+    def __str__(self):
+        try:
+            pv = self.proposicao_votacao
+            return f"Ref[{self.get_kind_display()}] {pv.proposicao.id_proposicao}-{pv.votacao_sufixo}"
+        except Exception:
+            return f"Ref[{self.get_kind_display()}] {self.url}"

@@ -7,7 +7,7 @@ from django.db.models import Count, Q, Sum, Case, When, IntegerField, F
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
-from .models import VotacaoVoteBem, Voto, Proposicao, ProposicaoVotacao, Congressman, CongressmanVote
+from .models import VotacaoVoteBem, Voto, Proposicao, ProposicaoVotacao, Congressman, CongressmanVote, Referencia
 from .forms import VotoForm
 from users.models import UserProfile
 import json
@@ -22,12 +22,15 @@ class VotacoesDisponiveisView(ListView):
     def get_queryset(self):
         # Only show active voting sessions
         now = timezone.now()
+        # Prefetch proposição and its temas to avoid N+1 when rendering cards
         return VotacaoVoteBem.objects.filter(
             ativo=True,
             no_ar_desde__lte=now
         ).filter(
             Q(no_ar_ate__isnull=True) | Q(no_ar_ate__gte=now)
-        ).select_related('proposicao_votacao__proposicao').order_by('-no_ar_desde')
+        ).select_related('proposicao_votacao__proposicao') \
+         .prefetch_related('proposicao_votacao__proposicao__proposicaotema_set__tema') \
+         .order_by('-no_ar_desde')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -82,7 +85,16 @@ class VotacaoDetailView(DetailView):
                 .order_by('id')[:2]
             )
         context['related_votacoes'] = related_votacoes
-        
+
+        # Referências externas vinculadas à votação oficial da proposição
+        # Usa relação 1:N em Referencia(proposicao_votacao) para listar links explicativos
+        try:
+            referencias = Referencia.objects.filter(proposicao_votacao=votacao.proposicao_votacao).order_by('-created_at')
+        except Exception:
+            referencias = []
+        context['referencias'] = referencias
+        context['referencias_count'] = len(referencias) if hasattr(referencias, '__len__') else referencias.count() if hasattr(referencias, 'count') else 0
+
         return context
 
 class VotarView(LoginRequiredMixin, View):

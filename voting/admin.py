@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
-from .models import Proposicao, ProposicaoVotacao, VotacaoVoteBem, Voto, Congressman, CongressmanVote
+from .models import Proposicao, ProposicaoVotacao, VotacaoVoteBem, Voto, Congressman, CongressmanVote, Referencia
 
 @admin.register(Proposicao)
 class ProposicaoAdmin(admin.ModelAdmin):
@@ -25,12 +25,20 @@ class ProposicaoVotacaoInline(admin.TabularInline):
 # Attach inline to ProposicaoAdmin
 ProposicaoAdmin.inlines = [ProposicaoVotacaoInline]
 
+class ReferenciaInline(admin.TabularInline):
+    """Inline para gerenciar referências (URLs) de uma votação oficial."""
+    model = Referencia
+    extra = 0
+    fields = ['url', 'kind', 'created_at']
+    readonly_fields = ['created_at']
+
 @admin.register(ProposicaoVotacao)
 class ProposicaoVotacaoAdmin(admin.ModelAdmin):
     list_display = ['proposicao', 'votacao_sufixo', 'descricao', 'created_at']
     list_filter = ['proposicao__tipo', 'proposicao__ano']
     search_fields = ['proposicao__titulo', 'proposicao__id_proposicao', 'descricao']
     readonly_fields = ['created_at', 'updated_at']
+    inlines = [ReferenciaInline]
 
 @admin.register(VotacaoVoteBem)
 class VotacaoVoteBemAdmin(admin.ModelAdmin):

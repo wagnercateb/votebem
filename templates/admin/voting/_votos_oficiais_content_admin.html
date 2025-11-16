@@ -14,7 +14,24 @@
 </style>
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <h2 class="card-title mb-0">Votação oficial - Obter votos dos congressistas</h2>
+    {# Title row: keep H2 and add link to original proposição on the same line #}
+    <div class="d-flex align-items-center gap-2">
+      <h2 class="card-title mb-0">Votação oficial - Obter votos dos congressistas</h2>
+      {# Link para a ficha da proposição na Câmara, com fallback simples #}
+      {% if prop_id_for_header %}
+        <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ prop_id_for_header }}"
+           target="_blank" rel="noopener"
+           class="btn btn-sm btn-outline-primary">
+          Proposição original
+        </a>
+      {% elif prefill_proposicao_id %}
+        <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ prefill_proposicao_id }}"
+           target="_blank" rel="noopener"
+           class="btn btn-sm btn-outline-primary">
+          Proposição original
+        </a>
+      {% endif %}
+    </div>
     {% if votacao %}
       <!-- Atualiza rótulo para “Voltar para votação Votebem” no contexto admin -->
       <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
@@ -65,6 +82,7 @@
             <!-- Renamed column to reflect VoteBem actions instead of textual result -->
             <th style="padding:6px;">Votebem</th>
             <th style="padding:6px;">Qtd. registros</th>
+            <th style="padding:6px;">Referências</th>
             <th style="padding:6px;">Prioridade</th>
           </tr>
         </thead>
@@ -108,6 +126,20 @@
     const err = document.getElementById('vb-votacoes-error');
     const hintText = document.getElementById('vb-votos-hint-text');
     const hintLoading = document.getElementById('vb-votos-loading');
+
+    // Delegated click handler for Referências buttons to ensure reliability
+    // Works even if rows are re-rendered or appended later.
+    if (listTbody) {
+      listTbody.addEventListener('click', function(ev) {
+        const refsBtn = ev.target.closest('.vb-pv-refs');
+        if (!refsBtn) return;
+        ev.preventDefault();
+        const tr = refsBtn.closest('tr');
+        const pvId = refsBtn.getAttribute('data-pv-id');
+        if (!pvId || !tr) return;
+        toggleRefsPanel(tr, pvId);
+      });
+    }
 
     if (!form || !btnCarregarProposicao) return;
 
@@ -165,18 +197,23 @@
                 // Link para página pública usando o ID de ProposicaoVotacao (pv_id) quando disponível; caso contrário, usa vb_id
                 const votosCell = (votosCount > 0 && (pvId || vbId)) ? `<a href=\"/voting/votos/oficiais/?votacao_id=${pvId || vbId}\" target=\"votos\">${votosCount}</a>` : `${votosCount}`;
                 // Votebem cell: when vbId exists, show edit button; else show em dash
-                const votebemCell = vbId
-                  ? `<a href=\"/gerencial/votacao/${vbId}/edit/\" class=\"btn btn-sm btn-outline-primary\" target=\"vb-edit\" title=\"Editar votação VoteBem #${vbId}\"><i class=\"bi bi-pencil-square\"></i> Editar</a>`
-                  : `<span class=\"text-muted\">—</span>`;
+              const pvAdminPart = pvId ? ` <a href=\"/admin/voting/proposicaovotacao/${pvId}/change/\" class=\"btn btn-sm btn-outline-secondary\" target=\"pv-admin\" title=\"Editar ProposicaoVotacao\"><i class=\"bi bi-gear\"></i> PV</a>` : '';
+              const votebemCell = vbId
+                ? `<a href=\"/gerencial/votacao/${vbId}/edit/\" class=\"btn btn-sm btn-outline-primary\" target=\"vb-edit\" title=\"Editar votação VoteBem #${vbId}\"><i class=\"bi bi-pencil-square\"></i> Editar</a>${pvAdminPart}`
+                : `<span class=\"text-muted\">—</span>${pvAdminPart}`;
+                const refsCell = pvId ? `<button type=\"button\" class=\"btn btn-sm btn-outline-secondary vb-pv-refs\" data-pv-id=\"${pvId}\">Referências</button>` : `<span class=\"text-muted\">—</span>`;
                 tr.innerHTML = `<td style=\"padding:6px;\"><a href=\"${hrefFull}\" data-id=\"${id}\" class=\"vb-votacao-id\">${id}</a></td>`+
                                `<td style=\"padding:6px;\">${dataHora || ''}</td>`+
                                `<td style=\"padding:6px;\">${descricao || ''}</td>`+
                                `<td style=\"padding:6px;\">${votebemCell}</td>`+
                                `<td style=\"padding:6px;\">${votosCell}</td>`+
+                               `<td style=\"padding:6px;\">${refsCell}</td>`+
                                `<td style=\"padding:6px;\">${prioridadeCell}</td>`;
                 listTbody.appendChild(tr);
               });
               bindPrioridadeEditors();
+              // Bind direct listeners (delegation above covers dynamic updates)
+              bindReferenciasButtons();
               listTbody.querySelectorAll('a.vb-votacao-id').forEach(a => {
                 a.addEventListener('click', (e) => {
                   e.preventDefault();
@@ -257,16 +294,21 @@
             const votebemCell = vbId
               ? `<a href=\"/gerencial/votacao/${vbId}/edit/\" class=\"btn btn-sm btn-outline-primary\" target=\"vb-edit\" title=\"Editar votação VoteBem #${vbId}\"><i class=\"bi bi-pencil-square\"></i> Editar</a>`
               : `<span class=\"text-muted\">—</span>`;
+            const refsCell = pvId ? `<button type=\"button\" class=\"btn btn-sm btn-outline-secondary vb-pv-refs\" data-pv-id=\"${pvId}\"><i class=\"bi bi-link-45deg\"></i>Referências1</button>` : `<span class=\"text-muted\">—</span>`;
             tr.innerHTML = `<td style=\"padding:6px;\"><a href=\"${hrefFull}\" data-id=\"${id}\" class=\"vb-votacao-id\">${id}</a></td>`+
                            `<td style=\"padding:6px;\">${dataHora || ''}</td>`+
                            `<td style=\"padding:6px;\">${descricao || ''}</td>`+
                            `<td style=\"padding:6px;\">${votebemCell}</td>`+
                            `<td style=\"padding:6px;\">${votosCell}</td>`+
+                           `<td style=\"padding:6px;\">${refsCell}</td>`+
                            `<td style=\"padding:6px;\">${prioridadeCell}</td>`;
             listTbody.appendChild(tr);
           });
           // Bind save handlers for prioridade inputs (if any)
           bindPrioridadeEditors();
+          bindReferenciasButtons();
+          // Bind references panel toggles
+          bindReferenciasButtons();
           listTbody.querySelectorAll('a.vb-votacao-id').forEach(a => {
             a.addEventListener('click', (e) => {
               e.preventDefault();
@@ -410,6 +452,179 @@
       inp.addEventListener('change', handler);
       inp.addEventListener('blur', handler);
       inp.addEventListener('keyup', (ev) => { if (ev.key === 'Enter') handler(); });
+    });
+  }
+
+  // --- Referências (CRUD) subform per row ---
+  function bindReferenciasButtons() {
+    // Direct bindings disabled in favor of event delegation on tbody.
+    // This prevents duplicate handlers causing immediate toggle to hidden.
+    return;
+  }
+
+  function toggleRefsPanel(tr, pvId) {
+    // If panel exists next row, toggle; else create and load
+    const next = tr.nextElementSibling;
+    if (next && next.classList.contains('vb-refs-row')) {
+      const body = next.querySelector('.vb-refs-body');
+      if (body) body.style.display = body.style.display === 'none' ? 'block' : 'none';
+      return;
+    }
+    const panel = document.createElement('tr');
+    panel.className = 'vb-refs-row';
+    const colspan = tr.children.length; // span across all columns
+    // Ensure initial visibility: set vb-refs-body to display:block
+    panel.innerHTML = `<td colspan="${colspan}" style="padding:8px 12px; background:#f9fafb;">
+        <div class="vb-refs-body" style="display:block;">
+          <div class="d-flex justify-content-between align-items-center" style="margin-bottom:6px;">
+            <strong>Referências vinculadas</strong>
+            <small class="text-muted">PV #${pvId}</small>
+          </div>
+          <div class="row g-2" style="margin-bottom:8px;">
+            <div class="col-md-6">
+              <input type="url" class="form-control form-control-sm vb-ref-url" placeholder="https://...">
+            </div>
+            <div class="col-md-3">
+              <select class="form-select form-select-sm vb-ref-kind">
+                <option value="web_page">Página Web</option>
+                <option value="sound">Áudio</option>
+                <option value="social_media">Rede Social</option>
+              </select>
+            </div>
+            <div class="col-md-3 text-end">
+              <button type="button" class="btn btn-sm btn-primary vb-ref-add">Adicionar</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover vb-refs-table">
+              <thead>
+                <tr>
+                  <th style="padding:6px;">URL</th>
+                  <th style="padding:6px;">Tipo</th>
+                  <th style="padding:6px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="vb-refs-status text-muted" style="font-size:0.9em;"></div>
+        </div>
+      </td>`;
+    tr.parentNode.insertBefore(panel, tr.nextSibling);
+    const body = panel.querySelector('.vb-refs-body');
+    const addBtn = panel.querySelector('.vb-ref-add');
+    const urlInp = panel.querySelector('.vb-ref-url');
+    const kindSel = panel.querySelector('.vb-ref-kind');
+    const tableBody = panel.querySelector('.vb-refs-table tbody');
+    const statusEl = panel.querySelector('.vb-refs-status');
+
+    // Ensure panel is shown and visible immediately, and focus URL input
+    if (body) body.style.display = 'block';
+    try { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {}
+    if (urlInp) urlInp.focus();
+
+    addBtn.addEventListener('click', () => {
+      const url = (urlInp.value || '').trim();
+      const kind = kindSel.value || 'web_page';
+      if (!url) { statusEl.textContent = 'Informe uma URL válida.'; return; }
+      const formData = new URLSearchParams();
+      formData.append('pv_id', pvId);
+      formData.append('url', url);
+      formData.append('kind', kind);
+      fetch(`${window.location.origin}/gerencial/ajax/referencias/create/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCookie('csrftoken') || ''
+        },
+        body: formData.toString(),
+        credentials: 'same-origin'
+      }).then(r => r.json()).then(json => {
+        if (!json?.ok) { statusEl.textContent = json?.error || 'Falha ao criar referência.'; return; }
+        urlInp.value = '';
+        kindSel.value = 'web_page';
+        statusEl.textContent = 'Referência adicionada.';
+        renderRefsRows(tableBody, [json.ref], pvId);
+      }).catch(e => { statusEl.textContent = 'Erro de rede ao criar referência.'; });
+    });
+
+    // Inicial load
+    statusEl.textContent = 'Carregando referências...';
+    fetch(`${window.location.origin}/gerencial/ajax/referencias/list/?pv_id=${encodeURIComponent(pvId)}`, { headers: { 'Accept': 'application/json' } })
+      .then(r => r.json())
+      .then(json => {
+        if (!json?.ok) { statusEl.textContent = json?.error || 'Falha ao carregar.'; return; }
+        statusEl.textContent = `${(json.dados||[]).length} referência(s).`;
+        renderRefsRows(tableBody, json.dados || [], pvId);
+      })
+      .catch(e => { statusEl.textContent = 'Erro de rede ao carregar referências.'; });
+  }
+
+  function renderRefsRows(tbody, refs, pvId) {
+    refs.forEach(r => {
+      const tr = document.createElement('tr');
+      const esc = (s) => String(s||'');
+      tr.innerHTML = `<td style="padding:6px;">
+                        <input type="url" class="form-control form-control-sm vb-ref-url-edit" value="${esc(r.url)}" data-ref-id="${r.id}">
+                      </td>
+                      <td style="padding:6px;">
+                        <select class="form-select form-select-sm vb-ref-kind-edit" data-ref-id="${r.id}">
+                          <option value="web_page" ${r.kind==='web_page'?'selected':''}>Página Web</option>
+                          <option value="sound" ${r.kind==='sound'?'selected':''}>Áudio</option>
+                          <option value="social_media" ${r.kind==='social_media'?'selected':''}>Rede Social</option>
+                        </select>
+                      </td>
+                      <td style="padding:6px;">
+                        <button type="button" class="btn btn-sm btn-success vb-ref-save" data-ref-id="${r.id}"><i class="bi bi-check"></i> Salvar</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger vb-ref-del" data-ref-id="${r.id}"><i class="bi bi-trash"></i> Excluir</button>
+                      </td>`;
+      tbody.appendChild(tr);
+    });
+    bindRefsRowActions(tbody);
+  }
+
+  function bindRefsRowActions(tbody) {
+    const saveBtns = tbody.querySelectorAll('.vb-ref-save');
+    const delBtns = tbody.querySelectorAll('.vb-ref-del');
+    saveBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const refId = btn.getAttribute('data-ref-id');
+        const row = btn.closest('tr');
+        const urlInp = row.querySelector('.vb-ref-url-edit');
+        const kindSel = row.querySelector('.vb-ref-kind-edit');
+        const formData = new URLSearchParams();
+        formData.append('ref_id', refId);
+        formData.append('url', (urlInp.value||'').trim());
+        formData.append('kind', kindSel.value||'web_page');
+        fetch(`${window.location.origin}/gerencial/ajax/referencias/update/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCookie('csrftoken') || '' },
+          body: formData.toString(),
+          credentials: 'same-origin'
+        }).then(r => r.json()).then(json => {
+          if (!json?.ok) { alert(json?.error || 'Falha ao salvar.'); return; }
+          btn.classList.add('btn-success');
+          setTimeout(() => btn.classList.remove('btn-success'), 800);
+        }).catch(e => { alert('Erro de rede ao salvar.'); });
+      });
+    });
+    delBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const refId = btn.getAttribute('data-ref-id');
+        if (!confirm('Excluir esta referência?')) return;
+        const formData = new URLSearchParams();
+        formData.append('ref_id', refId);
+        fetch(`${window.location.origin}/gerencial/ajax/referencias/delete/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': getCookie('csrftoken') || '' },
+          body: formData.toString(),
+          credentials: 'same-origin'
+        }).then(r => r.json()).then(json => {
+          if (!json?.ok) { alert(json?.error || 'Falha ao excluir.'); return; }
+          const row = btn.closest('tr');
+          if (row) row.remove();
+        }).catch(e => { alert('Erro de rede ao excluir.'); });
+      });
     });
   }
 

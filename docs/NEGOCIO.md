@@ -1,5 +1,11 @@
 # Fontes de informação
 
+## Prompts
+
+### Referencias
+
+- audio em https://notebooklm.google.com/:  create an audio of no more than 3 minutes. start with "Bem vindo ao debate, criado pela inteligência artificial Notebooklm". Highlight the main aspects of the norm. emphasize ethical aspects. use easy language to teach the subject to people who know very little about it.
+
 ## API da Câmara
 
 - swagger da API: https://dadosabertos.camara.leg.br/swagger/api.html?tab=api

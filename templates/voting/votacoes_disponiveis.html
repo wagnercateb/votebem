@@ -33,14 +33,16 @@
                                     {% endif %}
                                 </h6>
                                 {% if votacao.id in user_votes %}
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-check-circle"></i> Votado
+                                    {# Badge "Votado" agora com estilo de contorno #}
+                                    <span class="badge text-success border border-success bg-transparent">
+                                        <i class="bi bi-check-circle"></i> Já votei
                                     </span>
                                 {% else %}
                                     {% if votacao.is_active %}
-                                        <span class="badge bg-primary">
+                                        {# Estiliza o próprio anchor como badge preenchida #}
+                                        <a href="{% url 'voting:votacao_detail' votacao.id %}" class="badge bg-primary text-decoration-none">
                                             <i class="bi bi-clock"></i> Ativa
-                                        </span>
+                                        </a>
                                     {% else %}
                                         <span class="badge bg-secondary">
                                             <i class="bi bi-pause-circle"></i> Inativa
@@ -53,14 +55,17 @@
                                 <!-- Título agora usa 'proposicao.titulo' e linka para a tela de detalhes interna -->
                                 <h6 class="card-title">
                                     <a href="{% url 'voting:votacao_detail' votacao.id %}" class="text-decoration-none">
-{% if votacao.proposicao_votacao.proposicao.titulo %}
-{{ votacao.proposicao_votacao.proposicao.titulo|truncatechars:60 }}
-                                        {% else %}
-                                            {{ votacao.titulo|truncatechars:60 }}
-                                        {% endif %}
+                                        {{ votacao.resumo }}
                                     </a>
                                 </h6>
-                                <p class="card-text text-muted small">{{ votacao.resumo|truncatechars:100 }}</p>
+                                {# Botão de ação: mantém o "Vote agora!" abaixo do título; move "Altere seu voto" para o fim do card #}
+                                {% if votacao.id in user_votes %}
+                                    {# Já votado: não exibe botão aqui; será renderizado ao final do card-body #}
+                                {% else %}
+                                    {# Não votado: mantém o botão padrão abaixo do título #}
+                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-primary mt-2 mb-2 w-100">Vote agora!</a>
+                                {% endif %}
+                                <p class="card-text text-muted small">{{ votacao.proposicao_votacao.proposicao.titulo }}</p>
                                 
                                 <div class="row text-center mb-3">
                                     <div class="col-6">
@@ -78,10 +83,21 @@
                                 </div>
                                 
                                 <div class="text-center">
-                                    <small class="text-muted">
-                                        Total: {{ votacao.get_total_votos_populares }} votos
-                                    </small>
+                                    {# Temas associados: apresentar como badges leves #}
+                                    {% with temas=votacao.proposicao_votacao.proposicao.proposicaotema_set.all %}
+                                        {% if temas %}
+                                            <div class="mt-1">
+                                                {% for pt in temas %}
+                                                    <span class="badge rounded-pill bg-light text-secondary border me-1">{{ pt.tema.nome }}</span>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    {% endwith %}
                                 </div>
+                                {# Ao final do card-body, exibe o botão para alterar voto quando já votado #}
+                                {% if votacao.id in user_votes %}
+                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="badge text-success border border-success bg-transparent d-block w-100 text-center py-2 mb-2">Altere seu voto</a>
+                                {% endif %}
                             </div>
                             
                             <!-- Removido botão "Ver Detalhes" conforme solicitação -->
