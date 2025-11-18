@@ -108,25 +108,31 @@ class VotacaoVoteBem(models.Model):
     
     def get_votos_sim_populares(self):
         """Get popular SIM votes count"""
-        # Count related votes with value 'SIM' via related_name='voto'
-        return self.voto.filter(voto='SIM').count()
+        # Count related votes with value 1 via related_name='voto'
+        return self.voto.filter(voto=1).count()
     
     def get_votos_nao_populares(self):
         """Get popular NÃO votes count"""
-        # Count related votes with value 'NAO' via related_name='voto'
-        return self.voto.filter(voto='NAO').count()
+        # Count related votes with value -1 via related_name='voto'
+        return self.voto.filter(voto=-1).count()
+
+    def get_votos_abstencao_populares(self):
+        """Get popular ABSTENÇÃO votes count"""
+        return self.voto.filter(voto=0).count()
 
 class Voto(models.Model):
     """Model for individual votes"""
     VOTO_CHOICES = [
-        ('SIM', 'Sim'),
-        ('NAO', 'Não'),
-        ('ABSTENCAO', 'Abstenção'),
+        (1, 'Sim'),
+        (-1, 'Não'),
+        (0, 'Abstenção'),
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Usuário")
     votacao = models.ForeignKey(VotacaoVoteBem, on_delete=models.CASCADE, related_name='voto', verbose_name="Votação")
-    voto = models.CharField(max_length=10, choices=VOTO_CHOICES, verbose_name="Voto")
+    voto = models.IntegerField(choices=VOTO_CHOICES, verbose_name="Voto")
+    # Peso/Importância do voto popular: 1 (normal), 3 (muito), 8 (crucial)
+    peso = models.SmallIntegerField(default=1, verbose_name="Peso")
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -136,7 +142,11 @@ class Voto(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.user.username} - {self.voto} em {self.votacao.titulo[:30]}"
+        try:
+            display = self.get_voto_display()
+        except Exception:
+            display = str(self.voto)
+        return f"{self.user.username} - {display} em {self.votacao.titulo[:30]}"
 
 class Congressman(models.Model):
     """Model for congressmen/deputies"""

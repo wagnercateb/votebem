@@ -149,6 +149,12 @@
                 <div>
                     <a href="{% url 'gerencial:proposicao_edit' proposicao.pk %}">{{ proposicao.titulo|default:proposicao|truncatechars:120 }}</a>
                 </div>
+                {# Quick access link to Gerencial root, filtered by proposicao_id #}
+                <div class="mt-2">
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'gerencial:votos_oficiais_app' %}?proposicao_id={{ proposicao.id_proposicao }}">
+                        Ir para "Obter votações da Proposição"
+                    </a>
+                </div>
                 {# Breadcrumb is rendered by base_administrativo; items provided via block breadcrumb_items above #}
             </div>
 

@@ -4,7 +4,7 @@
 
 ### Referencias
 
-- audio em https://notebooklm.google.com/:  create an audio of no more than 3 minutes. start with "Bem vindo ao debate, criado pela inteligência artificial Notebooklm". Highlight the main aspects of the norm. emphasize ethical aspects. use easy language to teach the subject to people who know very little about it.
+- audio em https://notebooklm.google.com/:  create an audio of no more than 3 minutes. start with "Bem vindo ao debate, criado com a inteligência artificial do Google". Highlight the main aspects of the norm. emphasize ethical aspects. use easy language to teach the subject to people who know very little about it. Explain the acronyms you mention.
 
 ## API da Câmara
 

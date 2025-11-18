@@ -69,6 +69,10 @@ class VotacaoDetailView(DetailView):
         context['total_votos'] = votacao.get_total_votos_populares()
         context['votos_sim'] = votacao.get_votos_sim_populares()
         context['votos_nao'] = votacao.get_votos_nao_populares()
+        try:
+            context['votos_abstencao'] = votacao.get_votos_abstencao_populares()
+        except Exception:
+            context['votos_abstencao'] = 0
 
         # Related votações from the same proposição (via proposicao_votacao -> proposicao)
         try:
@@ -113,24 +117,39 @@ class VotarView(LoginRequiredMixin, View):
             messages.error(request, 'Você já votou nesta votação.')
             return redirect('voting:votacao_detail', pk=votacao_id)
         
-        # Get the vote choice
-        voto_choice = request.POST.get('voto')
-        if voto_choice not in ['SIM', 'NAO', 'ABSTENCAO']:
+        # Get the vote choice as integer (-1, 0, 1)
+        voto_raw = request.POST.get('voto')
+        try:
+            voto_choice = int(voto_raw)
+        except Exception:
+            voto_choice = None
+        if voto_choice not in (-1, 0, 1):
             messages.error(request, 'Opção de voto inválida.')
             return redirect('voting:votacao_detail', pk=votacao_id)
-        
-        # Create the vote
+
+        # Get peso importance (1, 3, 8). Default to 1 if missing/invalid
+        peso_raw = request.POST.get('peso')
+        try:
+            peso_val = int(peso_raw)
+        except Exception:
+            peso_val = 1
+        if peso_val not in (1, 3, 8):
+            peso_val = 1
+
+        # Create the vote with weight
         Voto.objects.create(
             user=request.user,
             votacao=votacao,
-            voto=voto_choice
+            voto=voto_choice,
+            peso=peso_val,
         )
         
         # Update user profile with vote record
         profile, created = UserProfile.objects.get_or_create(user=request.user)
         profile.add_voto(votacao_id)
         
-        messages.success(request, f'Seu voto "{voto_choice}" foi registrado com sucesso!')
+        label = {1: 'SIM', -1: 'NÃO', 0: 'ABSTENÇÃO'}.get(voto_choice, str(voto_choice))
+        messages.success(request, f'Seu voto "{label}" foi registrado com sucesso!')
         return redirect('voting:votacao_detail', pk=votacao_id)
 
 class DeleteVotoView(LoginRequiredMixin, View):
@@ -239,26 +258,26 @@ class PersonalizedRankingView(LoginRequiredMixin, ListView):
             total_score=Coalesce(
                 Sum(
                     Case(
-                        # When user voted SIM and congressman voted 1 (SIM)
+                        # When user voted 1 (SIM) and congressman voted 1 (SIM)
                         When(
                             congressmanvote__proposicao_votacao__votacaovotebem__voto__user=user,
-                            congressmanvote__proposicao_votacao__votacaovotebem__voto__voto='SIM',
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__voto=1,
                             congressmanvote__voto=1,
-                            then=1
+                            then=F('congressmanvote__proposicao_votacao__votacaovotebem__voto__peso')
                         ),
-                        # When user voted NAO and congressman voted -1 (NAO)
+                        # When user voted -1 (NAO) and congressman voted -1 (NAO)
                         When(
                             congressmanvote__proposicao_votacao__votacaovotebem__voto__user=user,
-                            congressmanvote__proposicao_votacao__votacaovotebem__voto__voto='NAO',
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__voto=-1,
                             congressmanvote__voto=-1,
-                            then=1
+                            then=F('congressmanvote__proposicao_votacao__votacaovotebem__voto__peso')
                         ),
-                        # When user voted ABSTENCAO and congressman voted 0 (ABSTENCAO)
+                        # When user voted 0 (ABSTENCAO) and congressman voted 0 (ABSTENCAO)
                         When(
                             congressmanvote__proposicao_votacao__votacaovotebem__voto__user=user,
-                            congressmanvote__proposicao_votacao__votacaovotebem__voto__voto='ABSTENCAO',
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__voto=0,
                             congressmanvote__voto=0,
-                            then=1
+                            then=F('congressmanvote__proposicao_votacao__votacaovotebem__voto__peso')
                         ),
                         default=0,
                         output_field=IntegerField()
@@ -328,14 +347,13 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
                     proposicao_votacao=user_vote.votacao.proposicao_votacao
                 )
                 
-                # Calculate points based on vote agreement
+                # Calculate points based on vote agreement, weighted by user's peso
                 points = 0
-                if user_vote.voto == 'SIM' and congressman_vote.voto == 1:
-                    points = 1
-                elif user_vote.voto == 'NAO' and congressman_vote.voto == -1:
-                    points = 1
-                elif user_vote.voto == 'ABSTENCAO' and congressman_vote.voto == 0:
-                    points = 1
+                try:
+                    if congressman_vote.voto is not None and user_vote.voto == congressman_vote.voto:
+                        points = getattr(user_vote, 'peso', 1) or 1
+                except Exception:
+                    points = 0
                 
                 accumulated_points += points
                 

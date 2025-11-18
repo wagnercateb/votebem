@@ -25,9 +25,15 @@
                             <h6 class="mb-0 text-truncate" title="{{ voto.votacao.titulo }}">
 {{ voto.votacao.proposicao_votacao.proposicao.tipo }} {{ voto.votacao.proposicao_votacao.proposicao.numero }}/{{ voto.votacao.proposicao_votacao.proposicao.ano }}
                             </h6>
-                            <span class="badge bg-{% if voto.voto == 'SIM' %}success{% elif voto.voto == 'NAO' %}danger{% else %}warning{% endif %}">
-                                {{ voto.get_voto_display }}
-                            </span>
+                            <!-- Grupo de badges à direita: voto e peso com mesma cor -->
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-{% if voto.voto == 1 %}success{% elif voto.voto == -1 %}danger{% else %}secondary{% endif %}">
+                                    {{ voto.get_voto_display }}
+                                </span>
+                                <span class="badge bg-{% if voto.voto == 1 %}success{% elif voto.voto == -1 %}danger{% else %}secondary{% endif %} ms-2" title="Importância do seu voto">
+                                    {{ voto.peso }} pontos
+                                </span>
+                            </div>
                         </div>
                     </div>
                     
