@@ -3,8 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, View
 from django.contrib import messages
-from django.db.models import Count, Q, Sum, Case, When, IntegerField, F
-from django.db.models.functions import Coalesce
+from django.db.models import Count, Q, Sum, Case, When, IntegerField, F, Value, CharField
+from django.db.models.functions import Coalesce, Upper, Trim
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from .models import VotacaoVoteBem, Voto, Proposicao, ProposicaoVotacao, Congressman, CongressmanVote, Referencia
@@ -332,6 +332,8 @@ class PersonalizedRankingView(LoginRequiredMixin, ListView):
             base_qs = base_qs.filter(uf__in=self.selected_ufs)
 
         # Annotate with compatibility score and compared votes
+        # Annotate ranking values and a normalized party string to ensure consistent grouping in the template.
+        # The normalized party uses TRIM + UPPER and falls back to empty string when null using Value('').
         queryset = base_qs.annotate(
             total_score=Coalesce(
                 Sum(
@@ -363,11 +365,18 @@ class PersonalizedRankingView(LoginRequiredMixin, ListView):
                 ),
                 0
             ),
+            # Normalized party name for stable grouping in template (avoids duplicates like 'PT' vs 'pt' vs 'PT ').
+            # Use Value('') explicitly to avoid ORM interpreting '' as a field name.
+            partido_norm=Coalesce(
+                Upper(Trim(F('partido'))),
+                Value(''),
+                output_field=CharField(),
+            ),
             total_votes_compared=Count(
                 'congressmanvote',
                 filter=Q(congressmanvote__proposicao_votacao__votacaovotebem__voto__user=user)
             )
-        ).filter(total_votes_compared__gt=0).order_by('-total_score', 'nome')
+        ).filter(total_votes_compared__gt=0).order_by('-total_score', 'partido_norm', 'nome')
 
         return queryset
 
@@ -417,6 +426,9 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
         # This is equivalent to the getDetalheRanking function in PHP
         voting_details = []
         accumulated_points = 0
+        # Track total possible points considering user's weight (peso) per compared vote.
+        # This allows computing a signed compatibility in [-100, 100].
+        total_possible_points = 0
         
         # Get all propositions where both user and congressman voted
         user_votes = Voto.objects.filter(user=user).select_related('votacao__proposicao_votacao__proposicao')
@@ -428,11 +440,22 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
                     proposicao_votacao=user_vote.votacao.proposicao_votacao
                 )
                 
-                # Calculate points based on vote agreement, weighted by user's peso
+                # Calculate points based on vote agreement, weighted by user's peso.
+                # Also accumulate the total possible points (sum of pesos) for compared votes
+                # so we can compute a signed percentage (agreement vs disagreement).
+                try:
+                    peso_val = getattr(user_vote, 'peso', 1) or 1
+                except Exception:
+                    peso_val = 1
+
+                # Every compared vote contributes its weight to the total possible points
+                total_possible_points += peso_val
+
+                # If votes match, add the weight to the accumulated points; otherwise add 0
                 points = 0
                 try:
                     if congressman_vote.voto is not None and user_vote.voto == congressman_vote.voto:
-                        points = getattr(user_vote, 'peso', 1) or 1
+                        points = peso_val
                 except Exception:
                     points = 0
                 
@@ -459,6 +482,8 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
         
         context['voting_details'] = voting_details
         context['total_accumulated_points'] = accumulated_points
+        # Total weighted points possible (denominator for signed compatibility)
+        context['total_possible_points'] = total_possible_points
         # Total de votações comparadas (denominador para compatibilidade)
         context['total_votacoes_comparadas'] = len(voting_details)
         # Compatibilidade: acumulado / total comparações * 100, limitado a 100%
@@ -471,9 +496,47 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
                 context['compatibility_pct'] = 0
         except Exception:
             context['compatibility_pct'] = 0
+        
+        # Signed compatibility percentage in [-100, 100] using weights (peso):
+        # formula => 100 * (agreements - disagreements) / total_weight
+        # which equals 100 * (2*agreements - total_weight) / total_weight
+        try:
+            denom = total_possible_points
+            if denom and denom > 0:
+                signed_pct = int(round(((accumulated_points * 2 - denom) * 100.0) / denom))
+                # Clamp to [-100, 100]
+                signed_pct = max(-100, min(100, signed_pct))
+                context['signed_compatibility_pct'] = signed_pct
+                # Compute a red→green gradient color based on signed percentage
+                context['compatibility_color'] = self._gradient_color(signed_pct)
+            else:
+                context['signed_compatibility_pct'] = 0
+                context['compatibility_color'] = self._gradient_color(0)
+        except Exception:
+            context['signed_compatibility_pct'] = 0
+            context['compatibility_color'] = self._gradient_color(0)
         context['congressman_photo_url'] = congressman.get_foto_url()
         
         return context
+
+    def _gradient_color(self, signed_pct: int) -> str:
+        """
+        Map signed compatibility percentage [-100, 100] to a red→green gradient.
+
+        -100 → red (hue 0), 0 → yellow-ish (hue ~60), 100 → green (hue 120).
+        Returns a CSS color string using HSL for smooth gradients.
+        """
+        try:
+            val = max(-100, min(100, int(round(signed_pct))))
+        except Exception:
+            val = 0
+        # Normalize to [0,1] and map to hue [0,120]
+        # -100 => 0.0 => hue 0 (red)
+        # +100 => 1.0 => hue 120 (green)
+        normalized = (val + 100) / 200.0
+        hue = int(round(120 * normalized))
+        # Use high saturation and medium-lightness for visibility
+        return f"hsl({hue}, 80%, 40%)"
 
 
 class VotacoesPesquisaView(ListView):

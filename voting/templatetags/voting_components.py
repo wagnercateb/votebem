@@ -193,3 +193,54 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
         'main_votos_url': main_votos_url,
         'main_votos_label': main_votos_label,
     }
+
+
+# -----------------------------------------------------------------------------
+# Sorting filter for party groups used in the ranking template
+# -----------------------------------------------------------------------------
+@register.filter(name="sort_groups_by_size_and_name_desc")
+def sort_groups_by_size_and_name_desc(groups: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Sort party regroup entries primarily by group size (descending),
+    and secondarily by party name (descending alphabetical order).
+
+    Expected input (from Django `{% regroup %}`): a list of dicts, each with:
+      - `grouper`: the party name (string)
+      - `list`:   the list of items for that party within the current score
+
+    This function is defensive: if the input is not in the expected format,
+    it will try to coerce missing fields and fail gracefully.
+    """
+    try:
+        # Normalize to a list to prevent errors if `groups` is None or another iterable
+        normalized: List[Dict[str, Any]] = []
+        for g in groups or []:
+            # Ensure dict-like access
+            if isinstance(g, dict):
+                party_name = str(g.get('grouper', '') or '')
+                items = g.get('list') or []
+            else:
+                # Fallback: attempt attribute access if not a dict
+                party_name = str(getattr(g, 'grouper', '') or '')
+                items = getattr(g, 'list', []) or []
+
+            # Compute size safely
+            try:
+                size = len(items)
+            except Exception:
+                size = 0
+
+            normalized.append({'grouper': party_name, 'list': items, '_size': size})
+
+        # Sort by size desc, then name desc
+        normalized.sort(key=lambda x: (x['_size'], x['grouper']), reverse=True)
+
+        # Remove helper field before returning, to keep the original structure
+        for n in normalized:
+            if '_size' in n:
+                del n['_size']
+
+        return normalized
+    except Exception:
+        # On any unexpected error, return the groups unchanged
+        return groups or []
