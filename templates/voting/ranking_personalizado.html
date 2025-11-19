@@ -9,28 +9,34 @@
         <div class="col-12">
             <div class="topo-pagina intro-lead-in text-center mb-4">
                 <h1>Ranking Personalizado</h1>
-                <p class="lead">Veja quais congressistas do seu estado votam mais parecido com você</p>
+                <p class="lead">Veja que congressistas melhor te representam (votam mais parecido com você)</p>
             </div>
         </div>
     </div>
 
-    {% if not user_uf %}
+    {# If no selection has been made yet, prompt the user #}
+    {% if not all_selected and selected_ufs|length == 0 %}
     <div class="row">
         <div class="col-md-8 offset-md-2">
             <div class="alert alert-info text-center">
                 <h4>Selecione seu estado</h4>
-                <p>Para ver o ranking personalizado, precisamos saber de qual estado você é:</p>
+                <p>Para ver o ranking personalizado, escolha um ou mais estados.
+                   Você também pode selecionar todos os estados.</p>
                 
-                <form method="get" class="mt-3">
-                    <div class="form-group">
-                        <select name="uf" class="form-control" onchange="this.form.submit()">
-                            <option value="">Selecione seu estado...</option>
-                            {% for uf in available_ufs %}
-                                <option value="{{ uf }}">{{ uf }}</option>
-                            {% endfor %}
-                        </select>
+                <!-- Estados selector (badges) -->
+                <div class="text-left">
+                    <div id="uf-badges-initial" class="d-flex flex-wrap mb-3">
+                        {# Render one badge per estado (UF) - default unselected, black text #}
+                        {% for uf in available_ufs %}
+                            <span class="badge badge-pill badge-light border text-dark mr-2 mb-2 uf-badge" data-uf="{{ uf }}" style="cursor:pointer; color:#000;">
+                                {{ uf }}
+                            </span>
+                        {% endfor %}
+                        {# "Todos" badge to toggle all or none - default unselected #}
+                        <span id="uf-badge-all-initial" class="badge badge-pill badge-light border text-dark mr-2 mb-2" style="cursor:pointer; color:#000;">Todos</span>
                     </div>
-                </form>
+                    <button id="btn-apply-initial" class="btn btn-primary">Atualizar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -38,18 +44,24 @@
     
     <div class="row mb-4">
         <div class="col-md-6">
-            <h3>Congressistas de {{ user_uf }}</h3>
+            {% if all_selected %}
+                <h3>Congressistas de todos os estados</h3>
+            {% else %}
+                <h3>Congressistas de {{ selected_ufs|join:", " }}</h3>
+            {% endif %}
             <p class="text-muted">Ranking baseado na compatibilidade com seus votos</p>
         </div>
         <div class="col-md-6 text-right">
-            <form method="get" class="form-inline justify-content-end">
-                <label for="uf" class="mr-2">Mudar estado:</label>
-                <select name="uf" class="form-control mr-2" onchange="this.form.submit()">
-                    {% for uf in available_ufs %}
-                        <option value="{{ uf }}" {% if uf == user_uf %}selected{% endif %}>{{ uf }}</option>
-                    {% endfor %}
-                </select>
-            </form>
+            <!-- Estados selector (badges) -->
+            <div id="uf-badges" class="d-inline-flex flex-wrap align-items-center justify-content-end">
+                {% for uf in available_ufs %}
+                    <span class="{% if selected_ufs and uf in selected_ufs %}btn btn-sm btn-primary rounded-pill{% else %}badge badge-pill badge-light border text-dark{% endif %} mr-2 mb-2 uf-badge" data-uf="{{ uf }}" style="cursor:pointer; {% if not selected_ufs or not uf in selected_ufs %}color:#000;{% endif %}">
+                        {{ uf }}
+                    </span>
+                {% endfor %}
+                <span id="uf-badge-all" class="{% if all_selected %}btn btn-sm btn-info rounded-pill{% else %}badge badge-pill badge-light border text-dark{% endif %} mr-2 mb-2" style="cursor:pointer; {% if not all_selected %}color:#000;{% endif %}">Todos</span>
+                <button id="btn-apply" class="btn btn-primary ml-2">Atualizar</button>
+            </div>
         </div>
     </div>
 
@@ -65,7 +77,7 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0">
+                        <table class="table table-striped table-hover mb-0" style="color: #000;">
                             <thead class="thead-dark">
                                 <tr>
                                     <th>Posição</th>
@@ -73,8 +85,6 @@
                                     <th>Nome</th>
                                     <th>Partido</th>
                                     <th>Pontos</th>
-                                    <th>Votações Comparadas</th>
-                                    <th>Compatibilidade</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
@@ -102,29 +112,10 @@
                                         <a href="https://www.camara.leg.br/deputados/{{ congressman.id_cadastro }}" target="deputado"><strong>{{ congressman.nome }}</strong></a>
                                     </td>
                                     <td>
-                                        <span class="badge badge-primary">{{ congressman.partido }}</span>
+                                        <span class="text-dark">{{ congressman.partido }}</span>
                                     </td>
                                     <td>
-                                        <span class="badge badge-success">{{ congressman.total_score }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="text-muted">{{ congressman.total_votes_compared }}</span>
-                                    </td>
-                                    <td>
-                                        {% if congressman.total_votes_compared > 0 %}
-                                            {% widthratio congressman.total_score congressman.total_votes_compared 100 as compatibility %}
-                                            <div class="progress" style="height: 20px;">
-                                                <div class="progress-bar 
-                                                    {% if compatibility >= 80 %}bg-success
-                                                    {% elif compatibility >= 60 %}bg-warning
-                                                    {% else %}bg-danger{% endif %}" 
-                                                    style="width: {{ compatibility }}%">
-                                                    {{ compatibility }}%
-                                                </div>
-                                            </div>
-                                        {% else %}
-                                            <span class="text-muted">N/A</span>
-                                        {% endif %}
+                                        <span class="text-dark">{{ congressman.total_score }}</span>
                                     </td>
                                     <td>
                                         <a href="{% url 'voting:congressman_detail' congressman_id=congressman.id_cadastro %}" 
@@ -142,47 +133,18 @@
         </div>
     </div>
 
-    <!-- Pagination -->
-    {% if is_paginated %}
-    <div class="row mt-4">
-        <div class="col-12">
-            <nav aria-label="Navegação do ranking">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1&uf={{ user_uf }}">Primeira</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&uf={{ user_uf }}">Anterior</a>
-                        </li>
-                    {% endif %}
-
-                    <li class="page-item active">
-                        <span class="page-link">
-                            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-                        </span>
-                    </li>
-
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}&uf={{ user_uf }}">Próxima</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&uf={{ user_uf }}">Última</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
-    </div>
-    {% endif %}
+    {# Pagination removed: showing all items as requested #}
 
     {% else %}
     <div class="row">
         <div class="col-12">
             <div class="alert alert-warning text-center">
                 <h4>Nenhum congressista encontrado</h4>
-                <p>Não encontramos congressistas do estado {{ user_uf }} que tenham votado nas mesmas proposições que você.</p>
+                {% if all_selected %}
+                    <p>Não encontramos congressistas que tenham votado nas mesmas proposições que você.</p>
+                {% else %}
+                    <p>Não encontramos congressistas dos estados selecionados ({{ selected_ufs|join:", " }}) que tenham votado nas mesmas proposições que você.</p>
+                {% endif %}
                 <p>Isso pode acontecer se:</p>
                 <ul class="text-left" style="display: inline-block;">
                     <li>Você ainda não votou em nenhuma proposição</li>
@@ -198,6 +160,103 @@
     {% endif %}
 
     {% endif %}
+
+    <!-- Simple JS to handle badge selection and update navigation -->
+    <script>
+        // Utility: read the initial selection from template variables
+        const initialSelected = [{% for uf in selected_ufs %}'{{ uf }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+        // Django templates do not support Python-style ternary; use an if-tag
+        const isAllSelected = {% if all_selected %}true{% else %}false{% endif %};
+
+        // Shared state for both initial prompt and header selector
+        let selected = new Set(initialSelected);
+        let allSel = isAllSelected;
+
+        // Helper to refresh badge styles based on state
+        function refreshStyles(containerId, allBadgeId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.querySelectorAll('.uf-badge').forEach(badge => {
+                const uf = badge.getAttribute('data-uf');
+                const selectedNow = allSel || selected.has(uf);
+                // Reset classes for both selected and unselected states
+                badge.classList.remove('badge','badge-pill','badge-light','border','text-dark','btn','btn-sm','btn-primary','rounded-pill');
+                if (selectedNow) {
+                    // Selected: look like a button
+                    badge.classList.add('btn','btn-sm','btn-primary','rounded-pill');
+                    badge.style.color = '';
+                } else {
+                    // Unselected: black text badge
+                    badge.classList.add('badge','badge-pill','badge-light','border','text-dark');
+                    badge.style.color = '#000';
+                }
+            });
+            const allBadge = document.getElementById(allBadgeId);
+            if (allBadge) {
+                allBadge.classList.remove('badge','badge-pill','badge-light','border','text-dark','btn','btn-sm','btn-info','rounded-pill');
+                if (allSel) {
+                    allBadge.classList.add('btn','btn-sm','btn-info','rounded-pill');
+                    allBadge.style.color = '';
+                } else {
+                    allBadge.classList.add('badge','badge-pill','badge-light','border','text-dark');
+                    allBadge.style.color = '#000';
+                }
+            }
+        }
+
+        // Attach handlers for a given container
+        function wireUp(containerId, allBadgeId, applyBtnId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            // Toggle individual UF
+            container.querySelectorAll('.uf-badge').forEach(badge => {
+                badge.addEventListener('click', () => {
+                    const uf = badge.getAttribute('data-uf');
+                    if (selected.has(uf)) {
+                        selected.delete(uf);
+                    } else {
+                        selected.add(uf);
+                    }
+                    // Turning off "Todos" if a specific toggle happens
+                    allSel = false;
+                    refreshStyles(containerId, allBadgeId);
+                });
+            });
+            // Toggle "Todos"
+            const allBadge = document.getElementById(allBadgeId);
+            if (allBadge) {
+                allBadge.addEventListener('click', () => {
+                    allSel = !allSel;
+                    if (allSel) {
+                        // When selecting all, ensure all UFs are marked selected visually
+                        selected = new Set();
+                    }
+                    refreshStyles(containerId, allBadgeId);
+                });
+            }
+            // Apply selection and reload page
+            const applyBtn = document.getElementById(applyBtnId);
+            if (applyBtn) {
+                applyBtn.addEventListener('click', () => {
+                    const basePath = window.location.pathname;
+                    let parts = [];
+                    if (allSel) {
+                        parts.push('all=1');
+                    } else {
+                        selected.forEach(uf => parts.push(`ufs=${encodeURIComponent(uf)}`));
+                    }
+                    const qs = parts.join('&');
+                    const url = qs ? `${basePath}?${qs}` : basePath;
+                    window.location.href = url;
+                });
+            }
+            refreshStyles(containerId, allBadgeId);
+        }
+
+        // Wire both the initial prompt and the header selector (if present)
+        wireUp('uf-badges', 'uf-badge-all', 'btn-apply');
+        wireUp('uf-badges-initial', 'uf-badge-all-initial', 'btn-apply-initial');
+    </script>
 
     <!-- Information section -->
     <div class="row mt-5">

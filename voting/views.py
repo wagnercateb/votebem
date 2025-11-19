@@ -224,37 +224,115 @@ class RankingView(ListView):
         return context
 
 class PersonalizedRankingView(LoginRequiredMixin, ListView):
-    """Personalized ranking view equivalent to vb14_RankingPersonalizado.php"""
+    """
+    Personalized ranking view equivalent to vb14_RankingPersonalizado.php
+
+    Enhancements:
+    - Persist selected UFs in a cookie so users don't need to select every visit
+    - Allow selecting multiple UFs and support a "select all states" option
+    """
     model = Congressman
     template_name = 'voting/ranking_personalizado.html'
     context_object_name = 'congressmen_ranking'
-    paginate_by = 20
-    
-    def get_queryset(self):
-        user = self.request.user
-        user_uf = None
-        
-        # Get user's UF from profile or session
+    # Disable pagination to show all results as requested
+    paginate_by = None
+
+    # Valid Brazilian UFs list used for selection and validation
+    AVAILABLE_UFS = [
+        'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
+        'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
+        'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+    ]
+
+    # Cookie name to store ranking UF selection
+    COOKIE_NAME = 'ranking_ufs'
+    COOKIE_MAX_AGE = 60 * 60 * 24 * 180  # 180 days
+
+    def _resolve_selection(self, request):
+        """
+        Compute the selected UFs and whether "all" is selected, using this priority:
+        1) Explicit GET params: multi-select 'ufs' and/or 'all=1'
+        2) Cookie 'ranking_ufs': 'ALL' or comma-separated UFs
+        3) User profile UF as a single default
+
+        Returns (selected_ufs_list, all_selected_bool, should_set_cookie_bool)
+        """
+        # Read GET params
+        raw_ufs = request.GET.getlist('ufs')
+        single_uf = request.GET.get('uf')  # backward-compat single UF
+        all_param = request.GET.get('all')
+
+        # Normalize and validate UFs from GET
+        selected_from_get = set()
+        if single_uf:
+            selected_from_get.add(single_uf.strip().upper())
+        for uf in raw_ufs:
+            selected_from_get.add(uf.strip().upper())
+        selected_from_get = [uf for uf in selected_from_get if uf in self.AVAILABLE_UFS]
+
+        # Determine if GET indicates 'all'
+        all_selected_get = bool(all_param) and str(all_param) not in ('0', 'false', 'False')
+
+        # If GET provided selection, we will set the cookie
+        if all_selected_get or selected_from_get:
+            return selected_from_get, all_selected_get, True
+
+        # Otherwise, try cookie
+        cookie_val = request.COOKIES.get(self.COOKIE_NAME)
+        if cookie_val:
+            if cookie_val.upper() == 'ALL':
+                return [], True, False
+            try:
+                cookie_ufs = [uf.strip().upper() for uf in cookie_val.split(',') if uf.strip()]
+                cookie_ufs = [uf for uf in cookie_ufs if uf in self.AVAILABLE_UFS]
+                if cookie_ufs:
+                    return cookie_ufs, False, False
+            except Exception:
+                # Ignore malformed cookie and fall back to profile
+                pass
+
+        # Fallback to user profile UF
         try:
-            user_profile = UserProfile.objects.get(user=user)
-            user_uf = user_profile.uf
+            profile = UserProfile.objects.get(user=request.user)
+            if profile.uf in self.AVAILABLE_UFS:
+                return [profile.uf], False, False
         except UserProfile.DoesNotExist:
             pass
-        
-        # If no UF in profile, try to get from GET parameter
-        if not user_uf:
-            user_uf = self.request.GET.get('uf')
-        
-        if not user_uf:
+
+        # No selection available
+        return [], False, False
+
+    def get(self, request, *args, **kwargs):
+        """Compute selection upfront and persist to cookie when explicitly provided."""
+        self.selected_ufs, self.all_selected, self.should_set_cookie = self._resolve_selection(request)
+        response = super().get(request, *args, **kwargs)
+
+        # Persist selection when provided via GET
+        if self.should_set_cookie:
+            cookie_value = 'ALL' if self.all_selected else ','.join(self.selected_ufs)
+            response.set_cookie(
+                self.COOKIE_NAME,
+                cookie_value,
+                max_age=self.COOKIE_MAX_AGE,
+                samesite='Lax'
+            )
+        return response
+
+    def get_queryset(self):
+        """Filter congressmen by selected UFs, or all if requested; annotate scores."""
+        user = self.request.user
+
+        # No selection -> empty queryset until user chooses
+        if not self.all_selected and not self.selected_ufs:
             return Congressman.objects.none()
-        
-        # Get congressmen from user's state with their scores
-        # This query calculates the score based on how often the congressman voted
-        # the same way as the user on the same propositions
-        queryset = Congressman.objects.filter(uf=user_uf, ativo=True)
-        
-        # Annotate with score calculation
-        queryset = queryset.annotate(
+
+        # Base queryset: either all active or active from selected UFs
+        base_qs = Congressman.objects.filter(ativo=True)
+        if not self.all_selected:
+            base_qs = base_qs.filter(uf__in=self.selected_ufs)
+
+        # Annotate with compatibility score and compared votes
+        queryset = base_qs.annotate(
             total_score=Coalesce(
                 Sum(
                     Case(
@@ -290,31 +368,29 @@ class PersonalizedRankingView(LoginRequiredMixin, ListView):
                 filter=Q(congressmanvote__proposicao_votacao__votacaovotebem__voto__user=user)
             )
         ).filter(total_votes_compared__gt=0).order_by('-total_score', 'nome')
-        
+
         return queryset
-    
+
     def get_context_data(self, **kwargs):
+        """Expose selection and helper values for the template UI and pagination."""
         context = super().get_context_data(**kwargs)
-        
-        # Get user's UF
-        user_uf = None
-        try:
-            user_profile = UserProfile.objects.get(user=self.request.user)
-            user_uf = user_profile.uf
-        except UserProfile.DoesNotExist:
-            pass
-        
-        if not user_uf:
-            user_uf = self.request.GET.get('uf')
-        
-        context['user_uf'] = user_uf
-        context['available_ufs'] = [
-            'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
-            'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
-            'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
-        ]
-        
+
+        # Selection info
+        context['available_ufs'] = self.AVAILABLE_UFS
+        context['selected_ufs'] = self.selected_ufs
+        context['all_selected'] = self.all_selected
+
+        # Build query string to preserve selection across pagination links
+        # Build query preserving selection (no pagination parameters)
+        query_parts = []
+        if self.all_selected:
+            query_parts.append('all=1')
+        elif self.selected_ufs:
+            query_parts.extend([f"ufs={uf}" for uf in self.selected_ufs])
+        context['current_query'] = '&'.join(query_parts)
+
         return context
+    # No get_paginate_by override needed (pagination disabled)
 
 class CongressmanDetailView(LoginRequiredMixin, DetailView):
     """Congressman detail view equivalent to vb16_DetalheRanking.php"""
@@ -325,7 +401,12 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
     
     def get_object(self):
         congressman_id = self.kwargs.get('congressman_id')
-        return get_object_or_404(Congressman, id_cadastro=congressman_id)
+        # Buscar por id_cadastro (ID oficial da Câmara) ou por PK local
+        # Isso evita 404 quando o usuário usa um ID diferente do esperado
+        return get_object_or_404(
+            Congressman,
+            Q(id_cadastro=congressman_id) | Q(pk=congressman_id)
+        )
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -359,8 +440,11 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
                 
                 voting_details.append({
                     'titulo': user_vote.votacao.titulo,
-    'ementa': user_vote.votacao.proposicao_votacao.proposicao.ementa,
-    'id_proposicao': user_vote.votacao.proposicao_votacao.proposicao.id_proposicao,
+                    # Adiciona resumo e id da VotacaoVoteBem para link local
+                    'resumo': getattr(user_vote.votacao, 'resumo', ''),
+                    'votacao_id': user_vote.votacao.id,
+                    'ementa': user_vote.votacao.proposicao_votacao.proposicao.ementa,
+                    'id_proposicao': user_vote.votacao.proposicao_votacao.proposicao.id_proposicao,
                     'data_votacao': user_vote.votacao.data_hora_votacao,
                     'voto_congressman': congressman_vote.get_voto_display_text(),
                     'voto_user': user_vote.get_voto_display(),
@@ -375,6 +459,18 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
         
         context['voting_details'] = voting_details
         context['total_accumulated_points'] = accumulated_points
+        # Total de votações comparadas (denominador para compatibilidade)
+        context['total_votacoes_comparadas'] = len(voting_details)
+        # Compatibilidade: acumulado / total comparações * 100, limitado a 100%
+        try:
+            total = context['total_votacoes_comparadas']
+            if total > 0:
+                pct = int(round((accumulated_points * 100.0) / total))
+                context['compatibility_pct'] = min(100, pct)
+            else:
+                context['compatibility_pct'] = 0
+        except Exception:
+            context['compatibility_pct'] = 0
         context['congressman_photo_url'] = congressman.get_foto_url()
         
         return context
