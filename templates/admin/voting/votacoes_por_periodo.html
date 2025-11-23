@@ -15,7 +15,7 @@
     <h1 id="final-msg" class="mt-2" style="display:none;"></h1>
   </div>
   <div class="card-body">
-    <p class="text-muted">Informe as datas para buscar votações do órgão `idOrgao=180`. Ao informar a data inicial, a data final será preenchida com +90 dias automaticamente. <b>A API da Câmara dá erro se especificar mais de 3 meses.</b></p>
+    <p class="text-muted">Informe as datas para buscar votações do órgão `idOrgao=180`. Ao informar a data inicial, a data final será preenchida com +88 dias automaticamente. <b>A API da Câmara dá erro se especificar mais de 3 meses.</b></p>
     <form id="form-periodo" class="row g-3" onsubmit="return false;">
       <div class="col-sm-4">
         <label for="datainicio" class="form-label">Data início</label>
@@ -24,7 +24,7 @@
       <div class="col-sm-4">
         <label for="datafim" class="form-label">Data fim</label>
         <input type="date" class="form-control" id="datafim" name="datafim" value="{{ default_fim }}" required>
-        <div class="form-text">Por padrão, será preenchido com início + 90 dias.</div>
+        <div class="form-text">Por padrão, será preenchido com início + 88 dias.</div>
       </div>
       <div class="col-sm-4 d-flex align-items-end">
         <button id="btn-consultar" type="button" class="btn btn-primary">Consultar votações</button>
@@ -78,7 +78,7 @@
   if (inpInicio) {
     inpInicio.addEventListener('change', () => {
       if (!inpFim.value) {
-        const auto = addDaysISO(inpInicio.value, 90);
+        const auto = addDaysISO(inpInicio.value, 88);
         if (auto) inpFim.value = auto;
       }
     });
@@ -140,9 +140,11 @@
   }
 
   function shouldImportByDescricao(desc) {
+    //Aqui é só exibição. Para definir critérios de importação de votações,
+    //  altere o step 2 da função votacao_obter_votacao no arquivo admin_views.py.
     const d = (desc || '').toLowerCase();
-    return (d.includes('aprovad') || d.includes('rejeitad')) &&
-           (d.includes('turno') || d.includes('emenda')) &&
+    return ( d.includes('aprovad') || d.includes('rejeitad') ) &&
+           ( d.includes('turno') || d.includes('emenda') || d.includes('projeto') ) &&
            d.includes('total') &&
            !d.includes('requerimento');
   }

@@ -49,7 +49,7 @@
             <select id="proposicao_votacao_id" name="proposicao_votacao_id" class="form-select" style="width:100%;" required>
                 <option value="">Selecione...</option>
                 {% for pv in prefill.pv_candidates %}
-                    <option value="{{ pv.id }}">{{ pv.votacao_sufixo }} — {{ pv.descricao|default:"(sem descrição)" }}</option>
+                    <option value="{{ pv.id }}" {% if prefill.selected_pv_id and pv.id == prefill.selected_pv_id %}selected{% endif %}>{{ pv.votacao_sufixo }} — {{ pv.descricao|default:"(sem descrição)" }}</option>
                 {% endfor %}
             </select>
             <small class="text-muted">Registros em voting_proposicaovotacao ainda sem Votação Disponível ligada.</small>
@@ -189,6 +189,10 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.style.display = pvSelect.value ? 'inline-block' : 'none';
         };
         toggleButton();
+        // If preselected via GET (consulta_id), ensure button is visible
+        if (pvSelect.value) {
+            submitBtn.style.display = 'inline-block';
+        }
         pvSelect.addEventListener('change', toggleButton);
     }
 });

@@ -202,8 +202,12 @@
         {% for votacao in votacoes %}
         <div class="votacao-item">
             <div class="votacao-info">
-                <h4>{{ votacao.titulo }}</h4>
-                 <small>Proposição: {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }} — {{ votacao.proposicao_votacao.proposicao.titulo|default:"(sem título)" }}</small><br>
+                <h4>
+                    <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao_id }}" target="_proposicao">{{ votacao.proposicao_votacao.proposicao_id }}</a> - 
+                    {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }} - 
+                    {{ votacao.titulo }}
+                </h4>
+                 <small>Proposição: {{ votacao.proposicao_votacao.proposicao.titulo|default:"(sem título)" }}</small><br>
                 <small>Criada em: {{ votacao.created_at|date:"d/m/Y H:i" }}</small>
             </div>
             <div class="votacao-actions">

@@ -1,0 +1,404 @@
+{% extends 'admin/voting/base_administrativo.html' %}
+
+{% comment %}
+Tela administrativa: lista entradas de `voting_proposicaovotacao` (ProposicaoVotacao)
+com contagem de registros relacionados em `voting_congressmanvote` (CongressmanVote).
+
+Cada linha representa uma votação oficial associada a uma proposição e exibe:
+- Identificação da proposição (tipo, número/ano) e título
+- Sufixo da votação (`votacao_sufixo`)
+- Data/Hora de registro da votação (`data_votacao`), quando disponível
+- Descrição da votação
+- Contagem de votos individuais oficiais (CongressmanVote) relacionados
+
+Observação: esta é uma listagem de leitura focada em inspeção rápida dos dados
+obtidos de votações oficiais. A edição é realizada via Django Admin ou telas específicas.
+{% endcomment %}
+
+{% block title %}Votações oficiais obtidas - Painel Administrativo{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/gerencial/dashboard/">Dashboard</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Votações oficiais obtidas</li>
+  </ol>
+  <div class="mb-2">
+    <a href="/gerencial/dashboard/" class="btn btn-secondary">Voltar ao Dashboard</a>
+    <form method="post" style="display: inline; margin-left: 8px;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="loopObterVotacoes">
+      <button type="submit" class="btn btn-primary" title="Insere votações em voting_proposicaovotacao para proposições de voting_proposicao, do ano informado, que ainda NÃO possuem votos em CongressmanVote" data-bs-toggle="tooltip" data-bs-placement="top" style="vertical-align: middle;">
+        <span class="icon">🔄</span> Obter Votações no Ano:
+      </button>
+      <input type="number" id="anoVotacaoInline" name="anoVotacao" min="1900" max="2100" value="{{ current_year }}" class="form-control" style="width: 90px; display: inline-block; vertical-align: middle;" title="Filtra por proposições do ano informado. O loop ignora qualquer votação oficial que já tenha votos individuais registrados." data-bs-toggle="tooltip" data-bs-placement="top" aria-label="Filtra por proposições do ano informado. O loop ignora qualquer votação oficial que já tenha votos individuais registrados.">
+    </form>
+  </div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <h2>Votações oficiais obtidas</h2>
+    <p class="text-muted">
+      Lista gerada a partir da tabela <code>voting_proposicaovotacao</code> com a contagem de
+      votos individuais oficiais (<code>voting_congressmanvote</code>) associados a cada votação.
+    </p>
+
+    <!-- Barra de controles (topo): filtro por múltiplas palavras e tamanho da página (client-side)
+         - O filtro aceita várias palavras separadas por espaço e busca em TODO o conteúdo textual da linha
+         - O controle de tamanho de página redefine a paginação CLIENT-SIDE desta tabela renderizada -->
+    <div class="d-flex align-items-center gap-2 mb-2" id="vb-top-controls">
+
+      <label for="vb-filter" class="form-label mb-0">Filtro:</label>
+      <input id="vb-filter" type="text" class="form-control" style="max-width: 280px;" placeholder="Ex.: urgência 2025 rejeitado">
+
+      <label for="vb-page-size" class="form-label mb-0" style="margin-left: 12px;">Linhas por página:</label>
+      <select id="vb-page-size" class="form-select" style="max-width: 120px;">
+        <option value="10">10</option>
+        <option value="20" selected>20</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="0">Todas</option>
+      </select>
+
+      <nav aria-label="Página de resultados" class="mt-3" id="vb-pagination-nav">
+        <ul class="pagination" id="vb-pagination">
+          {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a></li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+          {% endif %}
+
+          <li class="page-item active"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+
+          {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a></li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Próxima</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    
+    </div>
+
+
+    <div class="table-responsive">
+      <table class="table table-striped table-hover" id="vb-votacoes-table">
+        <thead>
+          <tr>
+            <th>#id</th>
+            <th>Proposição</th>
+            <th>Votebem</th>
+            <th>Data/Hora registro</th>
+            <th>Descrição</th>
+            <th>Votos individuais oficiais</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pv in page_obj %}
+          <tr>
+            <td>{{ pv.id }}</td>
+            <td>
+              {% if pv.proposicao %}
+                <strong>{{ pv.proposicao.tipo }} {{ pv.proposicao.numero }}/{{ pv.proposicao.ano }}</strong><br>
+                {% with vb=pv.votacaovotebem.all|first %}
+                  {% if vb %}
+                    <small>{{ vb.titulo }}</small>
+                  {% endif %}
+                {% endwith %}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {# Coluna "Votebem": link para editar a VotacaoVoteBem existente; se não existir, oferece criação #}
+              {% with vb=pv.votacaovotebem.all|first %}
+                {% if vb %}
+                  <a href="{% url 'gerencial:votacao_edit' pk=vb.id %}">Editar Votebem #{{ vb.id }}</a>
+                {% elif pv.congressman_votes_count == 0 %}
+                  {# Link de criação pré-preenchida: mantém navegação para criar Votebem e pré-seleciona a votação oficial #}
+                  <a href="{% url 'gerencial:votacao_create' %}?proposicao_id={{ pv.proposicao.id_proposicao }}&consulta_id={{ pv.proposicao.id_proposicao }}-{{ pv.votacao_sufixo }}">Criar p/ sufixo {{pv.votacao_sufixo}} </a>
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td>
+              {% if pv.data_votacao %}
+                {{ pv.data_votacao|date:"d/m/Y H:i" }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>{{ pv.descricao|default:"(sem descrição)" }}</td>
+            <td>
+              <!-- 
+                Coluna "Votos individuais oficiais":
+                - Se a contagem for maior que zero, apenas exibe o número.
+                - Se for zero, oferece um botão para importar diretamente os votos oficiais
+                  para esta votação, chamando o mesmo endpoint utilizado na página /gerencial/.
+                - O botão envia (proposicao_id, consulta_id) onde consulta_id é o sufixo da votação,
+                  resultando em uma chamada à API da Câmara no formato
+                  https://dadosabertos.camara.leg.br/api/v2/votacoes/<proposicao_id>-<sufixo>/votos
+              -->
+              {% if pv.congressman_votes_count|default:0 %}
+                {{ pv.congressman_votes_count|default:0 }}
+              {% else %}
+                <span class="text-muted">0</span>
+                <button type="button"
+                        class="btn btn-sm btn-success vb-btn-import-votos"
+                        data-proposicao-id="{{ pv.proposicao.id_proposicao }}"
+                        data-consulta-sufixo="{{ pv.votacao_sufixo }}"
+                        title="Importar votos oficiais desta votação">
+                  Carregar votos oficiais
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted">Nenhuma votação oficial encontrada.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+
+  </div>
+ </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // --- Filtro e paginação client-side para a tabela de votações oficiais ---
+  (function(){
+    // Elementos principais
+    const table = document.getElementById('vb-votacoes-table');
+    const tbody = table ? table.querySelector('tbody') : null;
+    const filterInput = document.getElementById('vb-filter');
+    const pageSizeSel = document.getElementById('vb-page-size');
+    const pagUl = document.getElementById('vb-pagination');
+    const pagNav = document.getElementById('vb-pagination-nav');
+
+    // Estado em memória
+    let allRows = [];
+    let filteredRows = [];
+    let currentPage = 1;
+    let pageSize = 20; // padrão
+
+    // --- Util: extrai o texto concatenado de uma linha, em minúsculas
+    function rowTextLower(tr) {
+      // Concatena texto dos nós descendentes para capturar todo conteúdo visível
+      return (tr.textContent || '').toLowerCase();
+    }
+
+    // --- Aplica filtro multi-palavra sobre o texto completo da linha
+    function applyFilter() {
+      const query = (filterInput && filterInput.value ? filterInput.value : '').toLowerCase().trim();
+      const tokens = query.split(/\s+/).filter(Boolean);
+      if (tokens.length === 0) {
+        filteredRows = allRows.slice();
+      } else {
+        filteredRows = allRows.filter(tr => {
+          const txt = rowTextLower(tr);
+          // Mantém a linha apenas se TODAS as palavras forem encontradas em algum lugar da linha
+          return tokens.every(t => txt.includes(t));
+        });
+      }
+      // Após filtrar, volte para a primeira página
+      currentPage = 1;
+      render();
+    }
+
+    // --- Renderiza linhas conforme página e atualiza paginação (li/span/a)
+    function render() {
+      if (!tbody) return;
+      // Oculta todas as linhas inicialmente
+      allRows.forEach(tr => { tr.style.display = 'none'; });
+
+      // Se pageSize = 0 => "Todas"
+      const ps = Number(pageSize) || 0;
+      const total = filteredRows.length;
+      const totalPages = ps > 0 ? Math.max(1, Math.ceil(total / ps)) : 1;
+      // Corrige currentPage dentro do intervalo
+      if (currentPage < 1) currentPage = 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      let startIdx = 0;
+      let endIdx = total; // exclusivo
+      if (ps > 0) {
+        startIdx = (currentPage - 1) * ps;
+        endIdx = Math.min(startIdx + ps, total);
+      }
+
+      // Exibe apenas o intervalo da página atual
+      for (let i = startIdx; i < endIdx; i++) {
+        const tr = filteredRows[i];
+        if (tr) tr.style.display = '';
+      }
+
+      // Atualiza UI de paginação
+      updatePaginationUI(totalPages);
+    }
+
+    // --- Constrói/atualiza itens de paginação com li/span/a
+    function updatePaginationUI(totalPages) {
+      if (!pagUl) return;
+      // Limpa paginação atual (substitui pela client-side)
+      pagUl.innerHTML = '';
+
+      // Botão "Anterior"
+      const prevLi = document.createElement('li');
+      prevLi.className = 'page-item' + (currentPage > 1 ? '' : ' disabled');
+      const prevA = document.createElement(currentPage > 1 ? 'a' : 'span');
+      prevA.className = 'page-link';
+      prevA.textContent = 'Anterior';
+      if (currentPage > 1) {
+        prevA.href = '#';
+        prevA.addEventListener('click', function(ev){ ev.preventDefault(); currentPage--; render(); });
+      }
+      prevLi.appendChild(prevA);
+      pagUl.appendChild(prevLi);
+
+      // Indicador "Página X de Y"
+      const midLi = document.createElement('li');
+      midLi.className = 'page-item active';
+      const midSpan = document.createElement('span');
+      midSpan.className = 'page-link';
+      midSpan.textContent = 'Página ' + currentPage + ' de ' + totalPages;
+      midLi.appendChild(midSpan);
+      pagUl.appendChild(midLi);
+
+      // Botão "Próxima"
+      const nextLi = document.createElement('li');
+      nextLi.className = 'page-item' + (currentPage < totalPages ? '' : ' disabled');
+      const nextA = document.createElement(currentPage < totalPages ? 'a' : 'span');
+      nextA.className = 'page-link';
+      nextA.textContent = 'Próxima';
+      if (currentPage < totalPages) {
+        nextA.href = '#';
+        nextA.addEventListener('click', function(ev){ ev.preventDefault(); currentPage++; render(); });
+      }
+      nextLi.appendChild(nextA);
+      pagUl.appendChild(nextLi);
+    }
+
+    // --- Inicialização: coleta linhas e liga eventos
+    function init() {
+      if (!tbody) return;
+      // Coleta todas as TRs atuais (linhas renderizadas pelo servidor)
+      allRows = Array.from(tbody.querySelectorAll('tr'));
+      filteredRows = allRows.slice();
+
+      // Define tamanho de página inicial a partir do seletor (ou padrão)
+      if (pageSizeSel) {
+        pageSize = Number(pageSizeSel.value) || 20;
+        pageSizeSel.addEventListener('change', function(){
+          pageSize = Number(pageSizeSel.value) || 0; // 0 => Todas
+          currentPage = 1;
+          render();
+        });
+      }
+
+      // Liga filtro incremental (input/change)
+      if (filterInput) {
+        filterInput.addEventListener('input', applyFilter);
+        filterInput.addEventListener('change', applyFilter);
+      }
+
+      // Primeira renderização
+      render();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  })();
+
+  // --- Importação de votos oficiais (mesma ação do botão em /gerencial/) ---
+  (function(){
+    // Este bloco adiciona comportamento ao botão "Carregar votos oficiais" exibido
+    // apenas quando a contagem de votos oficiais individuais é zero.
+    // A ação dispara uma requisição GET para o endpoint interno:
+    //   /gerencial/ajax/import-congress-votes/?proposicao_id=...&consulta_id=...
+    // O backend utiliza estes parâmetros para consultar a API da Câmara em:
+    //   https://dadosabertos.camara.leg.br/api/v2/votacoes/<proposicao_id>-<sufixo>/votos
+    // Após concluir, recarregamos a página para refletir a contagem atualizada.
+
+    // Utilitário: Alterna estado de carregamento usando o próprio botão
+    // - Altera o texto para "Importando..." e desabilita para evitar cliques repetidos
+    // - Restaura texto original e habilita em caso de erro
+    function setLoading(btn, isLoading) {
+      if (!btn) return;
+      if (isLoading) {
+        if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent || 'Carregar votos oficiais';
+        btn.textContent = 'Importando...';
+        btn.disabled = true;
+      } else {
+        const orig = btn.dataset.originalText || 'Carregar votos oficiais';
+        btn.textContent = orig;
+        btn.disabled = false;
+      }
+    }
+
+    function bindImportButtons() {
+      const buttons = document.querySelectorAll('.vb-btn-import-votos');
+      buttons.forEach(function(btn){
+        btn.addEventListener('click', function(ev){
+          ev.preventDefault();
+          // Extrai parâmetros necessários da linha atual
+          const propId = btn.getAttribute('data-proposicao-id') || '';
+          const sufixo = btn.getAttribute('data-consulta-sufixo') || '';
+          if (!propId || !sufixo) {
+            alert('Parâmetros faltando: verifique proposicao_id e sufixo da votação.');
+            return;
+          }
+          // Ativa estado de carregamento no botão
+          setLoading(btn, true);
+
+          // Monta URL interna que dispara a importação (mesmo endpoint usado em /gerencial/)
+          const url = `${window.location.origin}/gerencial/ajax/import-congress-votes/?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(sufixo)}`;
+
+          // Opcional: log para depuração, incluindo a URL pública da Câmara
+          // Exemplo de voto: https://dadosabertos.camara.leg.br/api/v2/votacoes/1197773-140/votos
+          console.debug('Importando votos oficiais via:', url,
+                        'API Câmara:', `https://dadosabertos.camara.leg.br/api/v2/votacoes/${propId}-${sufixo}/votos`);
+
+          fetch(url, { headers: { 'Accept': 'application/json' } })
+            .then(r => r.json().then(j => ({ ok: r.ok, status: r.status, body: j })))
+            .then(resp => {
+              if (!resp.ok || !resp.body?.ok) {
+                const apiUrl = resp.body?.api_url || '';
+                setLoading(btn, false);
+                alert('Erro ao importar votos.' + (apiUrl ? `\nURL: ${apiUrl}` : ''));
+                return;
+              }
+              // Sucesso: recarrega a página para atualizar a contagem no servidor
+              window.location.reload();
+            })
+            .catch(function(e){
+              setLoading(btn, false);
+              alert('Falha de rede ao importar votos. Tente novamente.');
+            });
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', bindImportButtons);
+  })();
+</script>
+<script>
+  // Inicializa tooltips do Bootstrap para todos os elementos com data-bs-toggle="tooltip"
+  // Mantém comportamento nativo de "title" como fallback caso Bootstrap não esteja disponível.
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.forEach(function (el) {
+        if (window.bootstrap && bootstrap.Tooltip) {
+          new bootstrap.Tooltip(el);
+        }
+      });
+    } catch (e) {
+      // Se Bootstrap JS não estiver carregado, o tooltip nativo (title) ainda funciona.
+    }
+  });
+</script>
+{% endblock %}

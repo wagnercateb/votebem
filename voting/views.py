@@ -40,6 +40,17 @@ class VotacoesDisponiveisView(ListView):
             context['user_votes'] = list(user_votes)
         else:
             context['user_votes'] = []
+
+        # Grouping helper flags for template rendering:
+        # Determine if the current page has any cards already voted by the user,
+        # so we can show the "Já votadas" subtitle only when applicable.
+        try:
+            current_items = list(context.get('page_obj').object_list) if context.get('page_obj') else list(context.get('votacoes', []))
+        except Exception:
+            current_items = list(context.get('votacoes', []))
+        voted_set = set(context['user_votes'])
+        context['has_voted_cards_on_page'] = any(getattr(item, 'id', None) in voted_set for item in current_items)
+        context['has_unvoted_cards_on_page'] = any(getattr(item, 'id', None) not in voted_set for item in current_items)
         return context
 
 
@@ -359,6 +370,13 @@ class PersonalizedRankingView(LoginRequiredMixin, ListView):
                             congressmanvote__voto=0,
                             then=F('congressmanvote__proposicao_votacao__votacaovotebem__voto__peso')
                         ),
+                        # Abstention-equivalence: treat congressman voto 4 as matching user abstention (0)
+                        When(
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__user=user,
+                            congressmanvote__proposicao_votacao__votacaovotebem__voto__voto=0,
+                            congressmanvote__voto=4,
+                            then=F('congressmanvote__proposicao_votacao__votacaovotebem__voto__peso')
+                        ),
                         default=0,
                         output_field=IntegerField()
                     )
@@ -454,7 +472,12 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
                 # If votes match, add the weight to the accumulated points; otherwise add 0
                 points = 0
                 try:
-                    if congressman_vote.voto is not None and user_vote.voto == congressman_vote.voto:
+                    # Ignore sentinel 2 ("Não Compareceu") when comparing congressman vs user vote
+                    # Only consider real votes (-1, 0, 1) when comparing; ignore dummy (2) and absence (3)
+                    # Abstention-equivalence: treat congressman voto 4 as abstention (0) for comparisons.
+                    if congressman_vote.voto in (-1, 0, 1) and user_vote.voto == congressman_vote.voto:
+                        points = peso_val
+                    elif congressman_vote.voto == 4 and user_vote.voto == 0:
                         points = peso_val
                 except Exception:
                     points = 0

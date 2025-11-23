@@ -11,6 +11,8 @@ class Proposicao(models.Model):
     tipo = models.CharField(max_length=50, verbose_name="Tipo")
     numero = models.IntegerField(verbose_name="Número")
     ano = models.IntegerField(verbose_name="Ano")
+    # Data de apresentação conforme API da Câmara (dataApresentacao)
+    data_apresentacao = models.DateField(blank=True, null=True, verbose_name="Data de Apresentação")
     autor = models.CharField(max_length=200, blank=True, null=True, verbose_name="Autor")
     estado = models.CharField(max_length=100, blank=True, null=True, verbose_name="Estado")
     url_foto1 = models.URLField(blank=True, null=True, verbose_name="URL Foto 1")
@@ -176,11 +178,20 @@ class Congressman(models.Model):
 
 class CongressmanVote(models.Model):
     """Model for congressman votes on propositions"""
+    # VOTO numeric codes for congressman votes
+    # -1: Não
+    #  0: Abstenção
+    #  1: Sim
+    #  2: Dummy (artificial record inserted when API returns valid JSON but zero votes)
+    #  3: Não Compareceu (absence / unknown from API, non-null sentinel)
+    #  4: Abstenção (Art. 17) — abstenção obrigatória do presidente, cadastrada como "Artigo 17" / "Art. 17"
     VOTO_CHOICES = [
         (1, 'Sim'),
         (-1, 'Não'),
         (0, 'Abstenção'),
-        (None, 'Não Compareceu'),
+        (2, 'Dummy'),
+        (3, 'Não Compareceu'),
+        (4, 'Abstenção (Art. 17)'),
     ]
     
     congressman = models.ForeignKey(Congressman, on_delete=models.CASCADE, verbose_name="Congressista")
@@ -192,7 +203,9 @@ class CongressmanVote(models.Model):
         null=True,
         verbose_name="Votação da Proposição"
     )
-    voto = models.IntegerField(choices=VOTO_CHOICES, blank=True, null=True, verbose_name="Voto")
+    # Enforce NOT NULL: absence is explicit sentinel 3.
+    # Default to 3 so records created without explicit vote are treated as "Não Compareceu".
+    voto = models.IntegerField(choices=VOTO_CHOICES, default=3, verbose_name="Voto")
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -202,7 +215,8 @@ class CongressmanVote(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        voto_display = self.get_voto_display() if self.voto is not None else "Não Compareceu"
+        # When voto == 3, represent as "Não Compareceu" consistently.
+        voto_display = self.get_voto_display() if self.voto != 3 else "Não Compareceu"
         try:
             titulo = self.proposicao_votacao.proposicao.titulo[:30]
         except Exception:
@@ -210,9 +224,11 @@ class CongressmanVote(models.Model):
         return f"{self.congressman.nome} - {voto_display} em {titulo}"
     
     def get_voto_display_text(self):
-        """Get human-readable vote display"""
-        if self.voto is None:
+        """Get human-readable vote display using explicit sentinel for absence (3) and dummy (2)."""
+        if self.voto == 3:
             return "Não compareceu"
+        elif self.voto == 2:
+            return "Dummy"
         elif self.voto == 0:
             return "Abstenção"
         elif self.voto == 1:

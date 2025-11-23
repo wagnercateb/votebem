@@ -32,13 +32,18 @@ class CamaraAPIService:
     
     def _make_request(self, endpoint: str, params: Dict = None) -> Optional[Dict]:
         """
-        Make a request to the Câmara API
+        Make a request to the Câmara API.
+
+        Enhanced error handling: when the API returns an HTTP error with a JSON
+        body containing a 'detail' field, this method extracts that detail and
+        includes it in the raised exception message. This ensures users see the
+        specific reason provided by the API (e.g., date range exceeding 3 months).
         """
         try:
             url = f"{self.BASE_URL}/{endpoint}"
             dev_log(f"DEBUG: Making request to {url} with params: {params}")
-            
-            # Add additional headers that might help with 403 errors
+
+            # Extra headers help mitigate occasional 403/anti-bot issues.
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Accept': 'application/json, text/plain, */*',
@@ -47,18 +52,42 @@ class CamaraAPIService:
                 'Connection': 'keep-alive',
                 'Referer': 'https://dadosabertos.camara.leg.br/',
             }
-            
+
             response = self.session.get(url, params=params, headers=headers, timeout=30)
             dev_log(f"DEBUG: Response status: {response.status_code}")
             dev_log(f"DEBUG: Response headers: {dict(response.headers)}")
-            
+
+            # Raise HTTPError for non-2xx before attempting to parse JSON.
             response.raise_for_status()
             return response.json()
+        except requests.exceptions.HTTPError as e:
+            # When the Câmara API returns an error with a JSON body, extract
+            # the 'detail' field to present a clearer message to the user.
+            api_detail = None
+            try:
+                if e.response is not None:
+                    # Attempt to parse JSON error response to find 'detail'
+                    err_json = e.response.json()
+                    api_detail = err_json.get('detail')
+            except Exception:
+                # If JSON parsing fails, we simply won't have 'detail'.
+                api_detail = None
+
+            base_msg = f"Erro na comunicação com a API da Câmara: {str(e)}"
+            # Append API-provided detail when available.
+            if api_detail:
+                base_msg = f"{base_msg}. Detalhe: {api_detail}"
+
+            dev_log(f"DEBUG: HTTPError captured. Message: {base_msg}")
+            logger.error(f"Error making request to {url}: {e}")
+            raise Exception(base_msg)
         except requests.exceptions.RequestException as e:
+            # Network/timeout/connection-level errors without HTTP status code.
             dev_log(f"DEBUG: Request error: {e}")
             logger.error(f"Error making request to {url}: {e}")
             raise Exception(f"Erro na comunicação com a API da Câmara: {str(e)}")
         except json.JSONDecodeError as e:
+            # Responses that claim to be JSON but can't be decoded.
             dev_log(f"DEBUG: JSON decode error: {e}")
             logger.error(f"Error decoding JSON response: {e}")
             raise Exception(f"Erro ao processar resposta da API: {str(e)}")
@@ -92,7 +121,7 @@ class CamaraAPIService:
             'ordem': ordem,
             'ordenarPor': ordenar_por,
             # Keep default behavior (100) for backward compatibility; allow override
-            'itens': itens_por_pagina if itens_por_pagina is not None else 100
+            # 'itens': itens_por_pagina if itens_por_pagina is not None else 100
         }
         
         all_proposicoes = []
@@ -202,7 +231,21 @@ class CamaraAPIService:
         detailed_data = self.get_proposicao_details(prop_data['id'])
         if detailed_data and 'dados' in detailed_data:
             prop_data.update(detailed_data['dados'])
-        
+
+        def _parse_data_apresentacao(value):
+            """Parse API date string (dataApresentacao) to date object or None.
+            Accepts formats like 'YYYY-MM-DD' or ISO strings; safely slices first 10 chars.
+            """
+            try:
+                if not value:
+                    return None
+                # Use only the date portion to avoid timezone issues
+                date_part = str(value)[:10]
+                from datetime import datetime
+                return datetime.strptime(date_part, '%Y-%m-%d').date()
+            except Exception:
+                return None
+
         # Extract fields
         proposicao_data = {
             'id_proposicao': prop_data['id'],
@@ -213,6 +256,7 @@ class CamaraAPIService:
             'ano': prop_data.get('ano', 0),
             'autor': self._extract_authors(prop_data.get('autores', [])),
             'estado': prop_data.get('statusProposicao', {}).get('descricaoSituacao', ''),
+            'data_apresentacao': _parse_data_apresentacao(prop_data.get('dataApresentacao')),
         }
         
         # Create or update proposition
@@ -338,6 +382,15 @@ class CamaraAPIService:
                 'titulo': titulo,
                 'resumo': resumo,
                 'data_hora_votacao': data_hora_votacao or timezone.now(),
+                # IMPORTANT FIX: `no_ar_desde` is NOT NULL on the model. When syncing
+                # historical/official votings from the Câmara API, these entries are
+                # meant for record-keeping and not public activation. Still, the DB
+                # requires a non-null `no_ar_desde`. We set it to the original
+                # `data_hora_votacao` when available, otherwise to `timezone.now()`
+                # to satisfy the constraint and avoid transaction rollback.
+                'no_ar_desde': (data_hora_votacao or timezone.now()),
+                # Keep them inactive for public voting; window checks use `no_ar_desde`
+                # and `no_ar_ate` but `is_active()` also requires `ativo=True`.
                 'ativo': False,  # API votings are historical, not active for public voting
             }
         )
@@ -453,7 +506,20 @@ class CamaraAPIService:
         detailed_data = self.get_proposicao_details(prop_data['id'])
         if detailed_data and 'dados' in detailed_data:
             prop_data.update(detailed_data['dados'])
-        
+
+        def _parse_data_apresentacao(value):
+            """Parse API date string (dataApresentacao) to date object or None.
+            Accepts formats like 'YYYY-MM-DD' or ISO strings; safely slices first 10 chars.
+            """
+            try:
+                if not value:
+                    return None
+                date_part = str(value)[:10]
+                from datetime import datetime
+                return datetime.strptime(date_part, '%Y-%m-%d').date()
+            except Exception:
+                return None
+
         # Extract fields
         proposicao_data = {
             'id_proposicao': prop_data['id'],
@@ -464,6 +530,7 @@ class CamaraAPIService:
             'ano': prop_data.get('ano', 0),
             'autor': self._extract_authors(prop_data.get('autores', [])),
             'estado': prop_data.get('statusProposicao', {}).get('descricaoSituacao', ''),
+            'data_apresentacao': _parse_data_apresentacao(prop_data.get('dataApresentacao')),
         }
         
         # Create or update proposition

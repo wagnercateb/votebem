@@ -283,15 +283,7 @@
 </style>
 
 <script>
-        function toggleTramitacaoForm() {
-            const form = document.getElementById('tramitacaoForm');
-            if (form.style.display === 'none' || form.style.display === '') {
-                form.style.display = 'block';
-                form.scrollIntoView({ behavior: 'smooth' });
-            } else {
-                form.style.display = 'none';
-            }
-        }
+
         // Toggle helper for showing/hiding sections by element id
         function toggleSection(sectionId) {
             const el = document.getElementById(sectionId);
@@ -313,67 +305,6 @@
 
 Só atualiza as proposições, não busca seus temas ou votações
 
-<!-- Tramitação Form Section -->
-<div id="tramitacaoForm" class="form-section" style="display: none;">
-    <div class="card">
-        <div class="card-header">
-            <h4><span class="icon">📅</span> Listar Proposições que Tramitaram entre Datas</h4>
-        </div>
-        <div class="card-body">
-            <form method="post" id="tramitacaoFormInner">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="listarProposicoesTramitacao">
-                
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="dataInicio">Data Início:</label>
-                            <!-- Native date input for consistent ISO value (yyyy-mm-dd) -->
-                            <input type="date" class="form-control" id="dataInicio" name="dataInicio" 
-                                   value="{{ default_data_inicio }}" required>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="dataFim">Data Fim:</label>
-                            <!-- Native date input for consistent ISO value (yyyy-mm-dd) -->
-                            <input type="date" class="form-control" id="dataFim" name="dataFim" 
-                                   value="{{ default_data_fim }}" required>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label for="apiType">Tipo de API:</label>
-                            <select class="form-control" id="apiType" name="apiType">
-                                <option value="desenvolvimento">API Desenvolvimento (dadosabertos.camara.leg.br)</option>
-                                <option value="producao">API Produção (www.camara.leg.br)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-12">
-                        <!-- Tooltip: list propositions in process -->
-                        <button type="submit" class="btn btn-primary" title="Busca proposições que tramitaram no período informado" data-bs-toggle="tooltip" data-bs-placement="top">
-                            <span class="icon">🔍</span> Listar Proposições em Tramitação
-                        </button>
-                        <!-- Tooltip: close form -->
-                        <button type="button" class="btn btn-secondary" onclick="toggleTramitacaoForm()" title="Fecha o formulário de tramitação" data-bs-toggle="tooltip" data-bs-placement="top">
-                            <span class="icon">❌</span> Cancelar
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="alert alert-info mt-3">
-                    <strong>Nota:</strong> O período máximo recomendado é de 60 dias. 
-                    Períodos muito longos podem resultar em muitos dados e lentidão na resposta.
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <!-- Datas agora usam inputs nativos type="date"; conversões cliente não são necessárias. -->
 
 <!-- Botões para exibir seções ocultas -->
@@ -382,8 +313,8 @@ Só atualiza as proposições, não busca seus temas ou votações
     <form method="post" style="display: inline;">
         {% csrf_token %}
         <input type="hidden" name="action" value="listarProposicoesVotadas">
-        <button type="submit" class="btn-action btn-success" title="Lista proposições que já foram votadas" data-bs-toggle="tooltip" data-bs-placement="top">
-            <span class="icon">✅</span> Proposições Votadas
+        <button type="submit" class="btn-action btn-success" title="Lista proposições cujas votações oficiais já foram carregadas" data-bs-toggle="tooltip" data-bs-placement="top">
+            <span class="icon">✅</span> Proposições com votações oficiais
         </button>
     </form>
 
@@ -394,9 +325,9 @@ Só atualiza as proposições, não busca seus temas ou votações
     </form>
 
     <!-- Botão: configurar atualização (mostrar/ocultar formulário de parâmetros) -->
-    <button type="button" class="btn-action btn-success" onclick="toggleSection('atualizarNSection')" title="Atualizar N proposições, a partir da proposição X, com timeout bem definido" data-bs-toggle="tooltip" data-bs-placement="top">
+    <!-- <button type="button" class="btn-action btn-success" onclick="toggleSection('atualizarNSection')" title="Atualizar N proposições, a partir da proposição X, com timeout bem definido" data-bs-toggle="tooltip" data-bs-placement="top">
         <span class="icon">⚙️</span> Atualizar N proposições
-    </button>
+    </button> -->
 
     <!-- Botão: mostrar/ocultar Sincronização (3 meses) -->
     <button type="button" class="btn-action btn-info" onclick="toggleSection('sync3mesesSection')" title="(demorado) Atualizar lista de proposições apresentadas ou com mudança de situação entre dataInicio e dataFim" data-bs-toggle="tooltip" data-bs-placement="top">
@@ -405,60 +336,10 @@ Só atualiza as proposições, não busca seus temas ou votações
 
     <!-- Botão: mostrar/ocultar Listagem por Período -->
     <button type="button" class="btn-action btn-primary" onclick="toggleSection('listarPeriodoSection')" title="Exibe/oculta a seção de listagem por período" data-bs-toggle="tooltip" data-bs-placement="top">
-        <span class="icon">📅</span> Mostrar Listagem por Período
+        <span class="icon">📅</span> Listar Proposições Apresentadas num Período
     </button>
 
-    <button type="button" class="btn-action btn-info" onclick="toggleTramitacaoForm()" title="Abre o formulário para listar tramitações por intervalo de datas" data-bs-toggle="tooltip" data-bs-placement="top">
-        <span class="icon">📅</span> Listar proposições por período de tramitação
-    </button>
-
-    <!-- Botão: Exibir Última Proposição -->
-    <form method="post" style="display: inline; margin-left: 8px;">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="exibeUltimaProposicao">
-        <button type="submit" class="btn-action btn-info" title="Exibe a última proposição registrada no banco" data-bs-toggle="tooltip" data-bs-placement="top">
-            <span class="icon">🆕</span> Última Proposição
-        </button>
-    </form>
-
-    <!-- Botão: Estatísticas das Proposições -->
-    <form method="post" style="display: inline; margin-left: 8px;">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="exibeEstatisticaProposicoesPriInseridas">
-        <button type="submit" class="btn-action btn-primary" title="Calcula estatísticas: total, por tipo, ano e estado" data-bs-toggle="tooltip" data-bs-placement="top">
-            <span class="icon">📊</span> Estatísticas
-        </button>
-    </form>
-
-    <!-- Botão: Listar Votações Disponíveis (VoteBem) -->
-    <form method="post" style="display: inline; margin-left: 8px;">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="listarVotacoesDisponiveis">
-        <button type="submit" class="btn-action btn-warning" title="Lista votações ativas do VoteBem vinculadas às proposições" data-bs-toggle="tooltip" data-bs-placement="top">
-            <span class="icon">🗳️</span> Votações Disponíveis
-        </button>
-    </form>
-
-    <!-- Botão: Atualizar Ementas Faltantes -->
-    <form method="post" style="display: inline; margin-left: 8px;">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="cadastrarEmentasFaltantes">
-        <button type="submit" class="btn-action btn-success" title="Preenche ementas ausentes consultando a API (limite ~50)" data-bs-toggle="tooltip" data-bs-placement="top">
-            <span class="icon">📝</span> Ementas Faltantes
-        </button>
-    </form>
-
-    <!-- Formulário inline: Loop Obter Votações por Ano -->
-    <form method="post" style="display: inline; margin-left: 8px;">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="loopObterVotacoes">
-        <label for="anoVotacaoInline" class="sr-only">Ano</label>
-        <input type="number" id="anoVotacaoInline" name="anoVotacao" min="1900" max="2100" value="{{ current_year }}" class="form-control" style="width: 90px; display: inline-block; vertical-align: middle;" title="Ano das proposições para sincronizar votações (processa até 20)" data-bs-toggle="tooltip" data-bs-placement="top">
-        <button type="submit" class="btn-action btn-primary" title="Sincroniza votações oficiais das proposições do ano informado" data-bs-toggle="tooltip" data-bs-placement="top" style="vertical-align: middle;">
-            <span class="icon">🔄</span> Obter Votações (Ano)
-        </button>
-    </form>
-
+    
 </div>
 
 <!-- Painel removido: Proposições Votadas (agora acionado diretamente pelo botão acima) -->
@@ -467,7 +348,7 @@ Só atualiza as proposições, não busca seus temas ou votações
 <div id="atualizarNSection" class="form-section" style="display: none;">
     <div class="card">
         <div class="card-header">
-            <h4><span class="icon">⚙️</span> Atualizar Proposições Recentes (Últimos 30 dias)</h4>
+            <h4><span class="icon">⚙️</span> Atualizar N Proposições</h4>
         </div>
         <div class="card-body">
             <form method="post" id="atualizarNForm">
@@ -517,7 +398,7 @@ Só atualiza as proposições, não busca seus temas ou votações
 <!-- Sync by Date Range Form -->
 <!-- Inicialmente oculto; exibido ao clicar no botão correspondente -->
 <div id="sync3mesesSection" class="form-section" style="display: none;">
-    <h3>🗓️ Atualizar proposições (buscar online)</h3>
+    <h3>🗓️ Atualizar proposições (buscar online) (por data de apresentação???)</h3>
     <form method="post" id="syncDateRangeForm">
         {% csrf_token %}
         <input type="hidden" name="action" value="atualizarProposicoesVotadasPlenario">
@@ -566,7 +447,7 @@ Só atualiza as proposições, não busca seus temas ou votações
 <!-- Inicialmente oculto; exibido ao clicar no botão correspondente -->
 <div id="listarPeriodoSection" class="form-section" style="display: none;">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="mb-0">📅 Listar Proposições por Período (buscar online)</h3>
+        <h3 class="mb-0">📅 Proposições Movimentadas por Período (busca online)</h3>
         <!-- Removed: link to 'Listar proposições carregadas' as requested -->
     </div>
     
@@ -604,49 +485,6 @@ Só atualiza as proposições, não busca seus temas ou votações
 </div>
 
 <!-- Results Sections -->
-{% if ultima_proposicao %}
-<div class="results-section">
-    <h3>🔍 Última Proposição</h3>
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Tipo</th>
-                    <th>Número</th>
-                    <th>Ano</th>
-                    <th>Ementa</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-<td>{{ ultima_proposicao.pk }}</td>
-                    <td>{{ ultima_proposicao.tipo }}</td>
-                    <td>{{ ultima_proposicao.numero }}</td>
-                    <td>{{ ultima_proposicao.ano }}</td>
-                    <td>{{ ultima_proposicao.ementa|truncatechars:100 }}</td>
-                    <td>{{ ultima_proposicao.estado }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endif %}
-
-{% if stats %}
-<div class="results-section">
-    <h3>📊 Estatísticas das Proposições</h3>
-    <div class="row">
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-number">{{ stats.total }}</div>
-                <div class="stat-label">Total de Proposições</div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
 
 {% if action_result == 'api_test' %}
 <div class="results-section">
@@ -732,7 +570,7 @@ Só atualiza as proposições, não busca seus temas ou votações
 
 {% if tramitacao_result %}
 <div class="results-section">
-    <h3>📋 Proposições em Tramitação</h3>
+    <h3>📋 Proposições com alguma movimentação no período selecionado</h3>
     <div class="table-responsive">
         <table class="table table-striped">
             <thead>
@@ -753,7 +591,7 @@ Só atualiza as proposições, não busca seus temas ou votações
                     <td>{{ proposicao.siglaTipo }}</td>
                     <td>{{ proposicao.numero }}</td>
                     <td>{{ proposicao.ano }}</td>
-                    <td>{{ proposicao.ementa|truncatechars:100 }}</td>
+                    <td>{{ proposicao.ementa }}</td>
                     <td>{{ proposicao.statusProposicao.descricaoSituacao }}</td>
                 </tr>
                 {% endfor %}
@@ -852,15 +690,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Function to toggle tramitacao form visibility
-function toggleTramitacaoForm() {
-    const form = document.getElementById('tramitacaoForm');
-    if (form.style.display === 'none' || form.style.display === '') {
-        form.style.display = 'block';
-    } else {
-        form.style.display = 'none';
-    }
-}
 </script>
 
 {% endblock %}

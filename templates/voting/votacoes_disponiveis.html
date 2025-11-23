@@ -19,87 +19,135 @@
         </div>
         
         {% if votacoes %}
+            {# Grupo 1: Votações com "Vote agora!" (usuário ainda não votou) #}
+            {% if has_unvoted_cards_on_page %}
             <div class="row">
                 {% for votacao in votacoes %}
+                    {% if not votacao.id in user_votes %}
                     <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="card h-100 {% if votacao.id in user_votes %}border-success{% endif %}">
+                        <div class="card h-100">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
                                     {{ votacao.titulo }}
                                 </h6>
-                                {% if votacao.id in user_votes %}
-                                    {# Badge "Votado" agora com estilo de contorno #}
-                                    <span class="badge text-success border border-success bg-transparent">
-                                        <i class="bi bi-check-circle"></i> Já votei
-                                    </span>
+                                {% if votacao.is_active %}
+                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="badge bg-primary text-decoration-none">
+                                        <i class="bi bi-clock"></i> Ativa
+                                    </a>
                                 {% else %}
-                                    {% if votacao.is_active %}
-                                        {# Estiliza o próprio anchor como badge preenchida #}
-                                        <a href="{% url 'voting:votacao_detail' votacao.id %}" class="badge bg-primary text-decoration-none">
-                                            <i class="bi bi-clock"></i> Ativa
-                                        </a>
-                                    {% else %}
-                                        <span class="badge bg-secondary">
-                                            <i class="bi bi-pause-circle"></i> Inativa
-                                        </span>
-                                    {% endif %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-pause-circle"></i> Inativa
+                                    </span>
                                 {% endif %}
                             </div>
                             
-                            <div class="card-body">
-                                <!-- Título agora usa 'proposicao.titulo' e linka para a tela de detalhes interna -->
-                                <h6 class="card-title">
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <!-- Top: title link -->
+                                <h6 class="card-title mb-2">
                                     <a href="{% url 'voting:votacao_detail' votacao.id %}" class="text-decoration-none">
                                         {{ votacao.resumo }}
                                     </a>
                                 </h6>
-                                {# Botão de ação: mantém o "Vote agora!" abaixo do título; move "Altere seu voto" para o fim do card #}
-                                {% if votacao.id in user_votes %}
-                                    {# Já votado: não exibe botão aqui; será renderizado ao final do card-body #}
-                                {% else %}
-                                    {# Não votado: mantém o botão padrão abaixo do título #}
-                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-primary mt-2 mb-2 w-100">Vote agora!</a>
-                                {% endif %}
-                                {% comment %} <p class="card-text text-muted small">{{ votacao.proposicao_votacao.proposicao.titulo }}</p> {% endcomment %}
-                                
-                                <div class="row text-center mb-3">
-                                    <div class="col-6">
-                                        <div class="text-success">
-                                            <strong>{{ votacao.get_votos_sim_populares }}</strong>
-                                            <br><small>SIM</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="text-danger">
-                                            <strong>{{ votacao.get_votos_nao_populares }}</strong>
-                                            <br><small>NÃO</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="text-center">
-                                    {# Temas associados: apresentar como badges leves #}
-                                    {% with temas=votacao.proposicao_votacao.proposicao.proposicaotema_set.all %}
-                                        {% if temas %}
-                                            <div class="mt-1">
-                                                {% for pt in temas %}
-                                                    <span class="badge rounded-pill bg-light text-secondary border me-1">{{ pt.tema.nome }}</span>
-                                                {% endfor %}
+                                <!-- Middle: primary action (Vote agora!) -->
+                                <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-primary my-2 w-100">Vote agora!</a>
+                                <!-- Bottom: stats and temas grouped to remain a single column item -->
+                                <div class="mt-2">
+                                    <div class="row text-center mb-3">
+                                        <div class="col-6">
+                                            <div class="text-success">
+                                                <strong>{{ votacao.get_votos_sim_populares }}</strong>
+                                                <br><small>SIM</small>
                                             </div>
-                                        {% endif %}
-                                    {% endwith %}
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-danger">
+                                                <strong>{{ votacao.get_votos_nao_populares }}</strong>
+                                                <br><small>NÃO</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        {% with temas=votacao.proposicao_votacao.proposicao.proposicaotema_set.all %}
+                                            {% if temas %}
+                                                <div class="mt-1">
+                                                    {% for pt in temas %}
+                                                        <span class="badge rounded-pill bg-light text-secondary border me-1">{{ pt.tema.nome }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
                                 </div>
-                                {# Ao final do card-body, exibe o botão para alterar voto quando já votado #}
-                                {% if votacao.id in user_votes %}
-                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="badge text-success border border-success bg-transparent d-block w-100 text-center py-2 mb-2">Altere seu voto / ver detalhes</a>
-                                {% endif %}
                             </div>
-                            
-                            <!-- Removido botão "Ver Detalhes" conforme solicitação -->
                         </div>
                     </div>
+                    {% endif %}
                 {% endfor %}
             </div>
+            {% endif %}
+
+            {# Grupo 2: Subtítulo e votações "Já votei" (usuário já votou) #}
+            {% if has_voted_cards_on_page %}
+            <h3 class="mt-2 mb-3"><i class="bi bi-check-circle"></i> Já votadas</h3>
+            <div class="row">
+                {% for votacao in votacoes %}
+                    {% if votacao.id in user_votes %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100 border-success">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    {{ votacao.titulo }}
+                                </h6>
+                                <span class="badge text-success border border-success bg-transparent">
+                                    <i class="bi bi-check-circle"></i> Já votei
+                                </span>
+                            </div>
+                            
+                            <div class="card-body d-flex flex-column justify-content-between">
+                                <!-- Top: title link -->
+                                <h6 class="card-title mb-2">
+                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="text-decoration-none">
+                                        {{ votacao.resumo }}
+                                    </a>
+                                </h6>
+                                <!-- Middle: action for already voted -->
+                                <a href="{% url 'voting:votacao_detail' votacao.id %}" class="badge text-success border border-success bg-transparent d-block w-100 text-center py-2 my-2">Altere seu voto / ver detalhes</a>
+
+                                <!-- Bottom: stats and temas grouped to remain a single column item -->
+                                <div class="mt-2">
+                                    <div class="row text-center mb-3">
+                                        <div class="col-6">
+                                            <div class="text-success">
+                                                <strong>{{ votacao.get_votos_sim_populares }}</strong>
+                                                <br><small>SIM</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-danger">
+                                                <strong>{{ votacao.get_votos_nao_populares }}</strong>
+                                                <br><small>NÃO</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        {% with temas=votacao.proposicao_votacao.proposicao.proposicaotema_set.all %}
+                                            {% if temas %}
+                                                <div class="mt-1">
+                                                    {% for pt in temas %}
+                                                        <span class="badge rounded-pill bg-light text-secondary border me-1">{{ pt.tema.nome }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
             
             <!-- Pagination -->
             {% if is_paginated %}

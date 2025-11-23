@@ -32,11 +32,111 @@ def admin_dashboard(request):
         'total_congressistas': Congressman.objects.count(),
         'total_votos_congressistas': CongressmanVote.objects.count(),
         'total_usuarios': User.objects.count(),
-        'ultima_proposicao': Proposicao.objects.first(),
-        'votacoes_recentes': VotacaoVoteBem.objects.filter(ativo=True)[:5],
     }
     
     return render(request, 'admin/voting/admin_dashboard.html', context)
+
+
+@staff_member_required
+def votacoes_oficiais_list(request):
+    """
+    Lista as entradas oficiais de votações por proposição (tabela `voting_proposicaovotacao`).
+
+    Para cada linha, anota a contagem de registros relacionados em `voting_congressmanvote`
+    filtrando por `proposicao_votacao_id` correspondente, ou seja, o total de votos individuais
+    oficiais obtidos para aquela votação.
+
+    A consulta usa ORM com `annotate(Count('congressmanvote'))`, aproveitando a relação FK
+    `CongressmanVote.proposicao_votacao -> ProposicaoVotacao`. Incluímos `select_related('proposicao')`
+    para renderização eficiente de dados da proposição na tabela.
+
+    Observação: esta tela é somente leitura e serve para fornecer uma visão rápida das
+    votações oficiais já armazenadas, incluindo um indicador de quantos votos individuais
+    oficiais foram obtidos para cada votação.
+    """
+    from django.db.models import Count, Prefetch
+    from datetime import datetime
+    # Novo: utilitários para subconsultas
+    from django.db.models import Exists, OuterRef
+
+    # Permitir execução rápida do loop de obtenção de votações por ano diretamente desta tela
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'loopObterVotacoes':
+            ano = request.POST.get('anoVotacao', datetime.now().year)
+            try:
+                ano = int(ano)
+                # Refatorado: selecionar proposições do ano cujo conjunto de votações
+                # oficiais (ProposicaoVotacao) NÃO possui nenhum registro de votos
+                # individuais (CongressmanVote). Assim, evitamos incluir no loop
+                # qualquer `voting_proposicaovotacao` que já tenha votos.
+                #
+                # A lógica:
+                # - Annotate(has_pv_with_votes) = Existe(ProposicaoVotacao com congressmanvote)
+                # - Filtrar has_pv_with_votes=False => nenhuma PV da proposição possui votos individuais
+                pv_with_votes_qs = (
+                    ProposicaoVotacao.objects
+                    .filter(proposicao_id=OuterRef('id_proposicao'))
+                    .filter(congressmanvote__isnull=False)
+                )
+
+                proposicoes = (
+                    Proposicao.objects
+                    .filter(ano=ano)
+                    .annotate(has_pv_with_votes=Exists(pv_with_votes_qs))
+                    .filter(has_pv_with_votes=False)
+                )
+                total_votacoes = 0
+                for proposicao in proposicoes:
+                    if proposicao.id_proposicao:
+                        try:
+                            votacoes_count = camara_api.sync_votacoes_for_proposicao(proposicao)
+                            total_votacoes += votacoes_count
+                        except Exception as e:
+                            # Continua mesmo se uma proposição falhar
+                            continue
+                messages.success(
+                    request,
+                    f"Sincronizadas {total_votacoes} votações para {proposicoes.count()} proposições do ano {ano}."
+                )
+            except ValueError:
+                messages.error(request, 'Ano inválido fornecido.')
+            except Exception as e:
+                messages.error(request, f'Erro na sincronização de votações: {str(e)}')
+
+    # Carrega votações oficiais e anota a contagem de votos individuais relacionados
+    # Prefetch relacionado para VotacaoVoteBem, ordenando pelo mais recente
+    vb_queryset = VotacaoVoteBem.objects.order_by('-created_at')
+
+    votacoes_oficiais = (
+        ProposicaoVotacao.objects
+        .select_related('proposicao')
+        .prefetch_related(Prefetch('votacaovotebem', queryset=vb_queryset))
+        # Count only real votes: SIM (1) and NÃO (-1)
+        .annotate(
+            congressman_votes_count=
+                Count(
+                    'congressmanvote',
+                    filter=Q(
+                        congressmanvote__voto__in=[1, -1, 2]
+                    )
+                )
+        )
+        .order_by('-data_votacao', '-created_at')
+    )
+
+    # Paginação para evitar telas muito longas
+    paginator = Paginator(votacoes_oficiais, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'title': 'Votações oficiais obtidas',
+        'page_obj': page_obj,
+        'current_year': datetime.now().year,
+    }
+
+    return render(request, 'admin/voting/votacoes_oficiais_list.html', context)
 
 
 @staff_member_required
@@ -214,9 +314,13 @@ def ajax_import_congress_votes(request):
             votes = camara_api.get_votacao_votos(v_id) or []
             return det, votes
 
+        api_success = False  # Flag para indicar sucesso em obter JSON válido da API
         try:
+            # Tentativa direta com ID composto; considerar sucesso quando retornos são estruturas válidas
             detalhes_votacao, votos_individuais = _try_fetch(votacao_composta_id)
             dados_det = detalhes_votacao.get('dados') or {}
+            if isinstance(detalhes_votacao, dict) and isinstance(votos_individuais, (list, tuple)):
+                api_success = True
         except Exception:
             # 2) Fallback: consultar lista de votações da proposição e localizar pelo sufixo
             try:
@@ -241,6 +345,8 @@ def ajax_import_congress_votes(request):
                     api_url_votes = f"{CamaraAPIService.BASE_URL}/votacoes/{candidato_id}/votos"
                     detalhes_votacao, votos_individuais = _try_fetch(candidato_id)
                     dados_det = detalhes_votacao.get('dados') or {}
+                    if isinstance(detalhes_votacao, dict) and isinstance(votos_individuais, (list, tuple)):
+                        api_success = True
                 else:
                     # Sem candidato: manter erro original
                     raise Exception("Votação não encontrada para o sufixo informado")
@@ -314,6 +420,10 @@ def ajax_import_congress_votes(request):
         by_name = {norm(cm.nome): cm for cm in congressmen if cm.nome}
 
         def map_voto(tipo: str):
+            # Map API vote strings to integer codes.
+            # Unknown or absence from API must be treated as explicit absence (3).
+            # Dummy (2) is used only by our fallback insertion when there are zero upserts.
+            # Special case: "Artigo 17" / "Art. 17" => 4 (abstenção obrigatória do presidente).
             t = (tipo or '').strip().lower()
             if t == 'sim':
                 return 1
@@ -321,7 +431,9 @@ def ajax_import_congress_votes(request):
                 return -1
             if t == 'abstenção' or t == 'abstencao':
                 return 0
-            return None
+            if t == 'artigo 17' or t == 'art. 17':
+                return 4
+            return 3
 
         created = 0
         updated = 0
@@ -429,6 +541,54 @@ def ajax_import_congress_votes(request):
                 'uf': cm.uf or '',
                 'voto': obj.get_voto_display_text(),
             })
+
+        # Caso nenhum voto tenha sido inserido/atualizado e a API tenha retornado JSON
+        # corretamente (sem erro), inserir um registro dummy. Se houver qualquer
+        # erro na chamada à API, NÃO insere dummy.
+        try:
+            if api_success and (created + updated) == 0:
+                # Garantir ProposicaoVotacao existente
+                try:
+                    pv_dummy = pv
+                except Exception:
+                    pv_dummy, _ = ProposicaoVotacao.objects.get_or_create(
+                        proposicao=proposicao,
+                        votacao_sufixo=sufixo_int,
+                        defaults={'descricao': (dados_det.get('descricao') or '')}
+                    )
+
+                # Obter/criar congressista dummy com id_cadastro negativo para evitar conflito
+                cm_dummy, _ = Congressman.objects.get_or_create(
+                    id_cadastro=-1,
+                    defaults={
+                        'nome': 'Dummy Deputado',
+                        'partido': '',
+                        'uf': '',
+                        'ativo': True,
+                    }
+                )
+
+                # Inserir voto dummy com valor 2 (Dummy) para não alterar placares
+                obj_dummy, was_created_dummy = CongressmanVote.objects.update_or_create(
+                    congressman=cm_dummy,
+                    proposicao_votacao=pv_dummy,
+                    defaults={'voto': 2}
+                )
+                if was_created_dummy:
+                    created += 1
+                else:
+                    updated += 1
+                votos_out.append({
+                    'nome': cm_dummy.nome,
+                    'id_cadastro': cm_dummy.id_cadastro,
+                    'partido': cm_dummy.partido or '',
+                    'uf': cm_dummy.uf or '',
+                    'voto': obj_dummy.get_voto_display_text(),
+                    'dummy': True,
+                })
+        except Exception:
+            # Se o dummy falhar, não interromper a resposta; apenas seguir com contadores atuais
+            pass
 
         return JsonResponse({
             'ok': True,
@@ -627,7 +787,15 @@ def votacao_obter_votacao(request, pk):
         main_votacao_id = None
         for v in votos_list:
             desc = (v.get('descricao') or '').lower()
-            if (('aprovad' in desc or 'rejeitad' in desc) and 'proposta' in desc):
+            # Critérios alinhados com a tela client-side (votacoes_por_periodo.html):
+            # - contém "aprovad" OU "rejeitad"
+            # - e contém "turno" OU "emenda" OU "projeto"
+            # - e contém "total"
+            # - e NÃO contém "requerimento"
+            if (("aprovad" in desc or "rejeitad" in desc) and
+                ("turno" in desc or "emenda" in desc or "projeto" in desc) and
+                ("total" in desc) and
+                ("requerimento" not in desc)):
                 main_votacao_id = v.get('id')
                 break
         # Fallback: first item
@@ -675,6 +843,9 @@ def votacao_obter_votacao(request, pk):
 
         # Map vote string to integers
         def map_voto(tipo: str):
+            # Map API vote strings to integer codes.
+            # Unknown/absence should map to 3; dummy (2) is reserved for fallback only.
+            # Special case: "Artigo 17" / "Art. 17" => 4 (abstenção obrigatória do presidente).
             t = (tipo or '').strip().lower()
             if t == 'sim':
                 return 1
@@ -682,7 +853,9 @@ def votacao_obter_votacao(request, pk):
                 return -1
             if t == 'abstenção' or t == 'abstencao':
                 return 0
-            return None
+            if t == 'artigo 17' or t == 'art. 17':
+                return 4
+            return 3
         # Count SIM/NÃO independently of DB matches; prefer official counts from details
         # Fallback to computing from individual votes when details are missing
         sim_count = int(dados_det.get('placarSim') or 0)
@@ -901,15 +1074,62 @@ def proposicoes_list(request):
     
     # Apply filters
     if search:
-        # AND across each word in the search, regardless of order.
-        # Each word must match in at least one of the fields.
+        # Multi-word filter: enforce AND across words; each word must match
+        # at least one column. We search across common columns displayed in
+        # the table: titulo, ementa, estado, tipo, and numeric fields.
+        #
+        # Portuguese-friendly matching:
+        # - Handle simple gender/plural variations (transformado/transformada, normas/norma).
+        # - Numeric terms match numero/ano/id_proposicao using equality.
+        #
+        # This makes searches like "transformada norma" match rows with
+        # "Transformado em Norma Jurídica" in the Estado column.
         terms = [t for t in re.split(r"\s+", search.strip()) if t]
         for term in terms:
-            proposicoes = proposicoes.filter(
-                Q(titulo__icontains=term) |
-                Q(ementa__icontains=term) |
-                Q(id_proposicao__icontains=term)
-            )
+            t = term.strip()
+            base_variants = set()
+            # Original term
+            base_variants.add(t)
+            tl = t.lower()
+            # Handle plural endings 'os'/'as' by removing them
+            if tl.endswith('os') or tl.endswith('as'):
+                base_variants.add(tl[:-2])
+            # Handle gender endings 'o'/'a' by removing last char
+            if tl.endswith('o') or tl.endswith('a'):
+                base_variants.add(tl[:-1])
+                # Swap gender to catch the opposite form
+                swapped = tl[:-1] + ('a' if tl.endswith('o') else 'o')
+                base_variants.add(swapped)
+
+            # Build a Q that matches any variant in any of the searchable fields
+            term_q = Q()
+            for v in base_variants:
+                term_q |= (
+                    Q(titulo__icontains=v) |
+                    Q(ementa__icontains=v) |
+                    Q(estado__icontains=v) |
+                    Q(tipo__icontains=v)
+                )
+
+                # Numeric match: if variant looks like a number, try equality
+                # on numero, ano e id_proposicao.
+                if v.isdigit():
+                    try:
+                        vi = int(v)
+                        term_q |= (
+                            Q(numero=vi) |
+                            Q(ano=vi) |
+                            Q(id_proposicao=vi)
+                        )
+                    except Exception:
+                        # Ignore conversion errors and continue with text filters
+                        pass
+
+                # Keep legacy support: if DB allows, also attempt icontains on id_proposicao as text
+                term_q |= Q(id_proposicao__icontains=v)
+
+            # AND across terms: progressively narrow the queryset
+            proposicoes = proposicoes.filter(term_q)
     
     if tipo_filter:
         proposicoes = proposicoes.filter(tipo=tipo_filter)
@@ -1090,8 +1310,19 @@ def votacao_edit(request, pk):
         # Get related votes count
         total_votos = votacao.get_total_votos_populares() if hasattr(votacao, 'get_total_votos_populares') else 0
 
+        # Provide related proposição details for template header convenience
+        try:
+            proposicao = (
+                votacao.proposicao_votacao.proposicao
+                if getattr(votacao, 'proposicao_votacao', None) and getattr(votacao.proposicao_votacao, 'proposicao', None)
+                else None
+            )
+        except Exception:
+            proposicao = None
+
         context = {
             'votacao': votacao,
+            'proposicao': proposicao,
             'total_votos': total_votos,
             'title': f'Editar Votação: {votacao.titulo[:50]}...'
         }
@@ -1270,6 +1501,32 @@ def votacao_create(request):
             prefill['pv_candidates'] = pv_candidates
         except Proposicao.DoesNotExist:
             messages.error(request, 'Proposição para preenchimento não encontrada.')
+
+    # Handle GET prefill: allow default selection of ProposicaoVotacao via consulta_id
+    try:
+        params = request.GET
+        consulta_id = params.get('consulta_id')  # e.g., "559138-241" or just "241"
+        proposicao_id_param = params.get('proposicao_id')
+        if consulta_id and proposicao_id_param and prefill.get('pv_candidates'):
+            try:
+                # Extract suffix (after last dash), or use value as-is when no dash
+                suffix_str = str(consulta_id)
+                if '-' in suffix_str:
+                    suffix_str = suffix_str.split('-')[-1]
+                suffix_int = int(suffix_str)
+            except Exception:
+                suffix_int = None
+
+            if suffix_int is not None:
+                # Find matching ProposicaoVotacao candidate by votacao_sufixo
+                try:
+                    match = next((pv for pv in prefill['pv_candidates'] if getattr(pv, 'votacao_sufixo', None) == suffix_int), None)
+                    if match:
+                        prefill['selected_pv_id'] = match.id
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
     context = {
         'prefill': prefill,
@@ -1676,28 +1933,9 @@ def camara_admin(request):
         dev_log(f"DEBUG: POST request received with action: {action}")
         dev_log(f"DEBUG: All POST data: {dict(request.POST)}")
         
-        if action == 'exibeUltimaProposicao':
-            # Show last proposition inserted (use primary key field id_proposicao)
-            try:
-                ultima_proposicao = Proposicao.objects.latest('id_proposicao')
-                context['ultima_proposicao'] = ultima_proposicao
-                context['action_result'] = 'ultima_proposicao'
-            except Proposicao.DoesNotExist:
-                context['error'] = 'Nenhuma proposição encontrada no banco de dados.'
-                
-        elif action == 'exibeEstatisticaProposicoesPriInseridas':
-            # Show proposition statistics
-            from django.db.models import Count
-            stats = {
-                'total': Proposicao.objects.count(),
-                'por_tipo': list(Proposicao.objects.values('tipo').annotate(count=Count('id_proposicao')).order_by('-count')),
-                'por_ano': list(Proposicao.objects.values('ano').annotate(count=Count('id_proposicao')).order_by('-ano')),
-                'por_estado': list(Proposicao.objects.values('estado').annotate(count=Count('id_proposicao')).order_by('-count')),
-            }
-            context['stats'] = stats
-            context['action_result'] = 'estatisticas'
+        
             
-        elif action == 'listarProposicoesVotadas':
+        if action == 'listarProposicoesVotadas':
             # List propositions that have been voted
             # Ajustado para novo relacionamento: Proposicao -> ProposicaoVotacao -> VotacaoVoteBem
             # Filtra proposições que possuem ao menos uma VotacaoVoteBem vinculada via ProposicaoVotacao
@@ -1712,17 +1950,7 @@ def camara_admin(request):
             context['proposicoes_votadas'] = proposicoes_votadas
             context['action_result'] = 'proposicoes_votadas'
             
-        elif action == 'listarVotacoesDisponiveis':
-            # List available votings (VoteBem)
-            votacoes = (
-                VotacaoVoteBem.objects
-                .filter(ativo=True)
-                .select_related('proposicao_votacao__proposicao')
-                .order_by('-data_hora_votacao')[:50]
-            )
-            context['votacoes_disponiveis'] = votacoes
-            context['action_result'] = 'votacoes_disponiveis'
-            
+           
         elif action == 'atualizarProposicoesVotadasPlenario':
             # Update propositions voted in plenary for specific date range
             data_inicial = request.POST.get('dataInicial')
@@ -1741,16 +1969,7 @@ def camara_admin(request):
             except Exception as e:
                 context['error'] = f'Erro na sincronização: {str(e)}'
                 
-        elif action == 'cadastrarEmentasFaltantes':
-            # Register missing ementas
-            try:
-                from .services.camara_api import camara_api
-                updated_count = camara_api.update_missing_ementas()
-                context['ementas_result'] = f'Atualizadas {updated_count} ementas faltantes com sucesso.'
-                context['action_result'] = 'ementas_result'
-                messages.success(request, f'Atualizadas {updated_count} ementas')
-            except Exception as e:
-                context['error'] = f'Erro ao atualizar ementas: {str(e)}'
+        
                 
         elif action == 'loopObterVotacoes':
             # Loop to get votings for propositions
@@ -1758,7 +1977,7 @@ def camara_admin(request):
             try:
                 ano = int(ano)
                 from .services.camara_api import camara_api
-                proposicoes = Proposicao.objects.filter(ano=ano)[:20]  # Limit for performance
+                proposicoes = Proposicao.objects.filter(ano=ano)[:100]  # Limit for performance
                 total_votacoes = 0
                 
                 for proposicao in proposicoes:
@@ -1877,13 +2096,17 @@ def ajax_proposicao_search(request):
 
 @staff_member_required
 def ajax_proposicao_votacoes(request):
-    """Cache-first endpoint: retorna votações por proposição.
-    1) Se existir em ProposicaoVotacao, retorna do banco.
-    2) Caso contrário, consulta API da Câmara, filtra, insere em ProposicaoVotacao e retorna.
+    """Endpoint de votações por proposição com modos de busca configuráveis.
+    Modos suportados:
+    - Padrão (cache-first): se existir em ProposicaoVotacao, retorna do banco; senão, consulta API.
+    - `db_only=1`: retorna apenas o que está no banco; não consulta API.
+    - `force_api=1`: ignora cache do banco e consulta a API diretamente.
     """
     prop_id = request.GET.get('proposicao_id')
     db_only_raw = request.GET.get('db_only')
     db_only = str(db_only_raw).lower() in ('1', 'true', 'yes', 'y')
+    force_api_raw = request.GET.get('force_api')
+    force_api = str(force_api_raw).lower() in ('1', 'true', 'yes', 'y')
     if not prop_id:
         return JsonResponse({'ok': False, 'error': 'Parâmetro proposicao_id é obrigatório.'}, status=400)
     try:
@@ -1924,7 +2147,8 @@ def ajax_proposicao_votacoes(request):
 
     # 1) Consulta cache local
     cached = list(ProposicaoVotacao.objects.filter(proposicao=proposicao).order_by('votacao_sufixo'))
-    if cached:
+    # Quando "force_api" está ativo, ignorar resultados em cache e seguir para a API.
+    if cached and not force_api:
         # Precompute counts for all cached votações to avoid N queries
         counts_qs = (
             CongressmanVote.objects
@@ -1976,17 +2200,24 @@ def ajax_proposicao_votacoes(request):
         api_url = f"{CamaraAPIService.BASE_URL}/proposicoes/{prop_id_int}/votacoes"
         api_url = f"{CamaraAPIService.BASE_URL}/votacoes?idProposicao={prop_id_int}&idOrgao=180"
         api_items = camara_api.get_proposicao_votacoes(prop_id_int) or []
-        # Filtro por descrição contendo chaves relevantes (case-insensitive)
+        # Para force_api, devolver TODOS os itens da API sem filtro.
+        # Caso contrário, manter filtro por chaves relevantes.
         needles = [
             'em primeiro turno',
             'em segundo turno',
             'emenda aglutinativa',
+            'projeto'
         ]
         def _desc(item):
             return (item.get('descricao') or item.get('descrição') or '').lower()
-        filtered = [i for i in api_items if any(n in _desc(i) for n in needles)]
+        filtered = api_items if force_api else [i for i in api_items if any(n in _desc(i) for n in needles)]
 
-        # Inserir no cache local
+        # Inserção no banco SEM duplicar: verificar sufixos existentes para a proposição
+        existing_sufixos = set(
+            ProposicaoVotacao.objects
+            .filter(proposicao=proposicao)
+            .values_list('votacao_sufixo', flat=True)
+        )
         to_create = []
         sufixos = []
         for item in filtered:
@@ -1996,26 +2227,28 @@ def ajax_proposicao_votacoes(request):
                 if isinstance(full_id, str) and '-' in full_id:
                     sufixo = int(full_id.split('-')[-1])
                 elif isinstance(full_id, int):
-                    # Em alguns casos a API pode devolver sufixo isolado
                     sufixo = full_id
             except Exception:
                 sufixo = None
             if sufixo is None:
                 continue
             sufixos.append(sufixo)
-            to_create.append(ProposicaoVotacao(
-                proposicao=proposicao,
-                votacao_sufixo=sufixo,
-                descricao=item.get('descricao') or item.get('descrição') or '',
-                prioridade=None,
-            ))
+            # Apenas inserir se NÃO existir (evita duplicação por (proposicao_id, votacao_sufixo))
+            if sufixo not in existing_sufixos:
+                to_create.append(ProposicaoVotacao(
+                    proposicao=proposicao,
+                    votacao_sufixo=sufixo,
+                    descricao=item.get('descricao') or item.get('descrição') or '',
+                    prioridade=None,
+                ))
 
-        # Evitar conflitos com unique_together
-        try:
-            with transaction.atomic():
-                ProposicaoVotacao.objects.bulk_create(to_create, ignore_conflicts=True)
-        except Exception:
-            pass
+        # Evitar conflitos com unique_together; inserir apenas os novos
+        if to_create:
+            try:
+                with transaction.atomic():
+                    ProposicaoVotacao.objects.bulk_create(to_create, ignore_conflicts=True)
+            except Exception:
+                pass
 
         # Mapear counts para sufixos existentes
         pv_qs = ProposicaoVotacao.objects.filter(proposicao=proposicao, votacao_sufixo__in=sufixos)
@@ -2063,6 +2296,7 @@ def ajax_proposicao_votacoes(request):
 
             dados.append({
                 'id': full_id,
+                'pv_id': pv_id,
                 'descricao': item.get('descricao') or item.get('descrição') or '',
                 'dataHora': item.get('dataHoraRegistro') or item.get('dataHora') or '',
                 'resultado': item.get('resultado') or '',
@@ -2114,6 +2348,73 @@ def ajax_update_proposicao_votacao_prioridade(request):
     pv.save(update_fields=['prioridade'])
 
     return JsonResponse({'ok': True, 'pv_id': pv.id, 'prioridade': pv.prioridade})
+
+
+@staff_member_required
+def ajax_delete_proposicao_votacao(request):
+    """Exclui registros de `ProposicaoVotacao` por `proposicao_id` e `votacao_sufixo` (consulta_id).
+    - Espera `POST` com uma das formas:
+      * `proposicao_id` e `consulta_id` (numéricos)
+      * `composed_id` no formato `<proposicao_id>-<consulta_id>` (ex.: `2270800-160`)
+    - Remove todos os registros que correspondam ao par informado.
+    - A exclusão CASCADE apaga também `VotacaoVoteBem`, `CongressmanVote` e, por consequência, `Voto`.
+    Retorna JSON com contagens estimadas de remoção.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método não permitido.'}, status=405)
+
+    composed = (request.POST.get('composed_id') or '').strip()
+    proposicao_id = (request.POST.get('proposicao_id') or '').strip()
+    consulta_id = (request.POST.get('consulta_id') or '').strip()
+
+    # Extrair de composed_id quando fornecido
+    if composed and ('-' in composed) and (not proposicao_id or not consulta_id):
+        try:
+            parts = composed.split('-')
+            proposicao_id = proposicao_id or parts[0].strip()
+            consulta_id = consulta_id or parts[1].strip()
+        except Exception:
+            return JsonResponse({'ok': False, 'error': 'Formato inválido de composed_id.'}, status=400)
+
+    # Validar numéricos
+    try:
+        prop_id_int = int(proposicao_id)
+        sufixo_int = int(consulta_id)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Parâmetros proposicao_id e consulta_id devem ser numéricos.'}, status=400)
+
+    # Preparar queryset
+    qs = ProposicaoVotacao.objects.filter(
+        proposicao__id_proposicao=prop_id_int,
+        votacao_sufixo=sufixo_int
+    )
+
+    # Levantar contagens antes da exclusão para relatar impacto
+    pv_ids = list(qs.values_list('id', flat=True))
+    from .models import VotacaoVoteBem, CongressmanVote, Voto
+    vb_qs = VotacaoVoteBem.objects.filter(proposicao_votacao_id__in=pv_ids)
+    cv_qs = CongressmanVote.objects.filter(proposicao_votacao_id__in=pv_ids)
+    # votos relacionados via VotacaoVoteBem
+    voto_qs = Voto.objects.filter(votacao_id__in=list(vb_qs.values_list('id', flat=True)))
+
+    counts_before = {
+        'proposicao_votacao': len(pv_ids),
+        'votacao_votebem': vb_qs.count(),
+        'congressman_vote': cv_qs.count(),
+        'voto': voto_qs.count(),
+    }
+
+    # Executar exclusão em transação
+    with transaction.atomic():
+        deleted_total, deleted_breakdown = qs.delete()
+
+    return JsonResponse({
+        'ok': True,
+        'params': {'proposicao_id': prop_id_int, 'consulta_id': sufixo_int},
+        'counts_before': counts_before,
+        'deleted_total': deleted_total,
+        'deleted_breakdown': deleted_breakdown,
+    })
 
 
 @staff_member_required

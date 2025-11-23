@@ -166,7 +166,10 @@
             <div class="mb-4">
                 {# Requested: after "Editar Votação", append the word "Votebem" in the H1 #}
                 {# Prefer explicit composition to ensure consistent wording across contexts #}
-                <h1>Editar Votação Votebem: {{ votacao.titulo|default:title }}</h1>
+                <h1>
+                    {% if proposicao %}{{ proposicao.tipo }} {{ proposicao.numero }}/{{ proposicao.ano }} - {% endif %}
+                    Votebem: <i>{{ votacao.titulo|default:title }}</i>
+                </h1>
                 {# Breadcrumb moved below the title and anchors removed as requested #}
                 <nav aria-label="breadcrumb" class="mt-2">
                     <ol class="breadcrumb">
@@ -193,12 +196,22 @@
                 {% csrf_token %}
                 
                 <div class="form-group">
-                    <label for="titulo">Título da Votação *
+                    <label for="titulo">Título da Votação * (3)
                         <small class="ms-2 text-muted">
                             IDs:
                             voting_votacaovotebem={{ votacao.id|default:'—' }},
-                            voting_proposicaovotacao={% if votacao.proposicao_votacao %}{{ votacao.proposicao_votacao.id }}{% else %}—{% endif %},
-                            voting_proposicao={% if votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao %}{{ votacao.proposicao_votacao.proposicao.id_proposicao }}{% else %}—{% endif %}
+                           voting_proposicaovotacao={% if votacao.proposicao_votacao %}{{ votacao.proposicao_votacao.id }}{% else %}—{% endif %},
+                            voting_proposicao=
+                            {% if votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao %}
+                                <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="_blank">
+                                    {{ votacao.proposicao_votacao.proposicao.id_proposicao }}
+                                </a>
+                            {% else %}—
+                            {% endif %},
+
+                            <b>proposicao-sufixo: {{ votacao.proposicao_votacao.proposicao.id_proposicao }}-{{ votacao.proposicao_votacao.votacao_sufixo }}
+                                <a href="https://dadosabertos.camara.leg.br/api/v2/votacoes/{{ votacao.proposicao_votacao.proposicao.id_proposicao }}-{{ votacao.proposicao_votacao.votacao_sufixo }}/votos" target="_blank">API votos</a>
+                            </b>
                         </small>
                     </label>
                     <input type="text" id="titulo" name="titulo" class="form-control" 

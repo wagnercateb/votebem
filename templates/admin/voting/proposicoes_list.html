@@ -94,9 +94,10 @@
         background: #f8f9fa;
     }
     .proposicao-titulo {
-        font-weight: bold;
         color: #007bff;
     }
+    /* Permitir que textos longos em links quebrem linha sem truncar */
+    .proposicao-titulo a { white-space: normal; word-break: break-word; }
     .proposicao-ementa {
         color: #6c757d;
         font-size: 0.9em;
@@ -243,20 +244,27 @@
             {% for proposicao in page_obj %}
             <tr>
                 <!-- Make ID clickable to internal gerencial route (relative path for portability) -->
-                <td><a href="/gerencial/?proposicao_id={{ proposicao.id_proposicao }}">{{ proposicao.id_proposicao }}</a></td>
+                <td><a href="/gerencial/?proposicao_id={{ proposicao.id_proposicao }}">{{ proposicao.id_proposicao }}</a>
+                    clique
+                </td>
                 <td>
                     <div class="proposicao-titulo">
                         {% if proposicao.id_proposicao %}
                             <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
-                                {{ proposicao.titulo|truncatechars:80 }}
+                                {{ proposicao.ementa|default:proposicao.titulo }}
                             </a>
                         {% else %}
-                            {{ proposicao.titulo|truncatechars:80 }}
+                            {{ proposicao.ementa|default:proposicao.titulo }}
                         {% endif %}
                     </div>
-                    {% if proposicao.ementa %}
-                        <div class="proposicao-ementa">{{ proposicao.ementa|truncatechars:120 }}</div>
+                    {% if proposicao.data_apresentacao %}
+                        <div class="proposicao-data" style="color:#6c757d; font-size:0.85em; margin-top:4px;">
+                            Apresentada em: {{ proposicao.data_apresentacao|date:"d/m/Y" }}
+                        </div>
                     {% endif %}
+                    <!-- {% if proposicao.ementa %}
+                        <div class="proposicao-ementa">{{ proposicao.ementa }}</div>
+                    {% endif %} -->
                 </td>
                 <td>
                     {% if proposicao.id_proposicao %}

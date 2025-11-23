@@ -24,6 +24,8 @@ urlpatterns = [
     # Votações
     path('votacoes/management/', admin_views.votacoes_management, name='votacoes_management'),
     path('votacoes/list/', admin_views.votacoes_management, name='votacoes_list'),  # Placeholder
+    # Lista votações oficiais armazenadas (ProposicaoVotacao) com contagem de votos individuais
+    path('votacoes/oficiais/', admin_views.votacoes_oficiais_list, name='votacoes_oficiais_list'),
     path('votacao/create/', admin_views.votacao_create, name='votacao_create'),
     path('votacao/<int:pk>/obter-votacao/', admin_views.votacao_obter_votacao, name='votacao_obter_votacao'),
     # Nova tela: obter votações por período
@@ -58,6 +60,8 @@ urlpatterns = [
     path('ajax/import-congress-votes/', admin_views.ajax_import_congress_votes, name='ajax_import_congress_votes')
     ,
     path('ajax/proposicao-votacao/update-prioridade/', admin_views.ajax_update_proposicao_votacao_prioridade, name='ajax_update_proposicao_votacao_prioridade')
+    ,
+    path('ajax/proposicao-votacao/delete/', admin_views.ajax_delete_proposicao_votacao, name='ajax_delete_proposicao_votacao')
     ,
     # Referências (CRUD) vinculadas a ProposicaoVotacao
     path('ajax/referencias/list/', admin_views.ajax_referencias_list, name='ajax_referencias_list'),

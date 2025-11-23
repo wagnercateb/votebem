@@ -114,43 +114,6 @@
         border-left-color: #4c63d2;
         transform: translateX(3px);
     }
-    
-    .quick-stats {
-        background: white;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    
-    .quick-stats h2 {
-        margin: 0 0 12px 0;
-        color: #333;
-        font-size: 1.3em;
-    }
-    
-    .stats-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 0;
-        border-bottom: 1px solid #eee;
-    }
-    
-    .stats-row:last-child {
-        border-bottom: none;
-    }
-    
-    .stats-label {
-        font-weight: 500;
-        color: #666;
-    }
-    
-    .stats-value {
-        font-size: 1.2em;
-        font-weight: bold;
-        color: #667eea;
-    }
 </style>
 {% endblock %}
 
@@ -193,7 +156,7 @@
 
 <div class="admin-actions">
     <div class="action-card">
-        <h3>Gerenciar Proposições</h3>
+        <h3>Proposições</h3>
         <ul class="action-list">
             <!-- Tooltip descreve ação e se é via App ou Django -->
             <li><a href="{% url 'gerencial:proposicoes_list' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Exibe a lista de proposições cadastradas no aplicativo">Listar Todas as Proposições</a></li>
@@ -218,17 +181,27 @@
     </div>
     
     <div class="action-card">
-        <h3>Gerenciar Votações Votebem</h3>
+        <h3>Votações Votebem</h3>
         <ul class="action-list">
-            <!-- Ajuste de rótulo para indicar Django Admin -->
+            <li><a href="{% url 'gerencial:votacoes_management' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Ativa, pausa ou encerra votações no aplicativo">Votações Ativas</a></li>
             <li><a href="/admin/voting/votacaovotebem/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista todas as votações disponíveis no Django Admin">Listar Todas as Votações via Django</a></li>
-            <li><a href="{% url 'gerencial:votacoes_management' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Ativa, pausa ou encerra votações no aplicativo">Gerenciar Votações Ativas</a></li>
             <li><a href="/admin/voting/votacaovotebem/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Cria uma nova votação pelo Django Admin">Criar Nova Votação via Django</a></li>
         </ul>
     </div>
+
+    <div class="action-card">
+        <h3>Votações oficiais</h3>
+        <ul class="action-list">
+            <li><a href="{% url 'gerencial:votacoes_oficiais_list' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista Votações oficiais já obtidas, com ou sem votos individuais">Listar votações oficiais, obter por ano</a></li>
+            <li><a href="/admin/voting/congressmanvote/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista Votação oficial no Django Admin">Votos individuais oficiais via Django</a></li>
+            <li><a href="{% url 'gerencial:votos_oficiais_app' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Obtem uma ou mais votações oficiais usando API da Câmara">Obter votação por proposicao_id via App</a></li>
+            <li><a href="{% url 'gerencial:votacoes_por_periodo' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre a tela para obter votações por período na Câmara API">Obter votações por período</a></li>
+        </ul>
+    </div>
+
     
     <div class="action-card">
-        <h3>Gerenciar Usuários</h3>
+        <h3>Usuários</h3>
         <ul class="action-list">
             <li><a href="/admin/auth/user/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista todos os usuários no Django Admin">Listar Todos os Usuários via Django</a></li>
             <li><a href="{% url 'gerencial:users_management' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Exibe estatísticas e atividade de usuários no aplicativo">Estatísticas de Usuários</a></li>
@@ -244,15 +217,6 @@
             <li><a href="{% url 'gerencial:congressistas_update' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Atualiza cadastro de deputados com dados da API da Câmara">Atualizar Deputados (Câmara API)</a></li>
         </ul>
     </div>
-
-    <div class="action-card">
-        <h3>Votação oficial</h3>
-        <ul class="action-list">
-            <li><a href="/admin/voting/congressmanvote/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista Votação oficial no Django Admin">Votação oficial via Django</a></li>
-            <li><a href="{% url 'gerencial:votos_oficiais_app' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Obtem uma ou mais votações oficiais usando API da Câmara">Obter votação oficial via App</a></li>
-            <li><a href="{% url 'gerencial:votacoes_por_periodo' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre a tela para obter votações por período na Câmara API">Obter votações por período</a></li>
-        </ul>
-    </div>
     
     <div class="action-card">
         <h3>Ferramentas de Dados</h3>
@@ -262,48 +226,18 @@
         </ul>
     </div>
     
-    <div class="action-card">
+    <!-- <div class="action-card">
         <h3>Enquetes</h3>
         <ul class="action-list">
-            <li><a href="/admin/polls/enquete/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista e edita enquetes no Django Admin">Gerenciar Enquetes via Django</a></li>
+            <li><a href="/admin/polls/enquete/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista e edita enquetes no Django Admin">Enquetes via Django</a></li>
             <li><a href="/admin/polls/respostaenquete/" data-bs-toggle="tooltip" data-bs-placement="top" title="Visualiza respostas de enquetes no Django Admin">Respostas de Enquetes via Django</a></li>
             <li><a href="/admin/polls/enquete/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Cria nova enquete pelo Django Admin">Criar Nova Enquete via Django</a></li>
         </ul>
-    </div>
+    </div> -->
+
 </div>
 
-{% if votacoes_recentes %}
-<div class="quick-stats">
-    <h2>Votações Ativas Recentes</h2>
-    {% for votacao in votacoes_recentes %}
-    <div class="stats-row">
-        <div class="stats-label">
-            <strong>{{ votacao.titulo }}</strong><br>
-        <small>{{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}</small>
-        </div>
-        <div class="stats-value">
-            {% if votacao.ativo %}Ativa{% else %}Inativa{% endif %}
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-{% if ultima_proposicao %}
-<div class="quick-stats">
-    <h2>Última Proposição Adicionada</h2>
-    <div class="stats-row">
-        <div class="stats-label">
-            <strong>{{ ultima_proposicao.titulo }}</strong><br>
-            <small>{{ ultima_proposicao.tipo }} {{ ultima_proposicao.numero }}/{{ ultima_proposicao.ano }} - {{ ultima_proposicao.estado }}</small>
-        </div>
-        <div class="stats-value">
-            <!-- Tooltip para link de detalhes no aplicativo -->
-            <a href="{% url 'gerencial:proposicao_edit' ultima_proposicao.pk %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre detalhes da proposição no aplicativo">Ver Detalhes</a>
-        </div>
-    </div>
-</div>
-{% endif %}
+{# Panels removed per request to avoid extra DB loads #}
 
 {% block extra_js %}
 <script>

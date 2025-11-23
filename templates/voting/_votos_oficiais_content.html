@@ -9,7 +9,8 @@
   .vb-votos-oficiais .table tbody tr:hover { background-color: #f1f3f5; }
   .vb-votos-oficiais th[data-field] { cursor: pointer; }
   .vb-votos-oficiais .sort-icon, .vb-votos-oficiais .sort-hint { margin-left: 6px; }
-  .vb-votos-oficiais .spin { animation: spin 1s linear infinite; }
+  /* Global spinner animation: applies to any element with class "spin" */
+  .spin { animation: spin 1s linear infinite; }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
 <div class="card">
@@ -42,6 +43,7 @@
       <div class="form-text" id="vb-votos-hint" aria-live="polite">
         <span id="vb-votos-hint-text">Dica: pesquise por proposição, selecione uma votação e carregue a votação oficial.</span>
         <span id="vb-votos-loading" style="display:none;">
+          <br/>
           <i class="bi bi-arrow-repeat spin" aria-hidden="true"></i>
           Carregando votação oficial, aguarde...
         </span>
@@ -52,7 +54,13 @@
 
 {% if not votacao %}
 <div class="card" id="vb-votacoes-card" style="display:none;">
-  <div class="card-header"><h4 class="card-title">Votações encontradas (turnos / emenda aglutinativa)</h4></div>
+  <div class="card-header" style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+    <h4 class="card-title" style="margin:0;">Votações encontradas</h4>
+    <div class="form-check form-switch" title="Opcional: aplica filtro por turno/emenda">
+      <input class="form-check-input" type="checkbox" id="vb-toggle-turno-filter">
+      <label class="form-check-label" for="vb-toggle-turno-filter">Filtrar por “turno / emenda aglutinativa / projeto”</label>
+    </div>
+  </div>
   <div class="card-body">
     <div id="vb-votacoes-status" class="text-muted" style="margin-bottom:8px;"></div>
     <div class="table-responsive">
@@ -62,7 +70,7 @@
             <th style="padding:6px;">ID</th>
             <th style="padding:6px;">Data/Hora</th>
             <th style="padding:6px;">Descrição</th>
-            <th style="padding:6px;">Resultado</th>
+            <th style="padding:6px;">Oficial</th>
             <th style="padding:6px;">Qtd. registros</th>
           </tr>
         </thead>
@@ -196,6 +204,74 @@
       }
     } catch (_) { /* ignore */ }
 
+    // Shared in-memory state to keep results consistent across flows
+    let lastDados = [];
+    let lastPropId = '';
+
+    // Optional client-side filter controlled by a toggle (unchecked by default)
+    const toggleTurnoFilter = document.getElementById('vb-toggle-turno-filter');
+    function applyTurnoFilter(items) {
+      const dados = Array.isArray(items) ? items : [];
+      if (!toggleTurnoFilter || !toggleTurnoFilter.checked) return dados;
+      const needles = [ 'em primeiro turno', 'em segundo turno', 'emenda aglutinativa', 'projeto' ];
+      return dados.filter(item => {
+        const d = (item?.descricao || item?.descrição || '').toLowerCase();
+        return needles.some(n => d.includes(n));
+      });
+    }
+
+    // Unified rendering routine: shows all returned items by default;
+    // if the filter is toggled on, applies it before rendering.
+    function renderVotacoes(dados, propId) {
+      const all = Array.isArray(dados) ? dados : [];
+      const shown = applyTurnoFilter(all);
+      listTbody.innerHTML = '';
+      const totalTxt = `${all.length}`;
+      const shownTxt = `${shown.length}`;
+      if (shown.length === 0) {
+        status.textContent = `Nenhuma votação para a proposição ${propId}.`;
+        help.style.display = 'block'; err.style.display = 'none';
+        return;
+      }
+      if (toggleTurnoFilter && toggleTurnoFilter.checked) {
+        status.textContent = `Encontradas ${shownTxt} de ${totalTxt} votações (aplicado filtro de turno/emenda).`;
+      } else {
+        status.textContent = `Encontradas ${shownTxt} votações.`;
+      }
+      help.style.display = 'none'; err.style.display = 'none';
+
+      shown.forEach(item => {
+        const id = item.id || item?.idVotacao || '';
+        const dataHora = item.dataHoraRegistro || item.dataHora || '';
+        const descricao = item.descricao || item?.descrição || '';
+        const resultado = item?.resultado || '';
+        const votosCount = Number(item.votes_count || 0);
+        const tr = document.createElement('tr');
+        const baseGerencial = `${window.location.origin}/gerencial/`;
+        const hrefFull = `${baseGerencial}?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(id)}`;
+        const deleteBtn = `<button type="button" class="btn btn-sm btn-outline-danger vb-delete-pv" data-composed-id="${propId}-${String(id).split('-').pop()}">Apagar</button>`;
+        tr.innerHTML = `<td style=\"padding:6px;\"><a href=\"${hrefFull}\" data-id=\"${id}\" class=\"vb-votacao-id\">${id}</a></td>`+
+                       `<td style=\"padding:6px;\">${dataHora || ''}</td>`+
+                       `<td style=\"padding:6px;\">${descricao || ''}</td>`+
+                       `<td style=\"padding:6px;\">${resultado || ''} ${deleteBtn}</td>`+
+                       `<td style=\"padding:6px;\">${votosCount}</td>`;
+        listTbody.appendChild(tr);
+      });
+
+      // Click on ID: prevent navigation and only fill the Votação ID textbox
+      listTbody.querySelectorAll('a.vb-votacao-id').forEach(a => {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const idSel = a.getAttribute('data-id');
+          if (votacaoInput) {
+            votacaoInput.value = idSel || '';
+            btnCarregarVotacao.style.display = (idSel ? 'inline-block' : 'none');
+            btnCarregarVotacao.focus();
+          }
+        });
+      });
+    }
+
     // Ao enviar, buscar votações da proposição e não submeter o formulário
     form.addEventListener('submit', function(ev){
       // Se já existe um votacao_id preenchido, opcionalmente poderíamos submeter,
@@ -220,60 +296,10 @@
           return r.json();
         })
         .then(json => {
-          const dados = Array.isArray(json?.dados) ? json.dados : [];
-          // Filtro por descrição contendo "em primeiro turno", "em segundo turno" ou "Emenda Aglutinativa" (case-insensitive)
-          const needles = [
-            'em primeiro turno',
-            'em segundo turno',
-            'emenda aglutinativa'
-          ];
-          const filtered = dados.filter(item => {
-            const d = (item?.descricao || item?.descrição || '').toLowerCase();
-            return needles.some(n => d.includes(n));
-          });
-
-          if (filtered.length === 0) {
-            status.textContent = `Nenhuma votação correspondente para a proposição ${propId}.`;
-            help.style.display = 'block'; err.style.display = 'none';
-            listTbody.innerHTML = '';
-            return;
-          }
-
-          status.textContent = `Foram encontradas ${filtered.length} votações relevantes.`;
-          help.style.display = 'none'; err.style.display = 'none';
-          listTbody.innerHTML = '';
-          filtered.forEach(item => {
-            const id = item.id || item?.idVotacao || '';
-            const dataHora = item.dataHoraRegistro || item.dataHora || '';
-            const descricao = item.descricao || item?.descrição || '';
-            const resultado = item?.resultado || '';
-            const votosCount = Number(item.votes_count || 0);
-            const tr = document.createElement('tr');
-            // Build a link that includes both proposicao_id and consulta_id (desired param)
-            const baseGerencial = `${window.location.origin}/gerencial/`;
-            const hrefFull = `${baseGerencial}?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(id)}`;
-            tr.innerHTML = `<td style=\"padding:6px;\"><a href=\"${hrefFull}\" data-id=\"${id}\" class=\"vb-votacao-id\">${id}</a></td>`+
-                           `<td style=\"padding:6px;\">${dataHora || ''}</td>`+
-                           `<td style=\"padding:6px;\">${descricao || ''}</td>`+
-                           `<td style=\"padding:6px;\">${resultado || ''}</td>`+
-                           `<td style=\"padding:6px;\">${votosCount}</td>`;
-            listTbody.appendChild(tr);
-          });
-          // Click on ID: prevent navigation and only fill the Votação ID textbox
-          listTbody.querySelectorAll('a.vb-votacao-id').forEach(a => {
-            a.addEventListener('click', (e) => {
-              e.preventDefault();
-              const idSel = a.getAttribute('data-id');
-              if (votacaoInput) {
-                votacaoInput.value = idSel || '';
-                btnCarregarVotacao.style.display = (idSel ? 'inline-block' : 'none');
-                btnCarregarVotacao.focus();
-              }
-            });
-          });
-
-          // Click nos IDs para preencher o textbox "votação id" e mostrar o botão
-          // Allow default navigation; inputs will be prefilled from URL on load
+          // Save raw results and proposição id, then render through the unified routine
+          lastDados = Array.isArray(json?.dados) ? json.dados : [];
+          lastPropId = propId;
+          renderVotacoes(lastDados, lastPropId);
         })
         .catch(err0 => {
           // Show detailed error with the URL we called, to aid troubleshooting
@@ -284,6 +310,14 @@
           err.innerHTML = `<div class="alert alert-danger" style="margin:0;">Ocorreu um erro ao consultar a API da Câmara. Verifique o ID e tente novamente. URL: <a href="${safeUrl}" target="api">${safeUrl}</a></div>`;
         });
     });
+
+    // Re-render when the filter toggle changes
+    if (toggleTurnoFilter) {
+      toggleTurnoFilter.addEventListener('change', function(){
+        if (!lastPropId) return; // nothing fetched yet
+        renderVotacoes(lastDados, lastPropId);
+      });
+    }
 
     // Botão para carregar votação: agora chama endpoint interno que importa e salva votos
     if (btnCarregarVotacao) {
@@ -310,10 +344,16 @@
           return;
         }
         const url = `${window.location.origin}/gerencial/ajax/import-congress-votes/?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(sufixo)}`;
+        // UI/UX: show a visible waiting message including the exact URL being fetched.
+        // Keep the spinner visible and also show the hint text with a clickable URL for clarity.
         status.textContent = `Importando votos oficiais de ${composed}...`;
         card.style.display = 'block'; help.style.display = 'none'; err.style.display = 'none';
         if (hintLoading) hintLoading.style.display = 'inline';
-        if (hintText) hintText.style.display = 'none';
+        if (hintText) {
+          //hintText.innerHTML = `Aguarde, importando da URL: <a href="${url}" target="api">${url}</a>`;
+          hintText.innerHTML = `Aguarde, importando da URL: https://dadosabertos.camara.leg.br/api/v2/votacoes/${encodeURIComponent(propId)}-${encodeURIComponent(sufixo)}/votos ...`;          
+          hintText.style.display = 'inline';
+        }
         fetch(url, { headers: { 'Accept': 'application/json' } })
           .then(r => r.json().then(j => ({ ok: r.ok, status: r.status, body: j })))
           .then(resp => {
@@ -348,6 +388,64 @@
           });
       });
     }
+  })();
+
+  // --- Helper: CSRF token from cookie
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  // --- Event delegation for Apagar button on the votações list
+  (function bindDeleteButtons(){
+    const listTbody = document.querySelector('#vb-votacoes-list tbody');
+    const status = document.getElementById('vb-votacoes-status');
+    const help = document.getElementById('vb-votacoes-help');
+    const err = document.getElementById('vb-votacoes-error');
+    if (!listTbody) return;
+    listTbody.addEventListener('click', function(ev){
+      const btn = ev.target.closest('.vb-delete-pv');
+      if (!btn) return;
+      ev.preventDefault();
+      const composed = btn.getAttribute('data-composed-id') || '';
+      if (!composed || composed.indexOf('-') < 0) {
+        alert('ID de votação inválido para exclusão.');
+        return;
+      }
+      if (!confirm('Tem certeza que deseja apagar os registros desta votação oficial?')) return;
+      const formData = new URLSearchParams();
+      formData.append('composed_id', composed);
+      fetch(`${window.location.origin}/gerencial/ajax/proposicao-votacao/delete/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCookie('csrftoken') || ''
+        },
+        body: formData.toString(),
+        credentials: 'same-origin'
+      }).then(async r => {
+        const ct = r.headers.get('Content-Type') || '';
+        if (!r.ok) {
+          const text = await r.text();
+          throw new Error(`HTTP ${r.status} (${ct}); ${text.slice(0, 200)}`);
+        }
+        return r.json();
+      }).then(json => {
+        if (!json?.ok) {
+          alert('Falha ao apagar: ' + (json?.error || 'erro desconhecido'));
+          return;
+        }
+        const total = Number(json.deleted_total || 0);
+        status.textContent = `Exclusão concluída. Registros removidos: ${total}.`;
+        // Remover a linha da tabela
+        const tr = btn.closest('tr');
+        if (tr) tr.remove();
+      }).catch(e => {
+        err.style.display = 'block'; help.style.display = 'none';
+        err.innerHTML = `<div class="alert alert-danger" style="margin:0;">Erro ao apagar registros. Verifique se você tem permissão de staff e se o CSRF está válido.<br/><small>${String(e)}</small></div>`;
+      });
+    });
   })();
 
 

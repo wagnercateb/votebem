@@ -13,6 +13,8 @@
   .vb-votos-oficiais .table tbody tr:hover { background-color: #f1f3f5; }
   .vb-votos-oficiais th[data-field] { cursor: pointer; }
   .vb-votos-oficiais .sort-icon, .vb-votos-oficiais .sort-hint { margin-left: 6px; }
+  /* Garantir que a ementa seja exibida por completo, sem truncamento */
+  .vb-votos-oficiais .vb-ementa { white-space: normal; overflow: visible; text-overflow: clip; display: block; word-break: break-word; }
 </style>
 
 <div class="card">
@@ -27,14 +29,20 @@
   </div>
   <div class="card-body">
     {# Mostrar o título da proposição logo abaixo do título da página #}
-    {% if pv and pv.proposicao and pv.proposicao.titulo %}
+    <!-- {% if pv and pv.proposicao and pv.proposicao.titulo %}
       <div class="text-muted mb-2">Proposição: {{ pv.proposicao.titulo }}</div>
     {% elif votacao and votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao and votacao.proposicao_votacao.proposicao.titulo %}
       <div class="text-muted mb-2">Proposição: {{ votacao.proposicao_votacao.proposicao.titulo }}</div>
-    {% endif %}
+    {% endif %} -->
     {% comment %} Show description only when a proposição/votação context (pv) exists {% endcomment %}
     {% if pv %}
       <div class="text-muted"><b>Descrição: {{ pv.descricao|default:"(sem descrição)" }}</b></div>
+    {% endif %}
+    {# Exibir ementa completa, sem truncamento #}
+    {% if pv and pv.proposicao and pv.proposicao.ementa %}
+      <div class="vb-ementa mt-2"><b>Ementa:</b> {{ pv.proposicao.ementa }}</div>
+    {% elif votacao and votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao and votacao.proposicao_votacao.proposicao.ementa %}
+      <div class="vb-ementa mt-2"><b>Ementa:</b> {{ votacao.proposicao_votacao.proposicao.ementa }}</div>
     {% endif %}
   </div>
 </div>
