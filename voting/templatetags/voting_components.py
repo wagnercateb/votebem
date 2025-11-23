@@ -93,6 +93,14 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
                 qid = request.GET.get('proposicao_id')
                 if qid:
                     pid = int(qid)
+                else:
+                    # Support composite votacao_id in the form "<proposicao_id>-<sufixo>"
+                    # Example: "2417025-45" should infer proposicao_id = 2417025
+                    vid = request.GET.get('votacao_id')
+                    if vid and '-' in vid:
+                        leading = vid.split('-', 1)[0]
+                        if leading.isdigit():
+                            pid = int(leading)
         except Exception:
             pass
 

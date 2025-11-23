@@ -1141,7 +1141,18 @@ def proposicoes_list(request):
         proposicoes = proposicoes.filter(estado=estado_filter)
     
     # Pagination
-    paginator = Paginator(proposicoes, 25)  # Show 25 propositions per page
+    # Allow the page size to be adjusted via querystring param `per_page`.
+    # We validate it against a small set of allowed values to avoid
+    # excessively large responses impacting performance.
+    try:
+        per_page_raw = request.GET.get('per_page', '25')
+        per_page = int(per_page_raw)
+    except Exception:
+        per_page = 25
+    if per_page not in (10, 25, 50, 100, 200):
+        per_page = 25
+
+    paginator = Paginator(proposicoes, per_page)  # Show N propositions per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -1181,6 +1192,8 @@ def proposicoes_list(request):
         'tipos_disponiveis': tipos_disponiveis,
         'anos_disponiveis': anos_disponiveis,
         'total_proposicoes': proposicoes.count(),
+        # Expose current page size to the template so we can persist the selection
+        'per_page': per_page,
     }
     
     return render(request, 'admin/voting/proposicoes_list.html', context)

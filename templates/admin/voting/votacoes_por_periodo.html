@@ -23,11 +23,12 @@
       </div>
       <div class="col-sm-4">
         <label for="datafim" class="form-label">Data fim</label>
-        <input type="date" class="form-control" id="datafim" name="datafim" value="{{ default_fim }}" required>
+       <input type="date" class="form-control" id="datafim" name="datafim" value="{{ default_fim }}" required>
         <div class="form-text">Por padrão, será preenchido com início + 88 dias.</div>
       </div>
-      <div class="col-sm-4 d-flex align-items-end">
-        <button id="btn-consultar" type="button" class="btn btn-primary">Consultar votações</button>
+      <div class="col-sm-4 d-flex align-items-end gap-2">
+        <button id="btn-consultar" type="button" title="https://dadosabertos.camara.leg.br/api/v2/votacoes?idOrgao=180&dataInicio=<inicio>&dataFim=<fim> e lista todas as votações com 'aprovad/rejeitad', 'turno/emenda/projeto', 'total'" class="btn btn-primary">Consultar votações</button>
+        <button id="btn-importar-todas" type="button" class="btn btn-success" title="Popula voting_proposicaovotacao com proposicao_id-votacao_sufixo de todas as votações listadas" disabled>Importar todas da lista</button>
       </div>
     </form>
 
@@ -38,9 +39,10 @@
         <thead>
           <tr>
             <th>ID votação</th>
+            <th>No BD</th>
             <th>Data/Hora</th>
             <th>Descrição</th>
-            <th>Ação</th>
+            <th>Votação oficial</th>
           </tr>
         </thead>
         <tbody id="tbody-votacoes"></tbody>
@@ -92,6 +94,60 @@
   const tbody = document.getElementById('tbody-votacoes');
   const importLog = document.getElementById('import-log');
   const logList = document.getElementById('log-list');
+  const btnImportarTodas = document.getElementById('btn-importar-todas');
+
+  // Memória: último conjunto de votações filtradas para importação sob demanda
+  let lastFiltrados = [];
+
+  // Cache local: presença e contagem de votos no BD por proposição
+  // Estrutura: mapa propId -> { [sufixo]: { pvId: number, votesCount: number } }
+  // Assim é possível tanto verificar se existe a votação quanto se já há votos cadastrados.
+  const dbCacheByPropId = {};
+
+  // Consulta apenas o banco para uma proposição e guarda os sufixos existentes
+  async function fetchDbOnlyForProp(propId) {
+    if (!propId) return {};
+    if (dbCacheByPropId[propId]) return dbCacheByPropId[propId];
+    const url = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(propId)}&db_only=1`;
+    try {
+      const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      // Mapa sufixo -> info { pvId, votesCount }
+      const sufixoMap = {};
+      if (Array.isArray(j?.dados)) {
+        for (const row of j.dados) {
+          // Cada item retorna um 'id' no formato "<prop>-<sufixo>" quando vem do banco
+          const fullId = row.id || row.idVotacao || '';
+          let suf = null;
+          try {
+            if (typeof fullId === 'string' && fullId.includes('-')) {
+              suf = parseInt(fullId.split('-')[1], 10);
+            } else if (typeof fullId === 'number') {
+              suf = fullId;
+            }
+          } catch (_) { suf = null; }
+          if (Number.isInteger(suf)) {
+            const pvId = row.pv_id || null;
+            const votesCount = Number(row.votes_count || 0);
+            sufixoMap[suf] = { pvId, votesCount };
+          }
+        }
+      }
+      dbCacheByPropId[propId] = sufixoMap;
+      return sufixoMap;
+    } catch (e) {
+      // Em caso de falha, manter cache vazio para evitar re-tentativas agressivas
+      dbCacheByPropId[propId] = {};
+      return dbCacheByPropId[propId];
+    }
+  }
+
+  // Pré-carrega presença no BD para um conjunto de proposições
+  async function prefetchDbForProps(propIds) {
+    const uniques = Array.from(new Set((propIds || []).filter(Boolean)));
+    await Promise.all(uniques.map(pid => fetchDbOnlyForProp(pid)));
+  }
 
   function log(msg) {
     importLog.style.display = 'block';
@@ -189,35 +245,49 @@
       status.textContent = `Foram encontradas ${dados.length} votações; ${filtrados.length} correspondem aos critérios.`;
       resultados.style.display = 'block';
       tbody.innerHTML = '';
+      // Guarda conjunto para importação via botão e habilita se houver itens
+      lastFiltrados = filtrados;
+      if (btnImportarTodas) {
+        btnImportarTodas.disabled = (lastFiltrados.length === 0);
+      }
+      // Antes de renderizar, pré-carregar presença no BD para cada proposição única
+      const propIds = filtrados.map(it => parseIdsFromItem(it).propId).filter(Boolean);
+      await prefetchDbForProps(propIds);
+
       // Render e disponibilizar ação de importação
       for (const item of filtrados) {
         const { fullId, propId, sufixo, desc, dataHora } = parseIdsFromItem(item);
+        const sufixoMap = dbCacheByPropId[propId] || {};
+        const info = (Number.isInteger(sufixo) ? sufixoMap[sufixo] : undefined) || { pvId: null, votesCount: 0 };
+        const isInDb = Number.isInteger(sufixo) && !!sufixoMap[sufixo];
+        const votosJaImportados = Number(info.votesCount || 0);
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${fullId || (propId ? `${propId}-${sufixo||''}` : (sufixo||''))}</td>`+
+        tr.innerHTML = `<td>${(propId ? `<a target='_blank' href='https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=${propId}'>${propId}</a>-${sufixo||''}` : (sufixo||''))}</td>`+
+                       `<td>${isInDb ? 'sim' : `<button type='button' class='btn btn-outline-primary btn-sm btn-abrir-gerencial' title='Abrir gerencial com votacao_id'>Abrir</button>`}</td>`+
                        `<td>${dataHora || ''}</td>`+
                        `<td>${desc || ''}</td>`+
-                       `<td><button type="button" class="btn btn-success btn-sm btn-import">Carregar votação</button></td>`;
+                       `<td>${votosJaImportados > 0 ? `${votosJaImportados}` : `<button type=\"button\" class=\"btn btn-success btn-sm btn-import\">Carregar votação oficial</button>`}</td>`;
         const btn = tr.querySelector('.btn-import');
-        btn.addEventListener('click', async () => {
-          // Primeiro, consulta por proposição (usa apenas X de X-Y)
-          await consultarPorProposicao(propId);
-          // Depois, importa votos oficiais
-          await importarVotos(fullId, propId, sufixo);
-        });
+        if (btn) {
+          btn.addEventListener('click', async () => {
+            // Primeiro, consulta por proposição (usa apenas X de X-Y)
+            await consultarPorProposicao(propId);
+            // Depois, importa votos oficiais
+            await importarVotos(fullId, propId, sufixo);
+          });
+        }
+        // Se não existir no BD, permitir abrir página gerencial passando votacao_id
+        const btnAbrir = tr.querySelector('.btn-abrir-gerencial');
+        if (btnAbrir && fullId) {
+          btnAbrir.addEventListener('click', () => {
+            const targetUrl = `${window.location.origin}/gerencial/?votacao_id=${encodeURIComponent(fullId)}`;
+            window.location.href = targetUrl;
+          });
+        }
         tbody.appendChild(tr);
       }
-      // Importar todas automaticamente ao final
-      for (const item of filtrados) {
-        const { fullId, propId, sufixo } = parseIdsFromItem(item);
-        // Executa consulta por proposição antes da importação
-        await consultarPorProposicao(propId);
-        await importarVotos(fullId, propId, sufixo);
-      }
-      // Mensagem de conclusão do processamento automático
-      log('Importação automática finalizada.');
-      status.textContent = 'Consulta e importações concluídas.';
-      // Exibir mensagem final abaixo do título, em <h1>
-      if (finalMsg) { finalMsg.textContent = 'Importação automática finalizada.'; finalMsg.style.display = ''; }
+      // Removido: fluxo automático. Agora importação é sob demanda.
+      status.textContent = 'Consulta concluída. Use o botão "Importar" para processar as votações filtradas.';
     } catch (e) {
       // Mensagem de erro com detalhes técnicos: tipo e mensagem do erro + URL da API
       const errName = e && e.name ? e.name : 'Erro';
@@ -229,6 +299,32 @@
 
   if (btnConsultar) {
     btnConsultar.addEventListener('click', consultarPeriodicamente);
+  }
+
+  // Importação sob demanda para todas as votações filtradas da última consulta
+  async function importarTodasFiltradas() {
+    if (!Array.isArray(lastFiltrados) || lastFiltrados.length === 0) {
+      status.textContent = 'Nenhuma votação filtrada para importar. Realize a consulta primeiro.';
+      return;
+    }
+    // Novo comportamento: apenas popular Proposição e ProposiçãoVotação sem importar votos
+    status.textContent = 'Populando Proposição e ProposiçãoVotação (sem votos), aguarde...';
+    if (finalMsg) { finalMsg.style.display = 'none'; finalMsg.textContent = ''; }
+    importLog.style.display = 'block';
+    for (const item of lastFiltrados) {
+      const { fullId, propId, sufixo } = parseIdsFromItem(item);
+      // Apenas garante registros na base via endpoint de proposição-votações,
+      // que insere ProposicaoVotacao quando ausente, sem persistir votos individuais.
+      await consultarPorProposicao(propId);
+      log(`Preparada votação ${fullId} da proposição ${propId}: Proposicao/ProposicaoVotacao garantidas. (Sem votos)`);
+    }
+    log('Processo concluído sem importação de votos.');
+    status.textContent = 'Concluído: Proposição e ProposicaoVotacao populadas (sem votos).';
+    if (finalMsg) { finalMsg.textContent = 'População de registros concluída (sem votos).'; finalMsg.style.display = ''; }
+  }
+
+  if (btnImportarTodas) {
+    btnImportarTodas.addEventListener('click', importarTodasFiltradas);
   }
 </script>
 {% endblock %}

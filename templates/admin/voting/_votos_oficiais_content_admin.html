@@ -214,8 +214,8 @@
         const votosCell = (votosCount > 0 && (pvId || vbId)) ? `<a href="/voting/votos/oficiais/?votacao_id=${pvId || vbId}" target="votos">${votosCount}</a>` : `${votosCount}`;
         const pvAdminPart = pvId ? ` <a href="/admin/voting/proposicaovotacao/${pvId}/change/" class="btn btn-sm btn-outline-secondary" target="pv-admin" title="Editar ProposicaoVotacao no Django">PropVotacao</a>` : '';
         const deleteBtn = `<button type="button" class="btn btn-sm btn-outline-danger vb-delete-pv" data-composed-id="${propId}-${String(id).includes('-') ? String(id).split('-').pop() : String(id)}">Apagar</button>`;
-        // When no VoteBem exists but there are official votes, offer a 'Criar' button
-        const canCreateVb = !vbId && votosCount > 0;
+        // Mostrar botão "Criar" somente quando não existe VoteBem e há mais de 1 registro na coluna de votos
+        const canCreateVb = !vbId && votosCount > 1;
         const createLink = canCreateVb ? ` <a href="/gerencial/votacao/create/?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(id)}" class="btn btn-sm btn-outline-success" target="vb-create" title="Criar votação VoteBem"><i class="bi bi-plus-circle"></i> Criar</a>` : '';
         const votebemCell = vbId
           ? `<a href="/gerencial/votacao/${vbId}/edit/" class="btn btn-sm btn-outline-primary" target="vb-edit" title="Editar votação VoteBem #${vbId}"><i class="bi bi-pencil-square"></i> Editar</a> ${pvAdminPart}`
@@ -387,7 +387,33 @@
 
     // Botão para importar votos oficiais
     if (btnCarregarVotacao) {
-      btnCarregarVotacao.addEventListener('click', function(ev){
+      // Helper assíncrono: verifica se existe o registro específico em voting_proposicaovotacao
+      // Parâmetros: propId e sufixo (id da votação dentro da proposição)
+      // Retorna true quando existir ProposicaoVotacao correspondente; caso contrário, false
+      async function checkPvExists(propId, sufixo) {
+        // Primeiro tenta usar resultados em memória (se a busca por proposição foi realizada)
+        try {
+          const idMatch = `${String(propId)}-${String(sufixo)}`;
+          if (Array.isArray(lastDados) && lastPropId && String(lastPropId) === String(propId)) {
+            const found = lastDados.some(row => String(row?.id || row?.idVotacao || '') === idMatch || String(row?.votacao_sufixo || '') === String(sufixo));
+            if (found) return true;
+          }
+        } catch (_) { /* ignore */ }
+        // Fallback: consulta DB-only para confirmar
+        try {
+          const url = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(String(propId))}&db_only=1`;
+          const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          if (!r.ok) return false;
+          const j = await r.json();
+          const arr = Array.isArray(j?.dados) ? j.dados : [];
+          const idMatch = `${String(propId)}-${String(sufixo)}`;
+          return arr.some(row => String(row?.id || row?.idVotacao || '') === idMatch || String(row?.votacao_sufixo || '') === String(sufixo));
+        } catch (_) {
+          return false;
+        }
+      }
+
+      btnCarregarVotacao.addEventListener('click', async function(ev){
         ev.preventDefault();
         const vRaw = (votacaoInput && votacaoInput.value ? votacaoInput.value.trim() : '');
         const pRaw = (propInput && propInput.value ? propInput.value.trim() : '');
@@ -409,6 +435,19 @@
           card.style.display = 'block'; help.style.display = 'none'; err.style.display = 'none';
           return;
         }
+        // NOVO: antes de executar a importação, verificar se EXISTE o registro específico de ProposicaoVotacao
+        const pvExists = await checkPvExists(propId, sufixo);
+        if (!pvExists) {
+          // Remover o botão e substituir por mensagem explícita de ação necessária
+          try { btnCarregarVotacao.remove(); } catch (_) { btnCarregarVotacao.style.display = 'none'; }
+          const msg = document.createElement('span');
+          msg.className = 'text-danger';
+          msg.style.marginLeft = '8px';
+          msg.textContent = 'bucar proposicao na API primeiro';
+          if (form) { form.appendChild(msg); } else if (status) { status.textContent = 'bucar proposicao na API primeiro'; }
+          return; // não prosseguir com importação se não houver ProposicaoVotacao
+        }
+
         const url = `${window.location.origin}/gerencial/ajax/import-congress-votes/?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(sufixo)}`;
         // UI/UX: show a visible, explicit waiting message including the exact URL being fetched.
         // Keep the spinner visible, but also show the hint text so the user sees which endpoint is being called.

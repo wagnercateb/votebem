@@ -210,6 +210,24 @@
     </div>
     {% if page_obj.has_other_pages %}
     <div class="pagination" style="margin: 0;">
+        {# Page size selector: submits via GET and preserves current filters. #}
+        <form method="get" style="display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap;">
+            <label for="per_page" class="form-label" style="margin:0; white-space:nowrap;">Itens pp:</label>
+            <select id="per_page" name="per_page" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()" title="Seleciona a quantidade de itens por página">
+                <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+                <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+            </select>
+            {# Preserve current filters when changing page size #}
+            {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
+            {% if tipo_filter %}<input type="hidden" name="tipo" value="{{ tipo_filter }}">{% endif %}
+            {% if ano_filter %}<input type="hidden" name="ano" value="{{ ano_filter }}">{% endif %}
+            {% if estado_filter %}<input type="hidden" name="estado" value="{{ estado_filter }}">{% endif %}
+            {# Reset to first page on per_page change for consistent UX #}
+            <input type="hidden" name="page" value="1">
+        </form>
         {% if page_obj.has_previous %}
             <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page=1">« Primeira</a>
             <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">‹ Anterior</a>
@@ -220,8 +238,8 @@
         </span>
 
         {% if page_obj.has_next %}
-            <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima ›</a>
-            <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última »</a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima ›</a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última »</a>
         {% endif %}
     </div>
     {% endif %}
@@ -315,17 +333,33 @@
 {% if page_obj.has_other_pages %}
 <div class="pagination">
     {% if page_obj.has_previous %}
-        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page=1">« Primeira</a>
-        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">‹ Anterior</a>
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}page=1">« Primeira</a>
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}page={{ page_obj.previous_page_number }}">‹ Anterior</a>
     {% endif %}
     
+    {# Duplicate page-size selector near bottom pagination for convenience #}
+    <form method="get" style="display:inline-flex; align-items:center; gap:6px; margin-right:8px; flex-wrap:nowrap;">
+        <label for="per_page_bottom" class="form-label" style="margin:0; white-space:nowrap;">Itens por página:</label>
+        <select id="per_page_bottom" name="per_page" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()" title="Seleciona a quantidade de itens por página">
+            <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+            <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+            <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+        </select>
+        {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
+        {% if tipo_filter %}<input type="hidden" name="tipo" value="{{ tipo_filter }}">{% endif %}
+        {% if ano_filter %}<input type="hidden" name="ano" value="{{ ano_filter }}">{% endif %}
+        {% if estado_filter %}<input type="hidden" name="estado" value="{{ estado_filter }}">{% endif %}
+        <input type="hidden" name="page" value="1">
+    </form>
     <span class="current">
         Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
     </span>
     
     {% if page_obj.has_next %}
-        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima ›</a>
-        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última »</a>
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima ›</a>
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% if tipo_filter %}tipo={{ tipo_filter }}&{% endif %}{% if ano_filter %}ano={{ ano_filter }}&{% endif %}{% if estado_filter %}estado={{ estado_filter|urlencode }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Última »</a>
     {% endif %}
 </div>
 {% endif %}

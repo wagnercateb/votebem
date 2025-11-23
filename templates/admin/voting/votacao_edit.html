@@ -211,7 +211,9 @@
 
                             <b>proposicao-sufixo: {{ votacao.proposicao_votacao.proposicao.id_proposicao }}-{{ votacao.proposicao_votacao.votacao_sufixo }}
                                 <a href="https://dadosabertos.camara.leg.br/api/v2/votacoes/{{ votacao.proposicao_votacao.proposicao.id_proposicao }}-{{ votacao.proposicao_votacao.votacao_sufixo }}/votos" target="_blank">API votos</a>
-                            </b>
+                            </b>,
+
+                            <a href="http://localhost:8000/voting/votacao/{{ votacao.id }}/" target="_blank">Votação Votebem (detalhes)</a>
                         </small>
                     </label>
                     <input type="text" id="titulo" name="titulo" class="form-control" 

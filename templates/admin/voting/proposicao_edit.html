@@ -152,7 +152,9 @@
 
 {% block content %}
 <h1>{{ title }}</h1>
-<p>Edite as informações da proposição abaixo.</p>
+<p>Edite as informações da proposição 
+    <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ proposicao.id_proposicao }}" target="_blank">{{ proposicao.id_proposicao }}</a>
+    abaixo.</p>
 
 {# Reusable proposição action bar #}
 {% proposicao_action_bar %}

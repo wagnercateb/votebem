@@ -301,7 +301,7 @@
 {% endblock %}
 
 {% block content %}
-{# Removido conforme solicitação: cabeçalho da página da Câmara #}
+<h2>Proposições > adicionar em lote, por período</h2>
 
 Só atualiza as proposições, não busca seus temas ou votações
 
@@ -317,7 +317,6 @@ Só atualiza as proposições, não busca seus temas ou votações
             <span class="icon">✅</span> Proposições com votações oficiais
         </button>
     </form>
-
     <!-- Botão: atualizar proposições dos últimos 30 dias (form submit) -->
     <form method="post" style="display: inline; margin-left: 8px;">
         {% csrf_token %}
