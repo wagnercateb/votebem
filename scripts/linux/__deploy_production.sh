@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Avoid __deploy_production.sh unless you want a self-contained stack with an Nginx container binding 80/443 (this can collide with your host Nginx).
+# Continue with linuxScripts/3__deploy_votebem_in_baixavideo.sh . It is designed for your exact scenario: a VPS already serving baixavideo.site with host-level Nginx, adding votebem.online as another site and proxying to the Django app on port 8001 .
+
 # --- SSH authorized_keys check (resilient, optional input) ---
 ensure_authorized_keys_for_user() {
   local user="$1"

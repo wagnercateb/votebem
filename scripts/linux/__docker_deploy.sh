@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Avoid __docker_deploy.sh unless you intend to run a multisite Nginx inside Docker on a shared vps_network and move away from host Nginx. It’s a different architecture and will complicate your current setup.
+# Continue with linuxScripts/3__deploy_votebem_in_baixavideo.sh . It is designed for your exact scenario: a VPS already serving baixavideo.site with host-level Nginx, adding votebem.online as another site and proxying to the Django app on port 8001 .
+
 # --- SSH authorized_keys check (resilient, optional input) ---
 ensure_authorized_keys_for_user() {
   local user="$1"

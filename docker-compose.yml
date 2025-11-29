@@ -39,8 +39,8 @@ services:
     environment:
       MARIADB_DATABASE: votebem_db
       MARIADB_USER: votebem_user
-      MARIADB_PASSWORD: votebem_password
-      MARIADB_ROOT_PASSWORD: votebem_root_pwd
+      MARIADB_PASSWORD: pppttwwwDB@@
+      MARIADB_ROOT_PASSWORD: pppttwwwDB@@
     # Host-mounted volumes for persistent data and backups
     volumes:
       - /dados/mariadb/votebem/data:/var/lib/mysql
@@ -50,12 +50,14 @@ services:
     - "127.0.0.1:3306:3306"
     # Restart policy for reliability
     restart: unless-stopped
-    # Basic healthcheck so web waits for a healthy DB before starting
+    # Robust healthcheck: root user, quoted password, TCP host     
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$MARIADB_USER -p$MARIADB_PASSWORD || exit 1"]
-      interval: 30s
+      test: ["CMD-SHELL", "mariadb -h 127.0.0.1 -uroot -p$${MARIADB_ROOT_PASSWORD} -e 'SELECT 1' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
       timeout: 10s
-      retries: 3
+      retries: 12
+      start_period: 30s
+
 
   # Valkey (Redis-compatible) cache/datastore
   valkey:
@@ -91,15 +93,15 @@ services:
       # Disable debug in production
       - DEBUG=False
       # Database connection string targeting the local db service on default network
-      - DATABASE_URL=mysql://votebem_user:votebem_password@db:3306/votebem_db?charset=utf8mb4
+      - DATABASE_URL=mysql://votebem_user:pppttwwwDB@@@db:3306/votebem_db?charset=utf8mb4
       # Redis URL using Valkey service name on default network
       - REDIS_URL=redis://valkey:6379/0
       # Allowed hosts for Django
-      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,votebem.example.com
+      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,votebem.online
       # Django settings module for production
       - DJANGO_SETTINGS_MODULE=votebem.settings.production
       # Secret key placeholder (change in production!)
-      - SECRET_KEY=change-this-in-production
+      - SECRET_KEY=chave_secreta_do_votebem_em_producao
     # Host-mounted volumes for static, media, and logs so Nginx can serve directly
     volumes:
       # Static files collected by Django (collectstatic)
