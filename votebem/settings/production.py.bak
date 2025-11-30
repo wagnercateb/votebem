@@ -1,37 +1,23 @@
-﻿from .base import *
+from .base import *
 import os
-from pathlib import Path
-# Use python-decouple to read configuration from environment and .env.
-# We explicitly bind to the project .env to ensure local/dev usage, while still
-# gracefully falling back to environment variables when .env is not present.
-try:
-    from decouple import Config, RepositoryEnv
-    ENV_FILE_PATH = os.environ.get('DJANGO_ENV_PATH') or str(Path(BASE_DIR) / '.env')
-    _repo = RepositoryEnv(ENV_FILE_PATH)
-    config = Config(_repo)
-except Exception:
-    # Fallback: if python-decouple cannot locate or load the repository .env,
-    # use the standard environment-driven config function.
-    from decouple import config  # type: ignore
+from decouple import config
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# Read from environment/.env; do not ship hardcoded secrets in repository.
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
 
 # Allowed hosts
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
 # Database (MariaDB/MySQL)
-# All sensitive values (passwords) are read from environment/.env only.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': config('DB_NAME', default='votebem_db'),
         'USER': config('DB_USER', default='votebem_user'),
-        'PASSWORD': config('DB_PASSWORD'),
+        'PASSWORD': config('DB_PASSWORD', default='votebem_password'),
         'HOST': config('DB_HOST', default='db'),
         'PORT': config('DB_PORT', default='3306'),
         'OPTIONS': {
@@ -47,21 +33,17 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
         'LOCATION': config('REDIS_URL', default='redis://redis:6379/0'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
         'KEY_PREFIX': 'votebem',
         'TIMEOUT': 300,
     }
 }
 
-# Session engine (configurable)
-# Use cache-backed sessions by default (requires Redis). To avoid 500s when Redis
-# is unavailable or misconfigured, you can set SESSION_ENGINE to 'db' in the env.
-_session_backend = config('SESSION_ENGINE', default='cache').strip().lower()
-if _session_backend == 'db':
-    SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-    SESSION_CACHE_ALIAS = None
-else:
-    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-    SESSION_CACHE_ALIAS = 'default'
+# Session engine
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
@@ -93,6 +75,7 @@ CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
 # Logging
+import os
 import logging.handlers
 
 # Container-friendly logging configuration
@@ -155,11 +138,13 @@ try:
     # Only add file logging if we can create the directory and it's writable
     if not os.path.exists(LOG_DIR):
         os.makedirs(LOG_DIR, exist_ok=True)
+    
     # Test if we can write to the directory
     test_file = os.path.join(LOG_DIR, 'test_write.tmp')
     with open(test_file, 'w') as f:
         f.write('test')
     os.remove(test_file)
+    
     # If we get here, file logging is possible
     LOGGING['handlers']['file'] = {
         'level': 'INFO',
@@ -169,11 +154,14 @@ try:
         'maxBytes': 1024*1024*10,  # 10MB
         'backupCount': 5,
     }
+    
     # Add file handler to loggers
     for logger_name in ['django', 'votebem', 'gunicorn', 'gunicorn.error']:
         if logger_name in LOGGING['loggers']:
             LOGGING['loggers'][logger_name]['handlers'].append('file')
+    
     LOGGING['root']['handlers'].append('file')
+    
 except (OSError, IOError, PermissionError):
     # If file logging fails, just use console logging
     # This prevents the container from failing to start

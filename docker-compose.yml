@@ -1,157 +1,70 @@
-﻿###################################################################################################
-# Docker Compose: Orchestrates the VotoBem Django stack
-#
-# Services:
-# - db     : MariaDB database for Django.
-# - valkey : In-memory datastore (Redis-compatible) used by Django.
-# - web    : Django app served by Gunicorn on port 8000.
-#
-# Shared infrastructure with the videoDownloader stack:
-# - A single Nginx reverse proxy container (defined in the other compose) serves multiple sites
-#   using /dados/nginx/conf.d/*.conf. This file does NOT define an Nginx container.
-# - A single Certbot container (defined in the other compose) handles certificates using webroot
-#   under /dados/certbot/acme and stores certs in /dados/certbot/certs.
-# - Both stacks join a shared Docker network named "vps_network" so Nginx can proxy to this web app.
-#
-# Storage under /dados/ on the host (service-scoped paths):
-# - /dados/mariadb/votebem/data    : MariaDB data directory.
-# - /dados/mariadb/votebem/backups : MariaDB backups.
-# - /dados/valkey/vbm/data         : Valkey persistent data (app vbm = VotoBem).
-# - /dados/nginx/app/votebem       : Static and media roots served directly by the shared Nginx.
-# - /dados/votebem/logs            : App logs directory.
-#
-# IMPORTANT:
-# - This compose intentionally excludes Nginx and Certbot to avoid duplicates.
-# - The shared Nginx must be running from the videoDownloader compose and have vhosts placed in
-#   /dados/nginx/conf.d (see docker/nginx/conf.d/votebem_http.conf and votebem_ssl.conf templates).
-# - Ensure this stack's "web" service is attached to the shared network "vps_network" so Nginx can
-#   reach it via DNS name "votebem-web".
-###################################################################################################
-
 services:
   # MariaDB database service
   db:
-    # Official MariaDB image version
     image: mariadb:11
-    # Human-friendly container name
     container_name: votebem_db
-    # Environment for MariaDB init and authentication
     environment:
-      MARIADB_DATABASE: votebem_db
-      MARIADB_USER: votebem_user
-      MARIADB_PASSWORD: pppttwwwDB@@
-      MARIADB_ROOT_PASSWORD: pppttwwwDB@@
-    # Host-mounted volumes for persistent data and backups
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - /dados/mariadb/votebem/data:/var/lib/mysql
       - /dados/mariadb/votebem/backups:/backups
-    # Expose MariaDB to host only if needed; comment out in production to avoid conflicts
     ports:
-    - "127.0.0.1:3306:3306"
-    # Restart policy for reliability
+      - "127.0.0.1:3306:3306"
     restart: unless-stopped
-    # Robust healthcheck: root user, quoted password, TCP host     
     healthcheck:
       test: ["CMD-SHELL", "mariadb -h 127.0.0.1 -uroot -p$${MARIADB_ROOT_PASSWORD} -e 'SELECT 1' >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 12
       start_period: 30s
-
+    networks:
+      - vps_network
 
   # Valkey (Redis-compatible) cache/datastore
   valkey:
-    # Use Valkey 7 on Alpine as requested
     image: valkey/valkey:7-alpine
-    # Unique container name for cross-compose DNS routing clarity
     container_name: votebem_valkey
-    # Persist Valkey data on host under /dados
     volumes:
       - /dados/valkey/votebem/data:/data
-    # Do NOT publish 6379 in production to avoid port conflicts with other stacks
-    # ports:
-    #   - "6379:6379"
-    # Restart policy for reliability
     restart: unless-stopped
+    networks:
+      - vps_network
 
   # Django application served by Gunicorn
   web:
-    # Build application image from current directory (must contain Dockerfile)
     build:
       context: .
       dockerfile: Dockerfile
-    # Tag the image for reuse between runs
     image: votebem-web:latest
-    # Do not attempt to pull from registry; build locally instead
     pull_policy: never
-    # Unique, stable container name so Nginx can proxy to it across stacks
     container_name: votebem-web
-    # Restart policy for reliability
     restart: unless-stopped
-    # Environment for Django and integrations
-    environment:
-      # Disable debug in production
-      - DEBUG=False
-      # Database connection string targeting the local db service on default network
-      - DATABASE_URL=mysql://votebem_user:pppttwwwDB@@@db:3306/votebem_db?charset=utf8mb4
-      # Redis URL using Valkey service name on default network
-      - REDIS_URL=redis://valkey:6379/0
-      # Allowed hosts for Django
-      - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,votebem.online
-      # Django settings module for production
-      - DJANGO_SETTINGS_MODULE=votebem.settings.production
-      # Secret key placeholder (change in production!)
-      - SECRET_KEY=chave_secreta_do_votebem_em_producao
-    # Host-mounted volumes for static, media, and logs so Nginx can serve directly
+    # Ensure the application receives all variables from .env.
+    # Avoid hardcoding DB/Redis here; let .env drive values to prevent socket fallback.
+    env_file: .env
+    # Publish container port 8000 to host 127.0.0.1:8001 for nginx proxy
+    ports:
+      - "127.0.0.1:8001:8000"
     volumes:
-      # Static files collected by Django (collectstatic)
       - /dados/nginx/app/votebem/static:/app/staticfiles
-      # Media uploads
       - /dados/nginx/app/votebem/media:/app/media
-      # Application logs
       - /dados/votebem/logs:/app/logs
-    # Publish ports only if needed for local debugging; Nginx proxies on shared network
-    # ports:
-    #   - "8001:8000"
-    # Wait for healthy dependencies before starting and run Gunicorn
     depends_on:
       db:
         condition: service_healthy
       valkey:
         condition: service_started
-    # Start command: run DB migrations, collect static assets, and launch Gunicorn
     command: >
       sh -c "python manage.py migrate --settings=votebem.settings.production &&
              python manage.py collectstatic --noinput --settings=votebem.settings.production &&
-             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 votebem.wsgi:application"
-
-# desnecessário porque usarei o nginx do videoDownloader
-#   nginx:
-#     image: nginx:alpine
-#     container_name: votebem_nginx
-#     ports:
-#       - "80:80"
-#       - "443:443"
-#     volumes:
-#       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-#       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-#       - static_volume:/app/staticfiles
-#       - media_volume:/app/media
-#       - ./ssl:/etc/nginx/ssl
-#     depends_on:
-#       - web
-#     restart: unless-stopped
-
-# volumes:
-#   mariadb_data:
-#   redis_data:
-#   static_volume:
-#   media_volume:
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 60 votebem.wsgi:application"
+    networks:
+      - vps_network
 
 networks:
-  # The shared network used across projects so the common Nginx container can reach this app.
-  # This must already exist (created by the videoDownloader compose when it runs), or create it via:
-  #   docker network create vps_network
   vps_network:
     external: true
     name: vps_network

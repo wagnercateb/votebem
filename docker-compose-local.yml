@@ -1,0 +1,109 @@
+version: "3.9"
+
+# Local-only stack: MariaDB + Valkey (Redis-compatible).
+# Purpose: run Django locally in VS Code while keeping Compose services
+# and network compatible with the VPS configuration.
+
+# services:
+#   # MariaDB database service (same service name, env, ports, healthcheck)
+#   db:
+#     image: mariadb:11
+#     container_name: votebem_db
+#     environment:
+#       # Compose reads .env in this directory; we map to MARIADB_* vars
+#       MARIADB_DATABASE: ${DB_NAME}
+#       MARIADB_USER: ${DB_USER}
+#       MARIADB_PASSWORD: ${DB_PASSWORD}
+#       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+#     volumes:
+#       # Local data dir for portability (host path differs from VPS, container paths match)
+#       - ./local_data/mariadb/votebem/data:/var/lib/mysql
+#       - ./local_data/mariadb/votebem/backups:/backups
+#     ports:
+#       # Publish DB port to localhost so host Django can connect
+#       - "127.0.0.1:3306:3306"
+#     restart: unless-stopped
+#     healthcheck:
+#       # Prevent variable expansion in test; $${...} passes through to container shell
+#       test: ["CMD-SHELL", "mariadb -h 127.0.0.1 -uroot -p$${MARIADB_ROOT_PASSWORD} -e 'SELECT 1' >/dev/null 2>&1 || exit 1"]
+#       interval: 10s
+#       timeout: 10s
+#       retries: 12
+#       start_period: 30s
+#     networks:
+#       - vps_network
+
+#   # Valkey (Redis-compatible) cache/datastore (same service name and port)
+#   valkey:
+#     image: valkey/valkey:7-alpine
+#     container_name: votebem_valkey
+#     volumes:
+#       - ./local_data/valkey/votebem/data:/data
+#     ports:
+#       - "127.0.0.1:6379:6379"
+#     restart: unless-stopped
+#     networks:
+#       - vps_network
+
+# networks:
+#   # Use the same network name as VPS for compatibility
+#   vps_network:
+#     driver: bridge
+
+services:
+  db:
+    image: mariadb:11
+    container_name: votebem_db_local
+
+    # Use the same .env in the project so credentials match production.
+    # MariaDB expects MARIADB_* vars; we map them from your DB_* .env values.
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+
+    # Publish the DB port to localhost so your host process (VS Code/Django)
+    # can reach the container. Keep 3306 for seamless config with production.
+    ports:
+      - "127.0.0.1:3306:3306"
+
+    # Store data in a local folder inside the repo (Windows-friendly).
+    volumes:
+      - ./local_data/mariadb/data:/var/lib/mysql
+      - ./local_data/mariadb/backups:/backups
+
+    restart: unless-stopped
+
+    # Healthcheck uses root password; $${...} prevents Compose from expanding it.
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb -h 127.0.0.1 -uroot -p$${MARIADB_ROOT_PASSWORD} -e 'SELECT 1' >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+    # Simple local bridge network (host connects via published ports).
+    networks:
+      - local_net
+
+  valkey:
+    image: valkey/valkey:7-alpine
+    container_name: votebem_valkey_local
+
+    # Persist cache data locally for debugging convenience.
+    volumes:
+      - ./local_data/valkey:/data
+
+    # Publish Redis-compatible port to localhost so host Django can connect.
+    ports:
+      - "127.0.0.1:6379:6379"
+
+    restart: unless-stopped
+
+    networks:
+      - local_net
+
+networks:
+  local_net:
+    driver: bridge

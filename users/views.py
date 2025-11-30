@@ -21,7 +21,7 @@ class RegisterView(CreateView):
         # Create user profile
         UserProfile.objects.create(user=self.object)
         # Log the user in
-        login(self.request, self.object)
+        login(self.request, self.object, backend='django.contrib.auth.backends.ModelBackend')
         messages.success(self.request, 'Conta criada com sucesso!')
         return response
 
