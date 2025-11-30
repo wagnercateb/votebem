@@ -17,6 +17,46 @@ from django.contrib.auth.models import User
 from .services.camara_api import camara_api, CamaraAPIService
 from votebem.utils.devlog import dev_log  # Dev logger for console + file output
 from django.db import transaction
+from django.core.cache import cache
+import threading
+
+# Background task helpers
+# ------------------------
+# We use a simple Redis-backed lock via Django cache to prevent duplicate runs,
+# and update a status key with human-readable progress. This avoids request timeouts
+# (e.g., from reverse proxies or WSGI workers) by moving heavy work off the request.
+
+def _acquire_lock(lock_key: str, ttl_seconds: int = 1800) -> bool:
+    """Try to acquire a cooperative lock using cache.add (SETNX semantics).
+    Returns True if acquired, False if already locked.
+    """
+    try:
+        # cache.add returns True if the key did not exist and is now set.
+        return bool(cache.add(lock_key, '1', ttl_seconds))
+    except Exception:
+        # Be conservative: if cache fails, do not run multiple jobs.
+        return False
+
+def _release_lock(lock_key: str):
+    """Release the cooperative lock by deleting the cache key."""
+    try:
+        cache.delete(lock_key)
+    except Exception:
+        pass
+
+def _set_status(status_key: str, payload: dict, ttl_seconds: int = 3600):
+    """Store a status snapshot under `status_key` with a TTL, for polling by UI."""
+    try:
+        cache.set(status_key, payload, ttl_seconds)
+    except Exception:
+        pass
+
+def _get_status(status_key: str) -> dict:
+    """Retrieve the latest status payload. Returns empty dict if missing."""
+    try:
+        return cache.get(status_key) or {}
+    except Exception:
+        return {}
 
 @staff_member_required
 def admin_dashboard(request):
@@ -59,50 +99,78 @@ def votacoes_oficiais_list(request):
     # Novo: utilitários para subconsultas
     from django.db.models import Exists, OuterRef
 
-    # Permitir execução rápida do loop de obtenção de votações por ano diretamente desta tela
+    # Executar o loop de obtenção de votações por ano em segundo plano
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'loopObterVotacoes':
-            ano = request.POST.get('anoVotacao', datetime.now().year)
+            ano_raw = request.POST.get('anoVotacao', datetime.now().year)
             try:
-                ano = int(ano)
-                # Refatorado: selecionar proposições do ano cujo conjunto de votações
-                # oficiais (ProposicaoVotacao) NÃO possui nenhum registro de votos
-                # individuais (CongressmanVote). Assim, evitamos incluir no loop
-                # qualquer `voting_proposicaovotacao` que já tenha votos.
-                #
-                # A lógica:
-                # - Annotate(has_pv_with_votes) = Existe(ProposicaoVotacao com congressmanvote)
-                # - Filtrar has_pv_with_votes=False => nenhuma PV da proposição possui votos individuais
-                pv_with_votes_qs = (
-                    ProposicaoVotacao.objects
-                    .filter(proposicao_id=OuterRef('id_proposicao'))
-                    .filter(congressmanvote__isnull=False)
-                )
-
-                proposicoes = (
-                    Proposicao.objects
-                    .filter(ano=ano)
-                    .annotate(has_pv_with_votes=Exists(pv_with_votes_qs))
-                    .filter(has_pv_with_votes=False)
-                )
-                total_votacoes = 0
-                for proposicao in proposicoes:
-                    if proposicao.id_proposicao:
-                        try:
-                            votacoes_count = camara_api.sync_votacoes_for_proposicao(proposicao)
-                            total_votacoes += votacoes_count
-                        except Exception as e:
-                            # Continua mesmo se uma proposição falhar
-                            continue
-                messages.success(
-                    request,
-                    f"Sincronizadas {total_votacoes} votações para {proposicoes.count()} proposições do ano {ano}."
-                )
-            except ValueError:
+                ano = int(ano_raw)
+            except Exception:
                 messages.error(request, 'Ano inválido fornecido.')
-            except Exception as e:
-                messages.error(request, f'Erro na sincronização de votações: {str(e)}')
+                ano = None
+
+            if ano is not None:
+                lock_key = f"vb:votacoes_oficiais:loop_votacoes:{ano}"
+                status_key = f"vb:status:votacoes_oficiais:loop_votacoes:{ano}"
+
+                if not _acquire_lock(lock_key, ttl_seconds=3600):
+                    messages.warning(request, f'Já existe uma sincronização em andamento para o ano {ano}.')
+                else:
+                    def _run_loop_votacoes():
+                        try:
+                            _set_status(status_key, {'ok': True, 'started': True, 'progress': 0, 'message': f'Iniciando sincronização de votações do ano {ano}...'})
+                            from django.db.models import Exists, OuterRef
+
+                            pv_with_votes_qs = (
+                                ProposicaoVotacao.objects
+                                .filter(proposicao_id=OuterRef('id_proposicao'))
+                                .filter(congressmanvote__isnull=False)
+                            )
+
+                            proposicoes = (
+                                Proposicao.objects
+                                .filter(ano=ano)
+                                .annotate(has_pv_with_votes=Exists(pv_with_votes_qs))
+                                .filter(has_pv_with_votes=False)
+                            )
+
+                            total_props = proposicoes.count()
+                            total_votacoes = 0
+                            processed = 0
+                            for proposicao in proposicoes:
+                                processed += 1
+                                try:
+                                    if proposicao.id_proposicao:
+                                        count = camara_api.sync_votacoes_for_proposicao(proposicao)
+                                        total_votacoes += (count or 0)
+                                except Exception:
+                                    pass
+                                # Atualiza status com progresso
+                                _set_status(status_key, {
+                                    'ok': True,
+                                    'started': True,
+                                    'progress': int((processed / max(total_props, 1)) * 100),
+                                    'processed': processed,
+                                    'total_props': total_props,
+                                    'total_votacoes': total_votacoes,
+                                    'message': f'Processadas {processed}/{total_props} proposições...'
+                                })
+
+                            _set_status(status_key, {
+                                'ok': True,
+                                'started': True,
+                                'completed': True,
+                                'processed': processed,
+                                'total_props': total_props,
+                                'total_votacoes': total_votacoes,
+                                'message': f'Sincronização concluída para {total_props} proposições do ano {ano}. Votações obtidas: {total_votacoes}.'
+                            })
+                        finally:
+                            _release_lock(lock_key)
+
+                    threading.Thread(target=_run_loop_votacoes, daemon=True).start()
+                    messages.info(request, f'Sincronização iniciada em segundo plano para {ano}. Status key: {status_key}')
 
     # Carrega votações oficiais e anota a contagem de votos individuais relacionados
     # Prefetch relacionado para VotacaoVoteBem, ordenando pelo mais recente
@@ -1916,7 +1984,7 @@ def proposicao_import(request):
 
     return render(request, 'admin/voting/proposicao_import.html', context)
 
-@staff_member_required
+@login_required
 def camara_admin(request):
     """
     Administrative tools for managing Chamber propositions
@@ -1940,7 +2008,14 @@ def camara_admin(request):
     
 
     
-    # Handle POST actions
+    # Restrict to staff in a friendly way (no redirect to admin login)
+    # If the user is authenticated but not staff, show a clear message instead of
+    # bouncing through the Django admin login page, which can appear as a loop.
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, 'Acesso restrito: é necessário ser usuário de staff.')
+        return render(request, 'admin/voting/camara_admin.html', context)
+
+    # Handle POST actions (refactored: long-running tasks now execute in background)
     if request.method == 'POST':
         action = request.POST.get('action')
         dev_log(f"DEBUG: POST request received with action: {action}")
@@ -1965,82 +2040,162 @@ def camara_admin(request):
             
            
         elif action == 'atualizarProposicoesVotadasPlenario':
-            # Update propositions voted in plenary for specific date range
+            # Long-running: execute in background with lock + status
             data_inicial = request.POST.get('dataInicial')
             data_final = request.POST.get('dataFinal')
             try:
                 if not data_inicial or not data_final:
                     raise ValueError("Data inicial e final são obrigatórias")
-                
-                from .services.camara_api import camara_api
-                stats = camara_api.sync_proposicoes_by_date_range(data_inicial, data_final)
-                context['update_result'] = f'Sincronização do período {data_inicial} a {data_final}: {stats["created"]} criadas, {stats["updated"]} atualizadas, {stats["errors"]} erros.'
+
+                lock_key = f"vb:camara_admin:sync_plenario:{data_inicial}:{data_final}"
+                status_key = f"vb:status:camara_admin:sync_plenario:{data_inicial}:{data_final}"
+                if not _acquire_lock(lock_key, ttl_seconds=3600):
+                    messages.info(request, 'Uma sincronização semelhante já está em execução. Aguarde a conclusão.')
+                else:
+                    _set_status(status_key, {
+                        'state': 'starting',
+                        'range': {'inicio': data_inicial, 'fim': data_final},
+                        'created': 0, 'updated': 0, 'errors': 0,
+                    })
+                    from .services.camara_api import camara_api
+
+                    def _runner():
+                        try:
+                            stats = camara_api.sync_proposicoes_by_date_range(data_inicial, data_final)
+                            _set_status(status_key, {
+                                'state': 'finished',
+                                'range': {'inicio': data_inicial, 'fim': data_final},
+                                'created': int(stats.get('created', 0)),
+                                'updated': int(stats.get('updated', 0)),
+                                'errors': int(stats.get('errors', 0)),
+                            })
+                        except Exception as e:
+                            _set_status(status_key, {'state': 'error', 'message': str(e)})
+                        finally:
+                            _release_lock(lock_key)
+
+                    threading.Thread(target=_runner, daemon=True).start()
+                    messages.success(request, 'Sincronização iniciada em segundo plano. Você pode continuar usando o painel.')
+
                 context['action_result'] = 'update_result'
-                messages.success(request, f'Sincronização concluída: {stats["created"]} proposições criadas')
             except ValueError as e:
                 context['error'] = f'Erro de validação: {str(e)}'
             except Exception as e:
-                context['error'] = f'Erro na sincronização: {str(e)}'
+                context['error'] = f'Erro ao iniciar sincronização: {str(e)}'
                 
         
                 
         elif action == 'loopObterVotacoes':
-            # Loop to get votings for propositions
+            # Long-running: execute in background with lock + status
             ano = request.POST.get('anoVotacao', datetime.now().year)
             try:
                 ano = int(ano)
-                from .services.camara_api import camara_api
-                proposicoes = Proposicao.objects.filter(ano=ano)[:100]  # Limit for performance
-                total_votacoes = 0
-                
-                for proposicao in proposicoes:
-                    if proposicao.id_proposicao:
-                        votacoes_count = camara_api.sync_votacoes_for_proposicao(proposicao)
-                        total_votacoes += votacoes_count
-                
-                context['loop_result'] = f'Sincronizadas {total_votacoes} votações para {proposicoes.count()} proposições do ano {ano}.'
+                lock_key = f"vb:camara_admin:loop_votacoes:{ano}"
+                status_key = f"vb:status:camara_admin:loop_votacoes:{ano}"
+                if not _acquire_lock(lock_key, ttl_seconds=3600):
+                    messages.info(request, f'Um loop de votações para o ano {ano} já está em execução. Aguarde a conclusão.')
+                else:
+                    _set_status(status_key, {'state': 'starting', 'ano': ano, 'processed': 0, 'total_votacoes': 0})
+                    from .services.camara_api import camara_api
+
+                    def _runner():
+                        total_votacoes = 0
+                        try:
+                            proposicoes = Proposicao.objects.filter(ano=ano)[:100]
+                            count = 0
+                            for proposicao in proposicoes:
+                                try:
+                                    if proposicao.id_proposicao:
+                                        votacoes_count = camara_api.sync_votacoes_for_proposicao(proposicao)
+                                        total_votacoes += int(votacoes_count or 0)
+                                except Exception:
+                                    # continue silently; record aggregate only
+                                    pass
+                                count += 1
+                                if count % 5 == 0:
+                                    _set_status(status_key, {
+                                        'state': 'running', 'ano': ano,
+                                        'processed': count, 'total_votacoes': total_votacoes
+                                    })
+                            _set_status(status_key, {
+                                'state': 'finished', 'ano': ano,
+                                'processed': count, 'total_votacoes': total_votacoes
+                            })
+                        except Exception as e:
+                            _set_status(status_key, {'state': 'error', 'message': str(e)})
+                        finally:
+                            _release_lock(lock_key)
+
+                    threading.Thread(target=_runner, daemon=True).start()
+                    messages.success(request, f'Loop de votações para {ano} iniciado em segundo plano.')
+
                 context['action_result'] = 'loop_result'
-                messages.success(request, f'Sincronizadas {total_votacoes} votações')
             except ValueError:
                 context['error'] = 'Ano inválido fornecido.'
             except Exception as e:
-                context['error'] = f'Erro na sincronização de votações: {str(e)}'
+                context['error'] = f'Erro ao iniciar loop de votações: {str(e)}'
                 
         elif action == 'atualizarNProposicoes':
-            # Update N propositions starting from a specific one
+            # Long-running: execute in background with lock + status
             n_proposicoes = request.POST.get('nProximasProposicoes', 1)
             partir_da = request.POST.get('aPartirDaProposicao', '')
             tempo_max = request.POST.get('tempoMaximoProcess', 150)
-            
+
             try:
                 n_proposicoes = int(n_proposicoes)
                 tempo_max = int(tempo_max)
-                
-                from .services.camara_api import camara_api
-                # Fetch only the requested number, avoiding unnecessary pages
-                proposicoes_api = camara_api.get_recent_proposicoes(days=30, limit=n_proposicoes)
-                created_count = 0
-                updated_count = 0
-                
-                for prop_data in proposicoes_api:
-                    try:
-                        result = camara_api._sync_single_proposicao(prop_data)
-                        if result['created']:
-                            created_count += 1
-                        else:
-                            updated_count += 1
-                    except Exception:
-                        continue
-                
-                ids_proposicoes_processadas = ','.join(str(prop.get('id')) for prop in proposicoes_api if isinstance(prop, dict))
-                msg = f'Processadas {n_proposicoes} proposições: {ids_proposicoes_processadas}. {created_count} criadas, {updated_count} atualizadas.'
-                context['update_n_result'] = msg
+
+                lock_key = f"vb:camara_admin:update_n:{n_proposicoes}:{partir_da or 'none'}"
+                status_key = f"vb:status:camara_admin:update_n:{n_proposicoes}:{partir_da or 'none'}"
+                if not _acquire_lock(lock_key, ttl_seconds=3600):
+                    messages.info(request, 'Uma atualização semelhante já está em execução. Aguarde a conclusão.')
+                else:
+                    _set_status(status_key, {
+                        'state': 'starting', 'n': n_proposicoes, 'partir_da': partir_da or '',
+                        'created': 0, 'updated': 0
+                    })
+
+                    from .services.camara_api import camara_api
+
+                    def _runner():
+                        created_count = 0
+                        updated_count = 0
+                        ids = []
+                        try:
+                            proposicoes_api = camara_api.get_recent_proposicoes(days=30, limit=n_proposicoes)
+                            for idx, prop_data in enumerate(proposicoes_api):
+                                try:
+                                    result = camara_api._sync_single_proposicao(prop_data)
+                                    ids.append(str(prop_data.get('id')))
+                                    if result.get('created'):
+                                        created_count += 1
+                                    else:
+                                        updated_count += 1
+                                except Exception:
+                                    pass
+                                if (idx + 1) % 5 == 0:
+                                    _set_status(status_key, {
+                                        'state': 'running', 'processed': idx + 1,
+                                        'created': created_count, 'updated': updated_count,
+                                    })
+                            _set_status(status_key, {
+                                'state': 'finished', 'processed': len(ids),
+                                'created': created_count, 'updated': updated_count,
+                                'ids': ','.join(ids)
+                            })
+                        except Exception as e:
+                            _set_status(status_key, {'state': 'error', 'message': str(e)})
+                        finally:
+                            _release_lock(lock_key)
+
+                    threading.Thread(target=_runner, daemon=True).start()
+                    messages.success(request, 'Atualização iniciada em segundo plano. Você pode continuar usando o painel.')
+
                 context['action_result'] = 'update_n_result'
-                messages.success(request,msg)
             except ValueError:
                 context['error'] = 'Valores numéricos inválidos fornecidos.'
             except Exception as e:
-                context['error'] = f'Erro ao atualizar proposições: {str(e)}'
+                context['error'] = f'Erro ao iniciar atualização: {str(e)}'
                 
         elif action == 'listarProposicoesTramitacao':
             # List propositions in processing within date range
@@ -2556,3 +2711,19 @@ def ajax_referencias_delete(request):
         return JsonResponse({'ok': False, 'error': 'Referência não encontrada.'}, status=404)
     ref.delete()
     return JsonResponse({'ok': True, 'deleted': True, 'ref_id': int(ref_id)})
+
+
+@login_required
+def ajax_task_status(request):
+    """Lightweight JSON endpoint to poll status of background tasks started from camara_admin.
+    Expects GET with `key` (the status_key used by the task). Returns whatever payload was stored.
+    """
+    if not (request.user.is_staff or request.user.is_superuser):
+        # Return 403-like JSON to keep UX clean for non-staff users
+        return JsonResponse({'ok': False, 'error': 'forbidden'}, status=403)
+
+    status_key = (request.GET.get('key') or '').strip()
+    if not status_key:
+        return JsonResponse({'ok': False, 'error': 'Parâmetro key é obrigatório.'}, status=400)
+    payload = _get_status(status_key)
+    return JsonResponse({'ok': True, 'status': payload, 'key': status_key})

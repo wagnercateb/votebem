@@ -271,13 +271,41 @@
       if (vParam && votacaoInput) {
         votacaoInput.value = vParam;
         btnCarregarVotacao.style.display = 'inline-block';
+        // If only a composite votacao_id is provided (e.g., "2270325-92"),
+        // derive and prefill the proposicao_id automatically so the search buttons work.
+        if (!pParam && propInput && String(vParam).includes('-')) {
+          const derivedProp = String(vParam).split('-')[0];
+          if (derivedProp) {
+            propInput.value = derivedProp;
+            // Auto-load DB-only list to immediately show available votações
+            const urlDbOnly = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(derivedProp)}&db_only=1`;
+            status.textContent = 'Carregando votações do banco (sem consultar API)...';
+            card.style.display = 'block'; help.style.display = 'none'; err.style.display = 'none';
+            listTbody.innerHTML = '';
+            fetch(urlDbOnly, { headers: { 'Accept': 'application/json' } })
+              .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+              })
+              .then(json => {
+                lastDados = Array.isArray(json?.dados) ? json.dados : [];
+                lastPropId = derivedProp;
+                renderVotacoes(lastDados, lastPropId, 'base local');
+              })
+              .catch(e => {
+                status.textContent = 'Falha ao carregar do banco (somente cache).';
+                help.style.display = 'none'; err.style.display = 'block';
+                listTbody.innerHTML = '';
+              });
+          }
+        }
       }
       if (pParam && propInput) {
         propInput.value = pParam;
         // Auto-load votações da base local quando já há proposicao_id na URL
         const propId = String(pParam).trim();
         if (propId) {
-        const urlDbOnly = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(propId)}&db_only=1`;
+          const urlDbOnly = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(propId)}&db_only=1`;
           status.textContent = 'Carregando votações do banco (sem consultar API)...';
           card.style.display = 'block'; help.style.display = 'none'; err.style.display = 'none';
           listTbody.innerHTML = '';
@@ -297,7 +325,7 @@
               help.style.display = 'none'; err.style.display = 'block';
               listTbody.innerHTML = '';
             });
-      }
+        }
       }
     } catch (_) { /* ignore */ }
 

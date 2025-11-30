@@ -133,6 +133,8 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
                 descricao = getattr(pv, 'descricao', '') or ''
                 pv_items.append({
                     'id': pv.id,
+                    # Prefer showing the Câmara voting suffix in labels (user-facing)
+                    'sufixo': getattr(pv, 'votacao_sufixo', None),
                     'url': f"/voting/votos/oficiais/?votacao_id={pv.id}",
                     'descricao': descricao,
                 })
@@ -141,7 +143,9 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
                 votos_items = pv_items
                 main_votos_url = pv_items[0]['url']
                 if len(pv_items) == 1:
-                    main_votos_label = f"Votos oficiais {pv_items[0]['id']}"
+                    # Show voting suffix when available; fallback to DB id
+                    lbl_suffix = pv_items[0].get('sufixo')
+                    main_votos_label = f"Votos oficiais {lbl_suffix if lbl_suffix is not None else pv_items[0]['id']}"
             else:
                 # Fallback to VotacaoVoteBem entries linked to a ProposicaoVotacao of this proposição
                 vb_qs = (
@@ -157,10 +161,16 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
                         descricao = getattr(v.proposicao_votacao, 'descricao', None)
                     except Exception:
                         descricao = None
+                    # Try to derive the voting suffix from linked ProposicaoVotacao
+                    try:
+                        sufixo = getattr(v.proposicao_votacao, 'votacao_sufixo', None)
+                    except Exception:
+                        sufixo = None
                     if not descricao:
                         descricao = v.titulo
                     vb_items.append({
                         'id': v.id,
+                        'sufixo': sufixo,
                         'url': f"/voting/votos/oficiais/?votacao_id={v.id}",
                         'descricao': descricao or '',
                     })
@@ -168,7 +178,8 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
                     votos_items = vb_items
                     main_votos_url = vb_items[0]['url']
                     if len(vb_items) == 1:
-                        main_votos_label = f"Votos oficiais {vb_items[0]['id']}"
+                        lbl_suffix = vb_items[0].get('sufixo')
+                        main_votos_label = f"Votos oficiais {lbl_suffix if lbl_suffix is not None else vb_items[0]['id']}"
                 else:
                     # Last-resort: list all PV for the proposição so the button stays usable
                     pv_all = (
@@ -180,6 +191,7 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
                     for pv in pv_all:
                         pv_items2.append({
                             'id': pv.id,
+                            'sufixo': getattr(pv, 'votacao_sufixo', None),
                             'url': f"/voting/votos/oficiais/?votacao_id={pv.id}",
                             'descricao': getattr(pv, 'descricao', '') or ''
                         })
@@ -187,7 +199,8 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
                         votos_items = pv_items2
                         main_votos_url = pv_items2[0]['url']
                         if len(pv_items2) == 1:
-                            main_votos_label = f"Votos oficiais {pv_items2[0]['id']}"
+                            lbl_suffix = pv_items2[0].get('sufixo')
+                            main_votos_label = f"Votos oficiais {lbl_suffix if lbl_suffix is not None else pv_items2[0]['id']}"
         except Exception:
             # In case of query issues, keep empty items to render disabled state
             votos_items = []
@@ -252,3 +265,128 @@ def sort_groups_by_size_and_name_desc(groups: List[Dict[str, Any]]) -> List[Dict
     except Exception:
         # On any unexpected error, return the groups unchanged
         return groups or []
+
+
+# -----------------------------------------------------------------------------
+# Reusable ID info component (for inline display of related IDs and links)
+# -----------------------------------------------------------------------------
+@register.inclusion_tag('components/id_info.html', takes_context=True)
+def id_info(
+    context: Dict[str, Any],
+    votacaovotebem_id: Optional[int] = None,
+    proposicaovotacao_id: Optional[int] = None,
+    proposicao_id: Optional[int] = None,
+    votacao_sufixo: Optional[int] = None,
+) -> Dict[str, Any]:
+    """
+    Renders a compact inline block showing IDs and helpful links related to a
+    voting record. Accepts explicit IDs but will infer them from the context if
+    not provided, making it usable across different pages and models.
+
+    Inputs (all optional):
+    - votacaovotebem_id: ID from table `voting_votacaovotebem`
+    - proposicaovotacao_id: ID from table `voting_proposicaovotacao`
+    - proposicao_id: Câmara `idProposicao` for external links
+    - votacao_sufixo: Câmara voting suffix used in composite voting ids
+    """
+    try:
+        if votacaovotebem_id is None:
+            v = context.get('votacao')
+            if v and getattr(v, 'id', None):
+                votacaovotebem_id = int(v.id)
+    except Exception:
+        pass
+
+    try:
+        if proposicaovotacao_id is None:
+            v = context.get('votacao')
+            pv = getattr(v, 'proposicao_votacao', None) if v else None
+            if pv and getattr(pv, 'id', None):
+                proposicaovotacao_id = int(pv.id)
+    except Exception:
+        pass
+
+    try:
+        if proposicao_id is None:
+            v = context.get('votacao')
+            pv = getattr(v, 'proposicao_votacao', None) if v else None
+            prop = getattr(pv, 'proposicao', None) if pv else None
+            ip = getattr(prop, 'id_proposicao', None) if prop else None
+            if ip:
+                proposicao_id = int(ip)
+    except Exception:
+        pass
+
+    # Fallback inference from request query parameters when creating new records
+    # This supports pages like creation forms that only provide IDs via GET,
+    # e.g., /gerencial/votacao/create/?proposicao_id=2270325&consulta_id=2270325-92
+    try:
+        if proposicao_id is None:
+            req = context.get('request')
+            if req:
+                q_prop = req.GET.get('proposicao_id')
+                if q_prop and q_prop.isdigit():
+                    proposicao_id = int(q_prop)
+    except Exception:
+        pass
+
+    try:
+        if votacao_sufixo is None:
+            v = context.get('votacao')
+            pv = getattr(v, 'proposicao_votacao', None) if v else None
+            s = getattr(pv, 'votacao_sufixo', None) if pv else None
+            if s is not None:
+                votacao_sufixo = int(s)
+    except Exception:
+        pass
+
+    # Also try to derive the suffix from composite consulta_id in the URL when present
+    try:
+        if votacao_sufixo is None:
+            req = context.get('request')
+            if req:
+                comp = req.GET.get('consulta_id')
+                if comp and '-' in comp:
+                    leading, trailing = comp.split('-', 1)
+                    # Only accept when leading matches proposicao_id or is numeric
+                    if trailing.isdigit():
+                        votacao_sufixo = int(trailing)
+                        # If proposicao_id still missing, and leading looks like an id, set it
+                        if proposicao_id is None and leading.isdigit():
+                            proposicao_id = int(leading)
+    except Exception:
+        pass
+
+    composite_votacao_id: Optional[str] = None
+    try:
+        if proposicao_id and votacao_sufixo is not None:
+            composite_votacao_id = f"{proposicao_id}-{votacao_sufixo}"
+    except Exception:
+        composite_votacao_id = None
+
+    proposicao_tramitacao_url: Optional[str] = None
+    if proposicao_id:
+        proposicao_tramitacao_url = (
+            f"https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={proposicao_id}"
+        )
+
+    api_votos_url: Optional[str] = None
+    if composite_votacao_id:
+        api_votos_url = (
+            f"https://dadosabertos.camara.leg.br/api/v2/votacoes/{composite_votacao_id}/votos"
+        )
+
+    votacao_detail_url: Optional[str] = None
+    if votacaovotebem_id:
+        votacao_detail_url = f"http://localhost:8000/voting/votacao/{votacaovotebem_id}/"
+
+    return {
+        'votacaovotebem_id': votacaovotebem_id,
+        'proposicaovotacao_id': proposicaovotacao_id,
+        'proposicao_id': proposicao_id,
+        'votacao_sufixo': votacao_sufixo,
+        'composite_votacao_id': composite_votacao_id,
+        'proposicao_tramitacao_url': proposicao_tramitacao_url,
+        'api_votos_url': api_votos_url,
+        'votacao_detail_url': votacao_detail_url,
+    }

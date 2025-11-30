@@ -68,4 +68,6 @@ urlpatterns = [
     path('ajax/referencias/create/', admin_views.ajax_referencias_create, name='ajax_referencias_create'),
     path('ajax/referencias/update/', admin_views.ajax_referencias_update, name='ajax_referencias_update'),
     path('ajax/referencias/delete/', admin_views.ajax_referencias_delete, name='ajax_referencias_delete'),
+    # Background task status polling
+    path('ajax/task-status/', admin_views.ajax_task_status, name='ajax_task_status'),
 ]

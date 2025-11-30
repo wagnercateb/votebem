@@ -1,0 +1,25 @@
+
+  {% comment %} 
+  Inline ID info component. Displays related IDs and helpful links.
+  Expects variables from the inclusion tag `id_info`. 
+  {% endcomment %}
+
+  <small class="ms-2 text-muted">
+  IDs:
+  voting_votacaovotebem={{ votacaovotebem_id|default:'—' }},
+  voting_proposicaovotacao={{ proposicaovotacao_id|default:'—' }},
+  voting_proposicao=
+  {% if proposicao_id and proposicao_tramitacao_url %}
+    <a href="{{ proposicao_tramitacao_url }}" target="_blank">{{ proposicao_id }}</a>
+  {% else %}—{% endif %},
+
+  <b>proposicao-sufixo: {% if composite_votacao_id %}{{ composite_votacao_id }}{% else %}—{% endif %}
+    {% if api_votos_url %}
+      <a href="{{ api_votos_url }}" target="_blank">API votos</a>
+    {% endif %}
+  </b>,
+
+  {% if votacao_detail_url %}
+    <a href="{{ votacao_detail_url }}" target="_blank">Votação Votebem (detalhes)</a>
+  {% endif %}
+</small>

@@ -197,24 +197,8 @@
                 
                 <div class="form-group">
                     <label for="titulo">Título da Votação * (3)
-                        <small class="ms-2 text-muted">
-                            IDs:
-                            voting_votacaovotebem={{ votacao.id|default:'—' }},
-                           voting_proposicaovotacao={% if votacao.proposicao_votacao %}{{ votacao.proposicao_votacao.id }}{% else %}—{% endif %},
-                            voting_proposicao=
-                            {% if votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao %}
-                                <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="_blank">
-                                    {{ votacao.proposicao_votacao.proposicao.id_proposicao }}
-                                </a>
-                            {% else %}—
-                            {% endif %},
-
-                            <b>proposicao-sufixo: {{ votacao.proposicao_votacao.proposicao.id_proposicao }}-{{ votacao.proposicao_votacao.votacao_sufixo }}
-                                <a href="https://dadosabertos.camara.leg.br/api/v2/votacoes/{{ votacao.proposicao_votacao.proposicao.id_proposicao }}-{{ votacao.proposicao_votacao.votacao_sufixo }}/votos" target="_blank">API votos</a>
-                            </b>,
-
-                            <a href="http://localhost:8000/voting/votacao/{{ votacao.id }}/" target="_blank">Votação Votebem (detalhes)</a>
-                        </small>
+                        <br/>
+                        {% id_info %}
                     </label>
                     <input type="text" id="titulo" name="titulo" class="form-control" 
                            value="{{ votacao.titulo }}" required maxlength="500">

@@ -336,4 +336,271 @@ Nada mais havendo a tratar, foi lavrada a presente **Ata de Fundação**, que ap
 
 ---
 
-**Fim do documento.**
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Aqui vai uma explicação **clara, completa e organizada** sobre **OSC (Organizações da Sociedade Civil)**, incluindo **o que são**, **qual legislação rege**, **como funcionam**, **benefícios fiscais**, **parcerias com o poder público**, e **formas jurídicas**.
+
+---
+
+# ✅ **1. O que são OSC (Organizações da Sociedade Civil)**
+
+**OSC** são entidades privadas, sem fins lucrativos, criadas pela sociedade para atuar em áreas de interesse público, como:
+
+* educação
+* saúde
+* assistência social
+* meio ambiente
+* cultura
+* direitos humanos
+* desenvolvimento comunitário
+
+Elas **não pertencem ao governo** e **não distribuem lucro**: todo recurso é reinvestido na própria atividade.
+
+Na prática, “OSC” é um termo amplo que engloba:
+
+* **ONGs**
+* **Associações**
+* **Fundações**
+* **Organizações religiosas com ações sociais**
+* **Cooperativas sociais (em alguns casos)**
+
+---
+
+# ✅ **2. Legislação principal das OSC no Brasil**
+
+As OSC são reguladas principalmente por três conjuntos de normas:
+
+---
+
+## **2.1. Código Civil (Lei nº 10.406/2002)**
+
+Define as formas jurídicas possíveis:
+
+### **Associações**
+
+* grupo de pessoas
+* finalidade comum
+* muito comuns para projetos sociais e culturais
+
+### **Fundações**
+
+* patrimônio destinado a um fim social
+* pode ser criada por pessoa física ou jurídica
+* mais rígida na governança
+
+---
+
+## **2.2. Lei do Marco Regulatório das OSC – MROSC (Lei nº 13.019/2014)**
+
+É a lei mais importante para parcerias com o governo.
+
+Ela regula:
+
+### **• Chamamento público**
+
+Procedimento para selecionar OSC para receber recursos públicos.
+
+### **• Tipos de parceria**
+
+* **Termo de Colaboração** (governo → OSC = interesse do governo)
+* **Termo de Fomento** (governo → OSC = iniciativa da OSC)
+* **Acordo de Cooperação** (sem transferência de recursos)
+
+### **• Prestação de contas**
+
+Transparência, indicadores, metas, auditoria.
+
+### **• Exigências para a OSC**
+
+* pelo menos 1 ano de existência
+* experiência comprovada
+* governança adequada
+
+---
+
+## **2.3. Lei de Filantropia – CEBAS (Lei nº 12.101/2009)**
+
+Aplica-se a entidades de:
+
+* Educação
+* Saúde
+* Assistência social
+
+Que pretendem obter **isenções previdenciárias**.
+
+---
+
+# ✅ **3. Benefícios fiscais e certificações**
+
+As OSC podem ter **isenções** ou **imunidades** tributárias, dependendo da natureza e certificação.
+
+---
+
+## **3.1. Imunidade tributária**
+
+Prevista na Constituição.
+
+Entidades sem fins lucrativos que atendem requisitos podem ter imunidade sobre:
+
+* **IPTU, ITBI e ISS** (municipais)
+* **ICMS e IPVA** (estaduais)
+* **IRPJ, CSLL, PIS, COFINS** (federais, em alguns casos)
+
+Requer:
+
+* não distribuir lucros
+* escrituração regular
+* aplicação de recursos na atividade-fim
+
+---
+
+## **3.2. Isenções específicas**
+
+Dependem de legislação municipal, estadual ou federal.
+
+Exemplo:
+
+* isenção de IPTU para associações e instituições de ensino sem fins lucrativos.
+
+---
+
+## **3.3. Certificado CEBAS (filantropia)**
+
+Dá isenção de **cota patronal do INSS** (20% sobre folha).
+É o benefício fiscal mais relevante para grandes entidades.
+
+---
+
+## **3.4. OSCIP (Lei 9.790/1999)**
+
+Status jurídico opcional.
+
+Benefícios:
+
+* possibilidade de **Termo de Parceria** com o governo
+* maior credibilidade
+
+Mas perdeu relevância após o MROSC (2014), pois ficou redundante.
+
+---
+
+## **3.5. Títulos e qualificações municipais e estaduais**
+
+Ex.:
+
+* “Utilidade Pública Municipal”
+* “Utilidade Pública Federal” (extinto em 2019 para novas concessões)
+
+Essas qualificações antigamente geravam isenção fiscal, mas hoje são mais simbólicas.
+
+---
+
+# ✅ **4. Como uma OSC obtém recursos**
+
+As fontes de financiamento incluem:
+
+### **1. Recursos públicos**
+
+* termos de colaboração/fomento (MROSC)
+* convênios antigos (não recomendados, mas ainda existem)
+* emendas parlamentares
+
+### **2. Recursos privados**
+
+* doações de pessoas físicas
+* doações de empresas
+* campanhas de crowdfunding
+* patrocínios incentivados (via leis de incentivo)
+
+### **3. Leis de incentivo**
+
+* **Lei Rouanet (Cultura)**
+* **Lei do Esporte**
+* **Fundos da Criança e do Adolescente (FIA)**
+* **Fundos do Idoso**
+* **Lei de Incentivo à Saúde (PRONON/PRONAS)**
+
+---
+
+# ✅ **5. Como uma OSC funciona na prática**
+
+### **Passos comuns:**
+
+1. **Criação do estatuto e ata de fundação**
+2. **Registro em cartório**
+3. **Obtenção de CNPJ**
+4. **Eleição de diretoria**
+5. **Abertura de contas bancárias**
+6. **Transparência e prestação de contas**
+7. **Captação de recursos**
+
+OSC precisa ter:
+
+* contabilidade regular
+* governança clara
+* atas e documentos organizados
+* plano de trabalho em projetos financiados
+
+---
+
+# ✅ **6. Exemplos práticos**
+
+| Tipo de entidade      | Exemplos                                  |
+| --------------------- | ----------------------------------------- |
+| Associação            | APAEs, ONGs ambientais                    |
+| Fundação              | Fundação Abrinq, Fundação Lemann          |
+| Organização religiosa | Igrejas que operam creches, abrigos etc.  |
+| OSCIP                 | Instituto Ethos (era OSCIP), entre outras |
+
+---
+
+# 📌 **Resumo geral**
+
+* **OSC = organizações privadas sem fins lucrativos voltadas ao interesse público.**
+* **Marco regulatório = Lei 13.019/2014** (parcerias com governo).
+* **Formas jurídicas = Associação e Fundação.**
+* **Benefícios fiscais** variam por tipo de certificação e atuação.
+* **Financiamento** pode ser público, privado ou via leis de incentivo.
+
+---
+
+Se quiser, posso também explicar:
+
+📌 como criar uma OSC passo a passo
+📌 diferenças entre ONG, OSCIP e OS
+📌 como conseguir isenções fiscais no seu município
+📌 como captar recursos para uma OSC
+📌 como escrever estatuto ou plano de trabalho
+
+Quer aprofundar em algum desses?

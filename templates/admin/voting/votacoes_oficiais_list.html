@@ -32,6 +32,11 @@ obtidos de votações oficiais. A edição é realizada via Django Admin ou tela
         <span class="icon">🔄</span> Obter Votações no Ano:
       </button>
       <input type="number" id="anoVotacaoInline" name="anoVotacao" min="1900" max="2100" value="{{ current_year }}" class="form-control" style="width: 90px; display: inline-block; vertical-align: middle;" title="Filtra por proposições do ano informado. O loop ignora qualquer votação oficial que já tenha votos individuais registrados." data-bs-toggle="tooltip" data-bs-placement="top" aria-label="Filtra por proposições do ano informado. O loop ignora qualquer votação oficial que já tenha votos individuais registrados.">
+      {# Botão adicional: dispara importação de votos oficiais para TODAS as votações listadas (sem recarregar entre cada item) #}
+      <button type="button" id="vb-import-all-btn" class="btn btn-success ms-2" style="vertical-align: middle;"
+              title="Executa a mesma ação de 'Carregar votos oficiais' para todas as votações listadas (ignora as que já têm votos)" data-bs-toggle="tooltip" data-bs-placement="top">
+        Carregar votos oficiais - todas as props
+      </button>
     </form>
   </div>
 {% endblock %}
@@ -400,5 +405,116 @@ obtidos de votações oficiais. A edição é realizada via Django Admin ou tela
       // Se Bootstrap JS não estiver carregado, o tooltip nativo (title) ainda funciona.
     }
   });
+</script>
+<script>
+  // --- Importação em massa: clica todos os botões "Carregar votos oficiais" desta página ---
+  // Este bloco adiciona um botão próximo ao filtro de ano que, quando acionado,
+  // executa a MESMA lógica dos botões individuais (endpoint AJAX em /gerencial/ajax/import-congress-votes/)
+  // porém em MODO LOTE, sequencialmente, evitando recarregar a página a cada item.
+  // Ao final do processamento, a página é recarregada UMA única vez para atualizar as contagens.
+
+  (function(){
+    /**
+     * Altera o estado visual do botão de importação em massa.
+     * Mantém texto original em data-original-text para restaurar posteriormente.
+     */
+    function setBulkBtnLoading(btn, isLoading, progressText) {
+      if (!btn) return;
+      if (isLoading) {
+        if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent || 'Carregar votos oficiais - todas as props';
+        btn.textContent = progressText || 'Importando todas...';
+        btn.disabled = true;
+      } else {
+        const orig = btn.dataset.originalText || 'Carregar votos oficiais - todas as props';
+        btn.textContent = orig;
+        btn.disabled = false;
+      }
+    }
+
+    /**
+     * Executa a mesma importação de um único botão de linha, porém sem recarregar a página.
+     * Retorna uma Promise que resolve em true/false conforme sucesso.
+     */
+    function importOneWithoutReload(rowBtn) {
+      return new Promise(function(resolve){
+        try {
+          const propId = rowBtn.getAttribute('data-proposicao-id') || '';
+          const sufixo = rowBtn.getAttribute('data-consulta-sufixo') || '';
+          if (!propId || !sufixo) {
+            console.warn('Parâmetros faltando em botão de linha:', rowBtn);
+            return resolve(false);
+          }
+          // Desabilita temporariamente o botão da linha para evitar reentrância
+          rowBtn.disabled = true;
+          // Monta URL para o mesmo endpoint de importação utilizado no modo individual
+          const url = `${window.location.origin}/gerencial/ajax/import-congress-votes/?proposicao_id=${encodeURIComponent(propId)}&consulta_id=${encodeURIComponent(sufixo)}`;
+          fetch(url, { headers: { 'Accept': 'application/json' } })
+            .then(r => r.json().then(j => ({ ok: r.ok, status: r.status, body: j })))
+            .then(resp => {
+              if (!resp.ok || !resp.body?.ok) {
+                console.warn('Falha ao importar votos (linha):', resp);
+                // Reabilita o botão de linha em caso de erro
+                rowBtn.disabled = false;
+                return resolve(false);
+              }
+              // Sucesso: mantém desabilitado para indicar já processado
+              return resolve(true);
+            })
+            .catch(function(e){
+              console.warn('Erro de rede ao importar votos (linha):', e);
+              rowBtn.disabled = false;
+              resolve(false);
+            });
+        } catch (e) {
+          console.warn('Exceção ao importar votos (linha):', e);
+          rowBtn.disabled = false;
+          resolve(false);
+        }
+      });
+    }
+
+    /**
+     * Processa sequencialmente todos os botões `.vb-btn-import-votos` visíveis na página.
+     * Atualiza o texto do botão de lote com progresso (i/N). Recarrega a página ao final.
+     */
+    async function bulkImportAll() {
+      const bulkBtn = document.getElementById('vb-import-all-btn');
+      const rowButtons = Array.from(document.querySelectorAll('.vb-btn-import-votos'))
+        .filter(btn => btn.offsetParent !== null); // apenas visíveis
+
+      if (rowButtons.length === 0) {
+        alert('Nenhuma votação elegível para importar (0 votos).');
+        return;
+      }
+
+      setBulkBtnLoading(bulkBtn, true, `Importando 0/${rowButtons.length}...`);
+
+      let successCount = 0;
+      for (let i = 0; i < rowButtons.length; i++) {
+        setBulkBtnLoading(bulkBtn, true, `Importando ${i+1}/${rowButtons.length}...`);
+        // Executa importação sem recarregar; aguarda antes de seguir
+        const ok = await importOneWithoutReload(rowButtons[i]);
+        if (ok) successCount++;
+        // Pequeno atraso opcional para não sobrecarregar backend
+        await new Promise(r => setTimeout(r, 250));
+      }
+
+      // Finaliza: informa resultado e recarrega para atualizar contagens
+      setBulkBtnLoading(bulkBtn, false);
+      alert(`Importação concluída: ${successCount}/${rowButtons.length} votações processadas.`);
+      window.location.reload();
+    }
+
+    // Liga o clique do botão de importação em massa após carregar o DOM
+    document.addEventListener('DOMContentLoaded', function(){
+      const bulkBtn = document.getElementById('vb-import-all-btn');
+      if (bulkBtn) {
+        bulkBtn.addEventListener('click', function(ev){
+          ev.preventDefault();
+          bulkImportAll();
+        });
+      }
+    });
+  })();
 </script>
 {% endblock %}

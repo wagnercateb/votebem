@@ -1,4 +1,5 @@
 {% extends "admin/voting/base_administrativo.html" %}
+{% load voting_components %}
 
 {% block title %}Criar Nova Votação - VoteBem{% endblock %}
 
@@ -27,6 +28,10 @@
     <h1 style="margin-bottom: 3px; font-size: 1.8em;">Criar Nova Votação Votebem{% if prefill.proposicao_id %} — Proposição {{ prefill.proposicao_id }}{% endif %}</h1>
     <p style="margin-bottom: 0; color: #6c757d; font-size: 0.9em;">Preencha os dados abaixo para criar uma votação votebem para uma votação oficial.</p>
     <div style="margin-top:8px;"><a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-secondary">Voltar ao Gerenciamento</a></div>
+    {# IDs e links úteis (inferidos de proposicao_id e consulta_id) #}
+    <div style="margin-top:6px;">
+        {% id_info %}
+    </div>
     {% if messages %}
         {% for message in messages %}
             <div class="alert alert-{{ message.tags }}" style="padding: 10px; margin: 10px 0; border-radius: 4px;
