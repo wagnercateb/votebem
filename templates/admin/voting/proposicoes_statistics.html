@@ -98,29 +98,6 @@
 </div>
 
 <div class="stats-container">
-    <div class="stats-card">
-        <h3>Proposições por Tipo</h3>
-        <table class="stats-table">
-            <thead>
-                <tr>
-                    <th>Tipo</th>
-                    <th>Quantidade</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in stats.por_tipo %}
-                <tr class="click-row" data-tipo="{{ item.tipo }}">
-                    <td>{{ item.tipo|default:"Não especificado" }}</td>
-                    <td><span class="count-badge">{{ item.count }}</span></td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="2">Nenhum dado disponível</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
 
     <div class="stats-card">
         <h3>Proposições por Ano</h3>
@@ -128,7 +105,10 @@
             <thead>
                 <tr>
                     <th>Ano</th>
-                    <th>Quantidade</th>
+                    <th>Proposições</th>
+                    <th>ProposicaoVotacao</th>
+                    <th>VotacaoVoteBem</th>
+                    <th>CongressmanVote</th>
                 </tr>
             </thead>
             <tbody>
@@ -136,10 +116,13 @@
                 <tr class="click-row" data-ano="{{ item.ano }}">
                     <td>{{ item.ano|default:"Não especificado" }}</td>
                     <td><span class="count-badge">{{ item.count }}</span></td>
+                    <td><span class="count-badge">{{ item.pv_count }}</span></td>
+                    <td><span class="count-badge">{{ item.vvb_count }}</span></td>
+                    <td><span class="count-badge">{{ item.cv_count }}</span></td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="2">Nenhum dado disponível</td>
+                    <td colspan="5">Nenhum dado disponível</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -169,6 +152,31 @@
             </tbody>
         </table>
     </div>
+
+    <div class="stats-card">
+        <h3>Proposições por Tipo</h3>
+        <table class="stats-table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Quantidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in stats.por_tipo %}
+                <tr class="click-row" data-tipo="{{ item.tipo }}">
+                    <td>{{ item.tipo|default:"Não especificado" }}</td>
+                    <td><span class="count-badge">{{ item.count }}</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2">Nenhum dado disponível</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+        
 </div>
 
 <!-- Removido: botões de ação no rodapé da página de estatísticas de proposições -->

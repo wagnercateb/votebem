@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Count, Q
+from django.db.models import Count, Q, F
 from django.utils import timezone
 from datetime import datetime, timedelta
 import time
@@ -1098,9 +1098,62 @@ def proposicoes_statistics(request):
     Display statistics about propositions similar to PHP admin
     """
     # Aggregations
-    por_tipo = Proposicao.objects.values('tipo').annotate(count=Count('id_proposicao')).order_by('-count')
-    por_ano = Proposicao.objects.values('ano').annotate(count=Count('id_proposicao')).order_by('-ano')
-    por_estado = Proposicao.objects.values('estado').annotate(count=Count('id_proposicao')).order_by('-count')
+    por_tipo = (
+        Proposicao.objects
+        .values('tipo')
+        .annotate(count=Count('id_proposicao'))
+        .order_by('-count')
+    )
+
+    # Base aggregation: total proposições por ano
+    base_por_ano = list(
+        Proposicao.objects
+        .values('ano')
+        .annotate(count=Count('id_proposicao'))
+        .order_by('-ano')
+    )
+
+    # Additional aggregations per year
+    pv_por_ano_qs = (
+        ProposicaoVotacao.objects
+        .values(ano=F('proposicao__ano'))
+        .annotate(pv_count=Count('id'))
+    )
+    vvb_por_ano_qs = (
+        VotacaoVoteBem.objects
+        .values(ano=F('proposicao_votacao__proposicao__ano'))
+        .annotate(vvb_count=Count('id'))
+    )
+    cv_por_ano_qs = (
+        CongressmanVote.objects
+        .values(ano=F('proposicao_votacao__proposicao__ano'))
+        .annotate(cv_count=Count('id'))
+    )
+
+    # Build maps for quick lookup
+    pv_map = {row['ano']: row['pv_count'] for row in pv_por_ano_qs}
+    vvb_map = {row['ano']: row['vvb_count'] for row in vvb_por_ano_qs}
+    cv_map = {row['ano']: row['cv_count'] for row in cv_por_ano_qs}
+
+    # Merge counts into the base per-year list
+    por_ano = []
+    for item in base_por_ano:
+        ano = item.get('ano')
+        merged = {
+            'ano': ano,
+            'count': item.get('count', 0),
+            'pv_count': pv_map.get(ano, 0),
+            'vvb_count': vvb_map.get(ano, 0),
+            'cv_count': cv_map.get(ano, 0),
+        }
+        por_ano.append(merged)
+
+    por_estado = (
+        Proposicao.objects
+        .values('estado')
+        .annotate(count=Count('id_proposicao'))
+        .order_by('-count')
+    )
 
     # Counts respecting the new relationships (Proposicao -> ProposicaoVotacao -> VotacaoVoteBem)
     total = Proposicao.objects.count()

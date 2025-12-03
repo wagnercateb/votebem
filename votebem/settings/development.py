@@ -12,6 +12,20 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-me')
 # Allowed hosts for development
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0').split(',')
 
+# Explicitly keep development HTTP-only to avoid accidental HTTPS redirects
+# and HSTS persistence when testing locally.
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SECURE_HSTS_SECONDS = 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+SECURE_PROXY_SSL_HEADER = None
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+]
+
 # Database for development (MariaDB in Docker with SQLite fallback)
 from django.core.exceptions import ImproperlyConfigured
 import pymysql

@@ -57,6 +57,8 @@
                     <option value="{{ pv.id }}" {% if prefill.selected_pv_id and pv.id == prefill.selected_pv_id %}selected{% endif %}>{{ pv.votacao_sufixo }} — {{ pv.descricao|default:"(sem descrição)" }}</option>
                 {% endfor %}
             </select>
+            {# Exibição do texto da opção selecionada, conforme solicitado: mostrar logo abaixo do select #}
+            <i><div id="pv-selected-text" class="mt-1 text-muted" aria-live="polite"></div></i>
             <small class="text-muted">Registros em voting_proposicaovotacao ainda sem Votação Disponível ligada.</small>
         </div>
         {% endif %}
@@ -189,16 +191,27 @@ document.addEventListener('click', function(e) {
 document.addEventListener('DOMContentLoaded', function() {
     const pvSelect = document.getElementById('proposicao_votacao_id');
     const submitBtn = document.querySelector('button[type="submit"]');
+    const pvSelectedText = document.getElementById('pv-selected-text');
     if (pvSelect && submitBtn) {
-        const toggleButton = () => {
+        // Atualiza exibição: botão de submit e descrição da opção abaixo do select
+        const updateUI = () => {
+            // Mostrar ou ocultar o botão de criar
             submitBtn.style.display = pvSelect.value ? 'inline-block' : 'none';
+            // Mostrar o texto da opção selecionada logo abaixo do select
+            if (pvSelectedText) {
+                if (pvSelect.value && pvSelect.selectedIndex >= 0) {
+                    // Usa o texto visível da option (ex.: "62 — Aprovado ...")
+                    const opt = pvSelect.options[pvSelect.selectedIndex];
+                    pvSelectedText.textContent = sanitizeBidi(opt ? opt.text : '');
+                } else {
+                    pvSelectedText.textContent = '';
+                }
+            }
         };
-        toggleButton();
-        // If preselected via GET (consulta_id), ensure button is visible
-        if (pvSelect.value) {
-            submitBtn.style.display = 'inline-block';
-        }
-        pvSelect.addEventListener('change', toggleButton);
+        // Inicializa UI ao carregar (inclui caso preselected via GET: consulta_id)
+        updateUI();
+        // Atualiza ao trocar a opção
+        pvSelect.addEventListener('change', updateUI);
     }
 });
 </script>

@@ -1,4 +1,4 @@
-﻿from .base import *
+from .base import *
 import os
 from pathlib import Path
 # Use python-decouple to read configuration from environment and .env.
@@ -32,6 +32,10 @@ DATABASES = {
         'NAME': config('DB_NAME', default='votebem_db'),
         'USER': config('DB_USER', default='votebem_user'),
         'PASSWORD': config('DB_PASSWORD'),
+        # Hostname for DB. In Docker, 'db' is resolvable via Docker DNS.
+        # On host Windows/macOS dev runs (outside Docker), 'db' may NOT resolve.
+        # We will resolve and fallback to '127.0.0.1' if DNS fails, so local
+        # runs using production settings don't crash with Unknown host 'db'.
         'HOST': config('DB_HOST', default='db'),
         'PORT': config('DB_PORT', default='3306'),
         'OPTIONS': {
@@ -46,6 +50,8 @@ DATABASES = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        # Redis URL. In Docker, 'redis' resolves fine; outside Docker, it may not.
+        # We'll normalize this below with a best-effort hostname resolution fallback.
         'LOCATION': config('REDIS_URL', default='redis://redis:6379/0'),
         'KEY_PREFIX': 'votebem',
         'TIMEOUT': 300,
@@ -254,3 +260,40 @@ INSTALLED_APPS += [
     'corsheaders',
     'django_extensions',
 ]
+
+# --- Runtime DNS fallback for DB and Redis when running outside Docker ---
+# Rationale
+# --------
+# - In production Compose, service names like 'db' and 'redis' resolve via Docker DNS.
+# - When someone runs manage.py with production settings on the HOST (Windows/macOS),
+#   those names do not resolve and lead to errors like:
+#     OperationalError: (2005, "Unknown server host 'db' (11001)")
+# - To make production settings more robust for occasional host-side executions
+#   (migrations, test runs, quick checks), we apply a lightweight DNS resolution
+#   check and fallback to localhost if needed.
+try:
+    import socket
+    # Resolve and fallback DB host
+    _db_host = DATABASES['default'].get('HOST') or 'db'
+    try:
+        # Attempt DNS resolution; if it fails, fallback to loopback.
+        socket.gethostbyname(_db_host)
+    except socket.gaierror:
+        DATABASES['default']['HOST'] = '127.0.0.1'
+
+    # Resolve and fallback Redis host within LOCATION URL
+    from urllib.parse import urlparse
+    _cache_loc = CACHES['default'].get('LOCATION', '')
+    if _cache_loc:
+        parsed = urlparse(_cache_loc)
+        host = parsed.hostname or 'redis'
+        try:
+            socket.gethostbyname(host)
+        except socket.gaierror:
+            # Rebuild URL with localhost preserving scheme/port/db
+            port = parsed.port or 6379
+            db = parsed.path or '/0'
+            CACHES['default']['LOCATION'] = f"{parsed.scheme}://127.0.0.1:{port}{db}"
+except Exception:
+    # Fail-safe: never break settings import due to fallback logic.
+    pass

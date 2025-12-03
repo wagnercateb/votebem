@@ -1,0 +1,20 @@
+Staff-only enforcement for /gerencial/
+
+Summary
+- A new middleware `votebem.middleware.StaffOnlyGerencialMiddleware` centrally
+  enforces that every URL under `/gerencial/` is accessible only to authenticated
+  staff users.
+
+Behavior
+- Unauthenticated or non-staff access is redirected to `/admin/login/` with a
+  `next` parameter pointing to the originally requested URL.
+- Authenticated staff users proceed normally to the requested view.
+
+Setup
+- Registered middleware in settings (base.py) immediately after
+  `django.contrib.auth.middleware.AuthenticationMiddleware`.
+
+Notes
+- Using the admin login strengthens the staff-only policy for administrative
+  paths.
+- Future routes under `/gerencial/` are automatically covered.

@@ -76,7 +76,7 @@
     <h4 class="card-title" style="margin:0;">Votações encontradas</h4>
     <div class="form-check form-switch" title="Opcional: aplica filtro por turno/emenda">
       <input class="form-check-input" type="checkbox" id="vb-toggle-turno-filter">
-      <label class="form-check-label" for="vb-toggle-turno-filter">Filtrar por “turno / emenda aglutinativa / projeto”</label>
+      <label class="form-check-label" for="vb-toggle-turno-filter">Filtrar linhas com  “total”</label>
     </div>
   </div>
   <div class="card-body">
@@ -153,7 +153,7 @@
       const dados = Array.isArray(items) ? items : [];
       // When toggle is off, return the full list
       if (!toggleTurnoFilter || !toggleTurnoFilter.checked) return dados;
-      const needles = [ 'em primeiro turno', 'em segundo turno', 'emenda aglutinativa', 'projeto' ];
+      const needles = [ 'total' ];
       return dados.filter(item => {
         const d = (item?.descricao || item?.descrição || '').toLowerCase();
         return needles.some(n => d.includes(n));

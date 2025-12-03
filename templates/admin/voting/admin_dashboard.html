@@ -123,37 +123,6 @@
     <p>Bem-vindo ao painel de administração do sistema VoteBem. Aqui você pode gerenciar todas as funcionalidades do sistema.</p>
 </div>
 
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-number">{{ total_proposicoes }}</div>
-        <div class="stat-label">Proposições</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{ total_votacoes_disponiveis }}</div>
-        <div class="stat-label">Votações Criadas</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{ votacoes_ativas }}</div>
-        <div class="stat-label">Votações Ativas</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{ total_votos_populares }}</div>
-        <div class="stat-label">Votos Populares</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{ total_congressistas }}</div>
-        <div class="stat-label">Congressistas</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{ total_votos_congressistas }}</div>
-        <div class="stat-label">Votação oficial</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-number">{{ total_usuarios }}</div>
-        <div class="stat-label">Usuários</div>
-    </div>
-</div>
-
 <div class="admin-actions">
     <div class="action-card">
         <h3>Proposições</h3>
@@ -164,6 +133,7 @@
             <li>
                 <a href="/gerencial/camara-admin/" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre a página de importação/gerência em lote da Câmara">Adicionar em lote, por período</a>
             </li>
+            <li><a href="{% url 'gerencial:proposicoes_statistics' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Mostra métricas e estatísticas das proposições">Estatísticas de Proposições</a></li>
             <li><a href="/admin/voting/proposicao/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre o formulário de criação no Django Admin">Adicionar via Django</a></li>
             <li><a href="{% url 'gerencial:proposicao_add' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre o formulário de criação de proposição no aplicativo">Adicionar uma manualmente</a></li>
             <!-- Link ajustado para manter o mesmo estilo dos demais itens -->
@@ -176,7 +146,6 @@
                 </a>
             </li>
             <li><a href="{% url 'gerencial:proposicao_import' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Importa uma proposição informando o ID da Câmara">Adicionar via ID</a></li>
-            <li><a href="{% url 'gerencial:proposicoes_statistics' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Mostra métricas e estatísticas das proposições">Estatísticas de Proposições</a></li>
         </ul>
     </div>
     
@@ -193,9 +162,9 @@
         <h3>Votações oficiais</h3>
         <ul class="action-list">
             <li><a href="{% url 'gerencial:votacoes_oficiais_list' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista Votações oficiais já obtidas, com ou sem votos individuais">Listar votações oficiais, obter por ano</a></li>
-            <li><a href="/admin/voting/congressmanvote/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista Votação oficial no Django Admin">Votos individuais oficiais via Django</a></li>
             <li><a href="{% url 'gerencial:votos_oficiais_app' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Obtem uma ou mais votações oficiais usando API da Câmara">Obter votação por proposicao_id via App</a></li>
             <li><a href="{% url 'gerencial:votacoes_por_periodo' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre a tela para obter votações por período na Câmara API">Obter votações por período</a></li>
+            <li><a href="/admin/voting/congressmanvote/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista Votação oficial no Django Admin">Votos individuais oficiais via Django</a></li>
         </ul>
     </div>
 
@@ -236,6 +205,39 @@
     </div> -->
 
 </div>
+
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_proposicoes }}</div>
+        <div class="stat-label">Proposições</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_votacoes_disponiveis }}</div>
+        <div class="stat-label">Votações Criadas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ votacoes_ativas }}</div>
+        <div class="stat-label">Votações Ativas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_votos_populares }}</div>
+        <div class="stat-label">Votos Populares</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_congressistas }}</div>
+        <div class="stat-label">Congressistas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_votos_congressistas }}</div>
+        <div class="stat-label">Votação oficial</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_usuarios }}</div>
+        <div class="stat-label">Usuários</div>
+    </div>
+</div>
+
 
 {# Panels removed per request to avoid extra DB loads #}
 

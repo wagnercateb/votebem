@@ -33,196 +33,51 @@ https://dadosabertos.camara.leg.br/api/v2/votacoes?idOrgao=180&dataInicio=2023-0
         ('/media/Proposicao 2515300 - tarifa social da energia elétrica.pdf','web_page','2025-11-16 20:10:13.324587','2025-11-16 20:10:13.324587',30),
         ('/media/Nova_lei_de_tarifas_Justiça_ou_custo_social.m4a','sound','2025-11-17 14:57:19.409102','2025-11-17 14:57:19.409102',30);
 
+# Imprensa e favoritos do navegador
 
-### crime organizado
-- https://www.camara.leg.br/noticias/1224884-camara-aprova-marco-legal-do-combate-ao-crime-organizado/
-    - https://dadosabertos.camara.leg.br/api/v2/proposicoes/2579832
-    - https://dadosabertos.camara.leg.br/api/v2/votacoes?idProposicao=2579832&ordem=DESC&ordenarPor=dataHoraRegistro
-
-        {
-            "dados": [
-                {
-                "id": "2579832-106",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-106",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T22:26:41",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Aprovada a Redação Final assinada pelo relator, Dep. Guilherme Derrite (PP/SP).",
-                "aprovacao": 1
-                },
-                {
-                "id": "2579832-105",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-105",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T22:26:21",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Aprovada a Emenda de Plenário nº 25. Sim: 349; Não: 40; Abstenção: 1; Total: 390.",
-                "aprovacao": 1
-                },
-                {
-                "id": "2579832-101",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-101",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T22:14:57",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Aprovada a Emenda de Plenário nº 1.",
-                "aprovacao": 1
-                },
-                {
-                "id": "2579832-99",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-99",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T22:11:52",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Rejeitada a preferência. Sim: 107; Não: 298; Abstenção: 2; Total: 407.",
-                "aprovacao": 0
-                },
-                {
-                "id": "2579832-96",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-96",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T22:01:24",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Mantido o texto. Sim: 298; Não: 109; Abstenção: 1; Total: 408.",
-                "aprovacao": null
-                },
-                {
-                "id": "2579832-95",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-95",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T21:48:46",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Rejeitada a Emenda de Plenário nº 33. Sim: 142; Não: 298; Abstenção: 1; Total: 441.",
-                "aprovacao": 0
-                },
-                {
-                "id": "2579832-72",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-72",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T21:32:49",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Rejeitadas as Emendas ao Substitutivo.",
-                "aprovacao": 0
-                },
-                {
-                "id": "2579832-67",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-67",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T21:31:18",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Mantido o texto.",
-                "aprovacao": null
-                },
-                {
-                "id": "2579832-62",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-62",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T21:24:57",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Aprovado o Substitutivo ao Projeto de Lei nº 5.582, de 2025, adotado pelo relator da Comissão de Segurança Pública e Combate ao Crime Organizado, ressalvados os destaques. Sim: 370; Não: 110; Abstenção: 3; Total: 483.",
-                "aprovacao": 1
-                },
-                {
-                "id": "2579832-61",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-61",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T20:35:55",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Rejeitada a Preferência. Sim: 156; Não: 306; Total: 462.",
-                "aprovacao": 0
-                },
-                {
-                "id": "2579832-54",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-54",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T19:51:52",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Aprovado o Requerimento. Sim: 335; Não: 111; Total: 446.",
-                "aprovacao": 1
-                },
-                {
-                "id": "2579832-49",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-49",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T18:58:32",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Rejeitado o Requerimento. Sim: 114; Não: 335; Total: 449.",
-                "aprovacao": 0
-                },
-                {
-                "id": "2579832-41",
-                "uri": "https://dadosabertos.camara.leg.br/api/v2/votacoes/2579832-41",
-                "data": "2025-11-18",
-                "dataHoraRegistro": "2025-11-18T18:11:45",
-                "siglaOrgao": "PLEN",
-                "uriOrgao": "https://dadosabertos.camara.leg.br/api/v2/orgaos/180",
-                "uriEvento": "https://dadosabertos.camara.leg.br/api/v2/eventos/80366",
-                "proposicaoObjeto": null,
-                "uriProposicaoObjeto": null,
-                "descricao": "Rejeitado o Requerimento. Sim: 110; Não: 316; Total: 426.",
-                "aprovacao": 0
-                }
-            ],
-            "links": [
-                {
-                "rel": "self",
-                "href": "https://dadosabertos.camara.leg.br/api/v2/votacoes?idProposicao=2579832&ordem=DESC&ordenarPor=dataHoraRegistro"
-                },
-                {
-                "rel": "first",
-                "href": "https://dadosabertos.camara.leg.br/api/v2/votacoes?idProposicao=2579832&ordem=DESC&ordenarPor=dataHoraRegistro&pagina=1&itens=100"
-                },
-                {
-                "rel": "last",
-                "href": "https://dadosabertos.camara.leg.br/api/v2/votacoes?idProposicao=2579832&ordem=DESC&ordenarPor=dataHoraRegistro&pagina=1&itens=100"
-                }
-            ]
-            }
+                <DT><H3 ADD_DATE="1760283851" LAST_MODIFIED="1764589927">VoteBem</H3>
+                <DL><p>
+                    <DT><H3 ADD_DATE="1760283851" LAST_MODIFIED="1760283873">semelhantes</H3>
+                    <DL><p>
+                        <DT><A HREF="https://quemfoiquem.org.br/" ADD_DATE="1760283820">quemfoiquem.org.br</A>
+                        <DT><A HREF="https://placarcongresso.com/pages/s-ranking.html" ADD_DATE="1760283873" 
+                        ... (icone)
+                    ">Placar Congresso - Ranking Senado Federal</A>
+                    </DL><p>
+                    <DT><A HREF="https://dadosabertos.camara.leg.br/#" ADD_DATE="1760229584" 
+                        ... (icone)
+                     - index indice assuntos principais</A>
+                    <DT><A HREF="https://www2.camara.leg.br/transparencia/servicos-ao-cidadao/relacionamento-e-participacao" ADD_DATE="1763903611" 
+                        ... (icone)
+                    ">Relacionamento e participação — Portal da Câmara dos Deputados</A>
+                    <DT><A HREF="https://evc.camara.leg.br/programas/oficina-de-atuacao-no-parlamento/" ADD_DATE="1763903645" 
+                        ... (icone)
+                    ">Oficina de Atuação no Parlamento - EVC</A>
+                    <DT><A HREF="https://dadosabertos.camara.leg.br/community/blogger.html" ADD_DATE="1763903661" 
+                    ... (icone)
+                    ==">Blogger da Câmara - cita votobom</A>
+                    <DT><A HREF="https://www.camara.leg.br/agenda?categorias=Plen%C3%A1rio,Congresso" ADD_DATE="1763903716" 
+                        ... (icone)
+                    ">A Agenda da Câmara dos Deputados - Portal da Câmara dos Deputados</A>
+                    <DT><A HREF="https://www1.folha.uol.com.br/fsp/fac-simile/2025/12/01/" ADD_DATE="1764588166" 
+                        ... (icone)
+                    ">FSP | Folha edicao impressa - por data</A>
+                    <DT><A HREF="https://acervo.folha.uol.com.br/digital/leitor.do?numero=51212&anchor=6531219&maxTouch=0&pd=db41acf838b17513aabf8fabb9a37531" ADD_DATE="1764588209" 
+                        ... (icone)
+                    ">Folha de S.Paulo - por data - ed impressa</A>
+                    <DT><A HREF="https://acervo.folha.uol.com.br/digital/edicoes-recentes.do" ADD_DATE="1764588270" 
+                        ... (icone)
+                    ">Folha de S.Paulo - edicoes por assunto e data periodo</A>
+                    <DT><A HREF="https://digital.estadao.com.br/o-estado-de-s-paulo/20241221" ADD_DATE="1764589306" 
+                        ... (icone)
+                    ">Estadao por data - so tem um ano</A>
+                    <DT><A HREF="https://acervo.estadao.com.br/linha-do-tempo/" ADD_DATE="1764589342">Estadao - acervo por data periodo completo</A>
+                    <DT><A HREF="https://acervo.estadao.com.br/procura/#!/c%C3%A2mara%20aprova%20votos/Acervo/capa//1/2020/" ADD_DATE="1764589927">Estadao acervo pesquisa total completa por votos</A>
+                </DL><p>
+                <DT><A HREF="https://app.improvmx.com/" ADD_DATE="1762802507" 
+                    ... (icone)
+                ">ImprovMX — Free email forwarding</A>
+                <DT><A HREF="http://investir.website:8081/#/garimpe" ADD_DATE="1762813239" 
+                    ... (icone)
+                ">investir.website</A>
+            </DL><p>

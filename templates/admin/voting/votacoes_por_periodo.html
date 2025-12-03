@@ -262,7 +262,16 @@
         const isInDb = Number.isInteger(sufixo) && !!sufixoMap[sufixo];
         const votosJaImportados = Number(info.votesCount || 0);
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${(propId ? `<a target='_blank' href='https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=${propId}'>${propId}</a>-${sufixo||''}` : (sufixo||''))}</td>`+
+        // Ajuste de UI: torna o número após o hífen clicável.
+        // A segunda parte (sufixo) vira um link para 
+        //   "<origin>/gerencial/?votacao_id=<fullId>"
+        // onde <fullId> é o texto completo da célula (ex.: "2579832-105").
+        // Mantemos o primeiro número (proposição) como link externo para a Câmara.
+        tr.innerHTML = `<td>${(
+          propId
+            ? `<a target='_blank' href='https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=${propId}'>${propId}</a>-<a href='${window.location.origin}/gerencial/?votacao_id=${encodeURIComponent(fullId)}'>${sufixo || ''}</a>`
+            : `<a href='${window.location.origin}/gerencial/?votacao_id=${encodeURIComponent(fullId)}'>${sufixo || ''}</a>`
+        )}</td>`+
                        `<td>${isInDb ? 'sim' : `<button type='button' class='btn btn-outline-primary btn-sm btn-abrir-gerencial' title='Abrir gerencial com votacao_id'>Abrir</button>`}</td>`+
                        `<td>${dataHora || ''}</td>`+
                        `<td>${desc || ''}</td>`+
