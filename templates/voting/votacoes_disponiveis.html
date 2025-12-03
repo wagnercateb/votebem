@@ -7,15 +7,43 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="bi bi-vote-fill"></i> Votações Disponíveis</h1>
+            <!-- Contagem total de cartões ATIVOS exibidos na página, à esquerda do título -->
+            <div class="d-flex align-items-center">
+                
+                <h1><i class="bi bi-vote-fill"></i>
+                    <span id="totalActiveCount" title="Total de votações ativas">0</span>
+                     Votações Disponíveis
+                </h1>
+            </div>
             {% if user.is_authenticated %}
-                <a href="{% url 'voting:meus_votos' %}" class="btn btn-outline-primary">
+                <a href="{% url 'voting:meus_votos' %}" class="btn btn-outline-primary me-2">
                     <i class="bi bi-list-check"></i> Meus Votos
                 </a>
             {% endif %}
-            <a href="{% url 'voting:votacoes_pesquisa' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-search"></i> Pesquisar Votações
+
+            <a href="{% url 'voting:votacoes_pesquisa' %}"
+                class="input-group-text text-decoration-none"
+                id="cardFilterLabel"
+                title="Ir para a pesquisa de votações">
+                <i class="bi bi-search"></i>
             </a>
+
+            <!-- Substituição do botão de pesquisa por uma caixa de texto de filtro.
+                 Requisito: qualquer cartão que contenha TODAS as palavras digitadas
+                 (em qualquer lugar dentro do cartão) deve ficar visível; os demais, ocultos.
+                 Implementação 100% client-side (JavaScript nesta página), sem chamadas ao servidor.
+                 Observação: a contagem de cartões FILTRADOS (visíveis) aparece ao lado do ícone. -->
+            <div class="input-group w-auto" style="max-width: 380px;">
+                <!-- Ícone de busca agora é clicável e abre a página de pesquisa -->
+                <!-- Contador de cartões atualmente VISÍVEIS após o filtro -->
+                <span class="input-group-text" id="cardFilterCount" title="Cartões visíveis">0</span>
+                <input type="text"
+                       id="cardFilterInput"
+                       class="form-control"
+                       placeholder="Filtrar"
+                       aria-label="Filtrar votações disponíveis"
+                       aria-describedby="cardFilterLabel cardFilterCount">
+            </div>
         </div>
         
         {% if votacoes %}
@@ -24,7 +52,7 @@
             <div class="row">
                 {% for votacao in votacoes %}
                     {% if not votacao.id in user_votes %}
-                    <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="col-md-6 col-lg-4 mb-4" data-active="{{ votacao.is_active }}">
                         <div class="card h-100">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
@@ -92,7 +120,7 @@
             <div class="row">
                 {% for votacao in votacoes %}
                     {% if votacao.id in user_votes %}
-                    <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="col-md-6 col-lg-4 mb-4" data-active="{{ votacao.is_active }}">
                         <div class="card h-100 border-success">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
@@ -188,4 +216,163 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!--
+    Filtro de cartões de votações (client-side)
+    - Comportamento: mantém visíveis apenas os cartões cujo texto contenha TODAS as palavras
+      digitadas na caixa de texto (separadas por espaço). Busca case-insensitive.
+    - Escopo: aplica-se a todos os cartões renderizados na página atual (incluindo "Vote agora!"
+      e "Já votadas"). Não impacta paginação; filtros atuam apenas nos itens exibidos.
+    - Implementação: coleta o texto completo de cada card via textContent e realiza uma busca
+      simples por substring para cada termo informado.
+-->
+<script>
+  (function () {
+    'use strict';
+
+    /**
+     * Remove diacríticos (acentos) do texto usando Unicode Normalization Form D (NFD)
+     * e elimina marcações combinadas. Ex.: "ação" -> "acao", "coração" -> "coracao".
+     * @param {string} s
+     * @returns {string}
+     */
+    function stripDiacritics(s) {
+      try {
+        return (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      } catch (e) {
+        // Fallback para ambientes sem suporte a normalize
+        return (s || '');
+      }
+    }
+
+    /**
+     * Normaliza texto para comparação:
+     * - Case-insensitive
+     * - Espaços extras removidos
+     * - Diacríticos (acentos) removidos
+     * @param {string} s
+     * @returns {string}
+     */
+    function normalizeText(s) {
+      return stripDiacritics(s || '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    /**
+     * Obtém a lista de elementos de coluna que embrulham cada card.
+     * Mantemos a ocultação no wrapper da coluna para preservar o layout do grid.
+     * @returns {HTMLElement[]}
+     */
+    function getCardColumns() {
+      // Os cartões estão sempre dentro de divs com classes: col-md-6 col-lg-4 mb-4
+      return Array.prototype.slice.call(document.querySelectorAll('.col-md-6.col-lg-4.mb-4'));
+    }
+
+    /**
+     * Retorna o texto completo do cartão (conteúdo textual agregado).
+     * @param {HTMLElement} colEl - wrapper da coluna contendo o card
+     * @returns {string}
+     */
+    function getCardText(colEl) {
+      var card = colEl.querySelector('.card');
+      if (!card) return '';
+      // textContent inclui o texto de títulos, badges, botões, temas, etc.
+      return normalizeText(card.textContent || card.innerText || '');
+    }
+
+    /**
+     * Avalia se o texto do cartão contém todas as palavras fornecidas.
+     * @param {string} haystack - texto do cartão
+     * @param {string[]} words - palavras já normalizadas
+     * @returns {boolean}
+     */
+    function matchesAllWords(haystack, words) {
+      // Se não há termos, consideramos "match" para exibir todos.
+      if (!words || words.length === 0) return true;
+      for (var i = 0; i < words.length; i++) {
+        if (haystack.indexOf(words[i]) === -1) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    /**
+     * Conta o total de cartões marcados como ATIVOS via atributo data-active.
+     * Não depende do filtro; representa o total ativo na página.
+     * @returns {number}
+     */
+    function countTotalActive() {
+      var cols = getCardColumns();
+      var total = 0;
+      for (var i = 0; i < cols.length; i++) {
+        var col = cols[i];
+        var isActive = String(col.getAttribute('data-active') || '').toLowerCase();
+        if (isActive === 'true' || isActive === '1') {
+          total++;
+        }
+      }
+      return total;
+    }
+
+    /**
+     * Aplica o filtro aos cartões visíveis na página.
+     * - Divide o input em palavras por espaço.
+     * - Exibe o cartão se todas as palavras estiverem contidas em seu texto.
+     */
+    function applyCardFilter() {
+      var inputEl = document.getElementById('cardFilterInput');
+      if (!inputEl) return;
+
+      var raw = normalizeText(inputEl.value);
+      var words = raw.length ? raw.split(' ') : [];
+
+      var cols = getCardColumns();
+      var visibleCount = 0;
+      for (var i = 0; i < cols.length; i++) {
+        var col = cols[i];
+        var text = getCardText(col);
+        var show = matchesAllWords(text, words);
+        // Exibe/oculta o wrapper da coluna
+        col.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+      }
+
+      // Atualiza contador de cartões visíveis ao lado do ícone
+      var countEl = document.getElementById('cardFilterCount');
+      if (countEl) {
+        countEl.textContent = String(visibleCount);
+      }
+    }
+
+    /**
+     * Inicializa listeners após o carregamento do DOM.
+     */
+    function initFilter() {
+      var inputEl = document.getElementById('cardFilterInput');
+      if (!inputEl) return;
+      // Aplica o filtro a cada alteração de texto
+      inputEl.addEventListener('input', applyCardFilter);
+      // Garante estado inicial (sem filtro = todos visíveis)
+      applyCardFilter();
+
+      // Inicializa contador de cartões ATIVOS (total na página)
+      var totalActiveEl = document.getElementById('totalActiveCount');
+      if (totalActiveEl) {
+        totalActiveEl.textContent = String(countTotalActive());
+      }
+    }
+
+    // Aguarda o DOM estar pronto antes de inicializar
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initFilter);
+    } else {
+      initFilter();
+    }
+  })();
+</script>
 {% endblock %}

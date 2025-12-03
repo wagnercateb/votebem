@@ -5,10 +5,10 @@
 <div class="row">
   <div class="col-12">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1>
+      <h2>
         <i class="bi bi-search"></i>
         {% if is_proposicoes %}Pesquisar Proposições da Câmara dos Deputados{% else %}Pesquisar Votações de Votebem.online{% endif %}
-      </h1>
+      </h2>
       <div class="d-flex gap-2">
         {% if is_proposicoes %}
           <a href="{% url 'voting:votacoes_pesquisa' %}" class="btn btn-outline-secondary">
@@ -29,43 +29,13 @@
     <form method="get" class="card mb-4">
       <div class="card-body">
         <div class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label">Pesquisa</label>
-            <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Título, resumo, ementa...">
+          <div class="col-md-8">
+            <div class="input-group">
+              <label for="q" class="input-group-text">Pesquisar</label>
+              <input type="text" id="q" name="q" value="{{ q }}" class="form-control" placeholder="Título, resumo, ementa..." aria-label="Pesquisar">
+            </div>
           </div>
-          <div class="col-md-3">
-            <label class="form-label">Tipo</label>
-            <select name="tipo" class="form-select">
-              <option value="">Todos</option>
-              {% for t in tipos %}
-                <option value="{{ t }}" {% if t == tipo_sel %}selected{% endif %}>{{ t }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Ano</label>
-            <select name="ano" class="form-select">
-              <option value="">Todos</option>
-              {% for a in anos %}
-                <option value="{{ a }}" {% if a|stringformat:'s' == ano_sel %}selected{% endif %}>{{ a }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          {% if not is_proposicoes %}
-          <div class="col-md-2">
-            <label class="form-label">Ativa</label>
-            <select name="ativo" class="form-select">
-              <option value="">Todas</option>
-              <option value="sim" {% if ativo_sel == 'sim' %}selected{% endif %}>Sim</option>
-              <option value="nao" {% if ativo_sel == 'nao' %}selected{% endif %}>Não</option>
-            </select>
-          </div>
-          {% endif %}
         </div>
-      </div>
-      <div class="card-footer d-flex justify-content-between">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-filter"></i> Filtrar</button>
-        <a href="{% url 'voting:votacoes_pesquisa' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> Limpar</a>
       </div>
     </form>
 
@@ -76,7 +46,6 @@
             <thead class="table-light">
               {% if is_proposicoes %}
               <tr>
-                <th>ID Câmara</th>
                 <th>Título</th>
                 <th>Proposição</th>
                 <th>Ementa</th>
@@ -84,9 +53,7 @@
               </tr>
               {% else %}
               <tr>
-                <th>ID</th>
                 <th>Título</th>
-                <th>Proposição</th>
                 <th>Ativa</th>
                 <th>No ar desde</th>
                 <th>Ações</th>
@@ -97,7 +64,6 @@
               {% for v in votacoes %}
               {% if is_proposicoes %}
               <tr>
-                <td>{{ v.id_proposicao }}</td>
                 <td>
                   {% if v.id_proposicao %}
                     <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.id_proposicao }}" target="camara" class="text-decoration-none">
@@ -129,25 +95,15 @@
               </tr>
               {% else %}
               <tr>
-                <td>{{ v.id }}</td>
                 <td>
-                  {% if v.proposicao.id_proposicao %}
-                    <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+                  {% if v.proposicao_votacao and v.proposicao_votacao.proposicao and v.proposicao_votacao.proposicao.id_proposicao %}
+                    <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.proposicao_votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
                       {{ v.titulo|truncatechars:80 }}
                     </a>
                   {% else %}
                     {{ v.titulo|truncatechars:80 }}
                   {% endif %}
                   <div class="text-muted small">{{ v.resumo|truncatechars:120 }}</div>
-                </td>
-                <td>
-                  {% if v.proposicao.id_proposicao %}
-                    <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
-                      <span class="badge bg-primary">{{ v.proposicao.tipo }} {{ v.proposicao.numero }}/{{ v.proposicao.ano }}</span>
-                    </a>
-                  {% else %}
-                    <span class="badge bg-primary">{{ v.proposicao.tipo }} {{ v.proposicao.numero }}/{{ v.proposicao.ano }}</span>
-                  {% endif %}
                 </td>
                 <td>
                   {% if v.ativo %}
@@ -200,4 +156,109 @@
     {% endif %}
   </div>
  </div>
+{% endblock %}
+
+{% block extra_js %}
+<!--
+  Aplicação imediata dos filtros na página de pesquisa:
+  - Todos os selects (Tipo, Ano, Ativa) disparam o envio do formulário ao mudar.
+  - O input de texto (q) também dispara o envio imediatamente ao digitar.
+  Observações:
+  - Método GET: os parâmetros são enviados na URL, permitindo bookmarking/compartilhamento.
+  - Não há debounce por solicitação de "imediato"; podemos adicionar no futuro se necessário.
+-->
+<script>
+  (function() {
+    'use strict';
+
+    /**
+     * Localiza o formulário principal da página de pesquisa.
+     * @returns {HTMLFormElement|null}
+     */
+    function getSearchForm() {
+      return document.querySelector('form.card.mb-4');
+    }
+
+    // ===== Client-side filtering helpers (accent- and case-insensitive) =====
+    function normalizeText(s) {
+      return (s || '')
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    }
+
+    function tokenize(raw) {
+      return normalizeText(raw)
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    }
+
+    function applyFilter() {
+      var form = getSearchForm();
+      if (!form) return;
+      var qInput = form.querySelector('input[name="q"]');
+      var rows = document.querySelectorAll('table.table tbody tr');
+      if (!qInput || rows.length === 0) return;
+
+      var tokens = tokenize(qInput.value);
+      if (tokens.length === 0) {
+        rows.forEach(function(tr) { tr.style.display = ''; });
+        return;
+      }
+
+      rows.forEach(function(tr) {
+        var text = normalizeText(tr.innerText || '');
+        var matchesAll = tokens.every(function(tok) { return text.indexOf(tok) !== -1; });
+        tr.style.display = matchesAll ? '' : 'none';
+      });
+    }
+
+    /**
+     * Envia o formulário imediatamente.
+     * Usa requestSubmit quando disponível para respeitar validações nativas.
+     */
+    function submitFormImmediate() {
+      var form = getSearchForm();
+      if (!form) return;
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    }
+
+    /**
+     * Inicializa listeners em selects e no input de texto.
+     */
+    function initImmediateFilters() {
+      var form = getSearchForm();
+      if (!form) return;
+
+      // Input de pesquisa (q)
+      var qInput = form.querySelector('input[name="q"]');
+      if (qInput) {
+        // Prevent Enter from submitting; keep UX purely client-side.
+        qInput.addEventListener('keydown', function(ev) {
+          if (ev.key === 'Enter') ev.preventDefault();
+        });
+        // Apply multi-word AND filter in real time.
+        qInput.addEventListener('input', applyFilter);
+        // Initial filter to reflect preloaded value.
+        applyFilter();
+      }
+
+      // Todos os selects presentes na página (tipo, ano e, quando aplicável, ativo)
+      var selects = form.querySelectorAll('select');
+      // Selects no longer submit; text input drives client-side filtering.
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initImmediateFilters);
+    } else {
+      initImmediateFilters();
+    }
+  })();
+</script>
 {% endblock %}

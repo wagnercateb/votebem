@@ -106,7 +106,10 @@ obtidos de votações oficiais. A edição é realizada via Django Admin ou tela
             <td>{{ pv.id }}</td>
             <td>
               {% if pv.proposicao %}
-                <strong>{{ pv.proposicao.tipo }} {{ pv.proposicao.numero }}/{{ pv.proposicao.ano }}</strong><br>
+                {# Linka o texto forte da proposição para a página /gerencial/ passando votacao_id=<proposicao_id>-<votacao_sufixo> #}
+                <a href="/gerencial/?votacao_id={{ pv.proposicao.id_proposicao }}-{{ pv.votacao_sufixo }}" title="Abrir gerencial para {{ pv.proposicao.id_proposicao }}-{{ pv.votacao_sufixo }}">
+                  <strong>{{ pv.proposicao.tipo }} {{ pv.proposicao.numero }}/{{ pv.proposicao.ano }}</strong>
+                </a><br>
                 {% with vb=pv.votacaovotebem.all|first %}
                   {% if vb %}
                     <small>{{ vb.titulo }}</small>

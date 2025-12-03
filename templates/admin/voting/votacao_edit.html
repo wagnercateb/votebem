@@ -267,6 +267,21 @@
                     <a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-secondary">
                         <i class="fas fa-times"></i> Cancelar
                     </a>
+                    {# Botão de Referências: abre a página gerencial com o votacao_id composto (proposicao_id-sufixo) #}
+                    {% if votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao and votacao.proposicao_votacao.votacao_sufixo %}
+                        <a
+                            class="btn btn-secondary"
+                            href="/gerencial/?votacao_id={{ votacao.proposicao_votacao.proposicao.id_proposicao }}-{{ votacao.proposicao_votacao.votacao_sufixo }}"
+                            title="Editar Referências desta votação"
+                        >
+                            <i class="fas fa-link"></i> Referencias
+                        </a>
+                    {% else %}
+                        {# Quando não há ligação com ProposicaoVotacao, mostramos botão desabilitado para evitar confusão #}
+                        <a class="btn btn-secondary" aria-disabled="true" tabindex="-1" style="opacity:0.6; pointer-events:none;">
+                            <i class="fas fa-link"></i> Referencias
+                        </a>
+                    {% endif %}
                 </div>
             </form>
 

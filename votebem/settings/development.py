@@ -40,8 +40,8 @@ def get_database_config():
             host=config('DB_HOST', default='localhost'),
             port=int(config('DB_PORT', default='3306')),
             user=config('DB_USER', default='votebem_user'),
-            password=config('DB_PASSWORD', default='votebem_dev_password'),
-            database=config('DB_NAME', default='votebem_dev'),
+            password=config('DB_PASSWORD', default='votebem_dsword'),
+            database=config('DB_NAME', default='votebem_db'),
             connect_timeout=5,
         )
         conn.close()
@@ -50,7 +50,7 @@ def get_database_config():
         return {
             'default': {
                 'ENGINE': 'django.db.backends.mysql',
-                'NAME': config('DB_NAME', default='votebem_dev'),
+                'NAME': config('DB_NAME', default='votebem_db'),
                 'USER': config('DB_USER', default='votebem_user'),
                 'PASSWORD': config('DB_PASSWORD', default='votebem_dev_password'),
                 'HOST': config('DB_HOST', default='localhost'),
@@ -61,9 +61,9 @@ def get_database_config():
                 },
             }
         }
-    except Exception:
+    except Exception as e:
         # MariaDB not available, use SQLite
-        dev_log("MariaDB not available, using SQLite database")
+        dev_log(f"MariaDB not available, using SQLite database. Error: {e}")
         return {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',

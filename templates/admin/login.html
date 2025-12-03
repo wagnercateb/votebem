@@ -1,0 +1,59 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Log in" %}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 420px; margin: 2rem auto;">
+  <h1 class="h3 mb-3">{% trans "Admin Login" %}</h1>
+
+  {% if form.errors %}
+    <div class="alert alert-danger" role="alert">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  <form action="{% url 'admin:login' %}" method="post" id="login-form" novalidate>
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label for="id_username" class="form-label">{% trans "Username" %}</label>
+      <input type="text" name="username" autofocus autocapitalize="none" autocomplete="username" maxlength="150" required id="id_username" class="form-control">
+    </div>
+
+    <div class="mb-3">
+      <label for="id_password" class="form-label">{% trans "Password" %}</label>
+      <input type="password" name="password" autocomplete="current-password" required id="id_password" class="form-control">
+    </div>
+
+    <input type="hidden" name="next" value="{{ next|default:'/admin/' }}">
+
+    <button type="submit" class="btn btn-primary w-100">{% trans "Log in" %}</button>
+  </form>
+
+  <script>
+    // Ensure inputs are interactive in any embedded preview environments
+    (function() {
+      const selector = 'input, select, textarea, button';
+      document.querySelectorAll(selector).forEach(function(el) {
+        try {
+          el.disabled = false;
+          el.readOnly = false;
+          el.style.pointerEvents = 'auto';
+          el.tabIndex = el.tabIndex < 0 ? 0 : el.tabIndex;
+        } catch (e) {}
+      });
+      // Remove any full-page overlays that may block interaction
+      document.querySelectorAll('*').forEach(function(el) {
+        const cs = getComputedStyle(el);
+        if (cs.pointerEvents === 'none' && cs.position === 'fixed' && cs.zIndex && parseInt(cs.zIndex, 10) > 0) {
+          el.style.pointerEvents = 'auto';
+        }
+      });
+      // Focus username for convenience
+      var u = document.getElementById('id_username');
+      if (u) { u.focus(); }
+    })();
+  </script>
+</div>
+{% endblock %}
