@@ -168,8 +168,15 @@
                 {# Prefer explicit composition to ensure consistent wording across contexts #}
                 <h1>
                     {% if proposicao %}{{ proposicao.tipo }} {{ proposicao.numero }}/{{ proposicao.ano }} - {% endif %}
-                    Votebem: <i>{{ votacao.titulo|default:title }}</i>
+                    <b><i>Editando Votebem: {{ votacao.titulo|default:title }}</b>
+
                 </h1>
+                {# Link explícito para edição da Proposição relacionada, com título completo sem truncamento #}
+                {% if proposicao %}
+                <div>
+                    <a href="{% url 'gerencial:proposicao_edit' proposicao.pk %}">{{ proposicao.titulo|default:proposicao }}</a>
+                </div>
+                {% endif %}
                 {# Breadcrumb moved below the title and anchors removed as requested #}
                 <nav aria-label="breadcrumb" class="mt-2">
                     <ol class="breadcrumb">
@@ -209,16 +216,24 @@
                     <textarea id="resumo" name="resumo" class="form-control" required>{{ votacao.resumo }}</textarea>
                 </div>
 
+                {# Campo novo: explicação detalhada (opcional). Persistido em voting_votacaovotebem.explicacao #}
+                <div class="form-group">
+                    <label for="explicacao">Explicação (opcional)</label>
+                    <textarea id="explicacao" name="explicacao" class="form-control" placeholder="Contexto adicional, pontos de destaque, justificativas...">{{ votacao.explicacao }}</textarea>
+                    <small class="text-muted">Texto livre opcional com contexto e justificativas sobre a votação.</small>
+                </div>
+
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="data_hora_votacao">Data/Hora da Votação Original 3*</label>
+                        <label for="data_hora_votacao">Data/Hora da Votação Original *</label>
                         <input type="datetime-local" id="data_hora_votacao" name="data_hora_votacao" 
                                class="form-control datetime-input" 
-                               value="{{ votacao.data_hora_votacao|date:'Y-m-d\TH:i' }}" required>
+                               value="{% if votacao.proposicao_votacao and votacao.proposicao_votacao.data_votacao %}{{ votacao.proposicao_votacao.data_votacao|date:'Y-m-d\TH:i' }}{% else %}{{ votacao.data_hora_votacao|date:'Y-m-d\TH:i' }}{% endif %}" required>
+                        <small class="text-muted">Quando ligada a uma votação oficial, esta data vem de ProposicaoVotacao.</small>
                     </div>
 
                     <div class="form-group">
-                        <label for="no_ar_desde">No Ar Desde *</label>
+                        <label for="no_ar_desde">Ativa desde *</label>
                         <input type="datetime-local" id="no_ar_desde" name="no_ar_desde" 
                                class="form-control datetime-input" 
                                value="{{ votacao.no_ar_desde|date:'Y-m-d\TH:i' }}" required>
@@ -227,7 +242,7 @@
 
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="no_ar_ate">No Ar Até (opcional)</label>
+                        <label for="no_ar_ate">Ativa até (opcional)</label>
                         <input type="datetime-local" id="no_ar_ate" name="no_ar_ate" 
                                class="form-control datetime-input" 
                                value="{% if votacao.no_ar_ate %}{{ votacao.no_ar_ate|date:'Y-m-d\TH:i' }}{% endif %}">
@@ -238,7 +253,7 @@
                         <label>&nbsp;</label>
                         <div class="checkbox-group">
                             <input type="checkbox" id="ativo" name="ativo" {% if votacao.ativo %}checked{% endif %}>
-                            <label for="ativo">Votação Ativa</label>
+                            <label for="ativo">Exibir na página principal enquanto ativa</label>
                         </div>
                     </div>
                 </div>

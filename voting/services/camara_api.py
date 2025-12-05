@@ -264,6 +264,14 @@ class CamaraAPIService:
             id_proposicao=proposicao_data['id_proposicao'],
             defaults=proposicao_data
         )
+        # Persist keywords if present
+        try:
+            kw_text = self._extract_keywords(prop_data.get('keywords'))
+            if kw_text:
+                proposicao.keywords = kw_text
+                proposicao.save(update_fields=['keywords'])
+        except Exception:
+            pass
         
         return proposicao
     
@@ -285,6 +293,30 @@ class CamaraAPIService:
             result += f' e mais {len(autores) - 3} autor(es)'
         
         return result[:200]  # Limit length
+
+    def _extract_keywords(self, keywords: Any) -> str:
+        """
+        Normalize keywords from API response into a single text string.
+        Accepts list of strings, string, or bytes; returns a clean comma-separated string.
+        """
+        try:
+            if not keywords:
+                return ''
+            if isinstance(keywords, list):
+                parts = []
+                for k in keywords:
+                    if k is None:
+                        continue
+                    s = str(k).strip()
+                    if s:
+                        parts.append(s)
+                return ', '.join(parts)
+            if isinstance(keywords, (str, bytes)):
+                s = keywords.decode() if isinstance(keywords, bytes) else str(keywords)
+                return s.strip()
+            return str(keywords)
+        except Exception:
+            return ''
     
     def sync_votacoes_for_proposicao(self, proposicao: Proposicao) -> int:
         """
@@ -538,6 +570,14 @@ class CamaraAPIService:
             id_proposicao=proposicao_data['id_proposicao'],
             defaults=proposicao_data
         )
+        # Persist keywords if present
+        try:
+            kw_text = self._extract_keywords(prop_data.get('keywords'))
+            if kw_text:
+                proposicao.keywords = kw_text
+                proposicao.save(update_fields=['keywords'])
+        except Exception:
+            pass
         
         return proposicao, created
 

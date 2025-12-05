@@ -147,7 +147,8 @@
                 <h1 class="mb-1">{{ title }}</h1>
                 {# Link to the related proposição edit page on the next line #}
                 <div>
-                    <a href="{% url 'gerencial:proposicao_edit' proposicao.pk %}">{{ proposicao.titulo|default:proposicao|truncatechars:120 }}</a>
+                    {# Do not truncate the anchor text; show full proposição title for clarity. #}
+                    <a href="{% url 'gerencial:proposicao_edit' proposicao.pk %}">{{ proposicao.titulo|default:proposicao }}</a>
                 </div>
                 {# Quick action buttons on the same line; unified styling #}
                 <div class="d-flex align-items-center gap-2 mb-3">
@@ -156,7 +157,6 @@
                 </div>
                 {# Breadcrumb is rendered by base_administrativo; items provided via block breadcrumb_items above #}
             </div>
-
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -208,13 +208,19 @@
                             <textarea id="resumo_{{ votacao.pk }}" name="resumo" class="form-control" required>{{ votacao.resumo }}</textarea>
                         </div>
 
+                        <div class="form-group">
+                            <label for="explicacao_{{ votacao.pk }}">Explicação (opcional)</label>
+                            <textarea id="explicacao_{{ votacao.pk }}" name="explicacao" class="form-control" placeholder="Explique os impactos fiscais, vínculos orçamentários, contexto e fontes relevantes." rows="6">{{ votacao.explicacao }}</textarea>
+                            <small class="text-muted">Use este campo para esclarecer tópicos como impacto fiscal, fonte de recursos e contexto adicional.</small>
+                        </div>
+
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="no_ar_desde_{{ votacao.pk }}">No Ar Desde *</label>
+                                <label for="no_ar_desde_{{ votacao.pk }}">Ativa desde *</label>
                                 <input type="datetime-local" id="no_ar_desde_{{ votacao.pk }}" name="no_ar_desde" class="form-control datetime-input" value="{% if votacao.no_ar_desde %}{{ votacao.no_ar_desde|date:'Y-m-d\TH:i' }}{% endif %}" required>
                             </div>
                             <div class="form-group">
-                                <label for="no_ar_ate_{{ votacao.pk }}">No Ar Até (opcional)</label>
+                                <label for="no_ar_ate_{{ votacao.pk }}">Ativa até (opcional)</label>
                                 <input type="datetime-local" id="no_ar_ate_{{ votacao.pk }}" name="no_ar_ate" class="form-control datetime-input" value="{% if votacao.no_ar_ate %}{{ votacao.no_ar_ate|date:'Y-m-d\TH:i' }}{% endif %}">
                                 <small class="text-muted">Deixe em branco para manter ativo indefinidamente</small>
                             </div>
@@ -226,7 +232,7 @@
                                 <label>&nbsp;</label>
                                 <div class="checkbox-group">
                                     <input type="checkbox" id="ativo_{{ votacao.pk }}" name="ativo" {% if votacao.ativo %}checked{% endif %}>
-                                    <label for="ativo_{{ votacao.pk }}">Votação Ativa</label>
+                                    <label for="ativo_{{ votacao.pk }}">Exibir na página principal enquanto ativa</label>
                                 </div>
                             </div>
                         </div>

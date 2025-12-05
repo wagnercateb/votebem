@@ -1404,12 +1404,27 @@ def votacao_edit(request, pk):
             # Handle form submission
             votacao.titulo = request.POST.get('titulo', votacao.titulo)
             votacao.resumo = request.POST.get('resumo', votacao.resumo)
+            # New field: explicacao (detailed explanation shown to users)
+            # Accepts optional long text; keep existing value when missing from POST
+            votacao.explicacao = request.POST.get('explicacao', votacao.explicacao)
 
             # Handle datetime fields
             data_hora_votacao = request.POST.get('data_hora_votacao')
             if data_hora_votacao:
                 try:
-                    votacao.data_hora_votacao = timezone.datetime.fromisoformat(data_hora_votacao.replace('T', ' '))
+                    dt_voto = timezone.datetime.fromisoformat(data_hora_votacao.replace('T', ' '))
+                    # If linked to an official ProposicaoVotacao, update its official vote record date
+                    if getattr(votacao, 'proposicao_votacao_id', None):
+                        try:
+                            pv = votacao.proposicao_votacao
+                            pv.data_votacao = dt_voto
+                            pv.save(update_fields=['data_votacao'])
+                        except Exception:
+                            # Fallback: set on VotacaoVoteBem if updating PV fails
+                            votacao.data_hora_votacao = dt_voto
+                    else:
+                        # No official link; keep date on VotacaoVoteBem
+                        votacao.data_hora_votacao = dt_voto
                 except ValueError:
                     pass
 
@@ -1458,7 +1473,9 @@ def votacao_edit(request, pk):
             'votacao': votacao,
             'proposicao': proposicao,
             'total_votos': total_votos,
-            'title': f'Editar Votação: {votacao.titulo[:50]}...'
+            # Exibir o título completo sem truncamento para evitar confusão na identificação
+            # do registro. O corte anterior ([:50] + "...") escondia informações úteis.
+            'title': f'Editar Votação: {votacao.titulo}'
         }
 
         return render(request, 'admin/voting/votacao_edit.html', context)
@@ -1542,6 +1559,8 @@ def votacao_create(request):
         proposicao_votacao_id = request.POST.get('proposicao_votacao_id')
         titulo = request.POST.get('titulo')
         resumo = request.POST.get('resumo')
+        # New field: explicacao (optional long text)
+        explicacao = request.POST.get('explicacao')
         data_hora_votacao = request.POST.get('data_hora_votacao')
         no_ar_desde = request.POST.get('no_ar_desde')
         no_ar_ate = request.POST.get('no_ar_ate')
@@ -1583,10 +1602,13 @@ def votacao_create(request):
                 except Exception:
                     dt_ate = None
 
+                # Create voting record including the optional explicacao field.
+                # Other official counts are stored on ProposicaoVotacao.
                 votacao = VotacaoVoteBem.objects.create(
                     proposicao_votacao=pv,
                     titulo=titulo,
                     resumo=resumo or "Votação",
+                    explicacao=explicacao or None,
                     data_hora_votacao=dt_voto,
                     no_ar_desde=dt_desde,
                     no_ar_ate=dt_ate,

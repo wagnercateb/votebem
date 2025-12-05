@@ -28,7 +28,7 @@ obtidos de votações oficiais. A edição é realizada via Django Admin ou tela
     <form method="post" style="display: inline; margin-left: 8px;">
       {% csrf_token %}
       <input type="hidden" name="action" value="loopObterVotacoes">
-      <button type="submit" class="btn btn-primary" title="Insere votações em voting_proposicaovotacao para proposições de voting_proposicao, do ano informado, que ainda NÃO possuem votos em CongressmanVote" data-bs-toggle="tooltip" data-bs-placement="top" style="vertical-align: middle;">
+      <button type="submit" class="btn btn-primary" title="Insere votações em voting_proposicaovotacao para proposições de voting_proposicao, do ano informado, que ainda NÃO possuem votos em CongressmanVote. Você deve popular ANTES a tabela voting_proposicao" data-bs-toggle="tooltip" data-bs-placement="top" style="vertical-align: middle;">
         <span class="icon">🔄</span> Obter Votações no Ano:
       </button>
       <input type="number" id="anoVotacaoInline" name="anoVotacao" min="1900" max="2100" value="{{ current_year }}" class="form-control" style="width: 90px; display: inline-block; vertical-align: middle;" title="Filtra por proposições do ano informado. O loop ignora qualquer votação oficial que já tenha votos individuais registrados." data-bs-toggle="tooltip" data-bs-placement="top" aria-label="Filtra por proposições do ano informado. O loop ignora qualquer votação oficial que já tenha votos individuais registrados.">
@@ -46,8 +46,7 @@ obtidos de votações oficiais. A edição é realizada via Django Admin ou tela
   <div class="card-body">
     <h2>Votações oficiais obtidas</h2>
     <p class="text-muted">
-      Lista gerada a partir da tabela <code>voting_proposicaovotacao</code> com a contagem de
-      votos individuais oficiais (<code>voting_congressmanvote</code>) associados a cada votação.
+      Lista gerada a partir dos registros da tabela <code>voting_proposicaovotacao</code> com a contagem de votos individuais oficiais (<code>voting_congressmanvote</code>) associados a cada votação.
     </p>
 
     <!-- Barra de controles (topo): filtro por múltiplas palavras e tamanho da página (client-side)

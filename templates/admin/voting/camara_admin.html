@@ -313,7 +313,7 @@ Só atualiza as proposições, não busca seus temas ou votações
     <form method="post" style="display: inline;">
         {% csrf_token %}
         <input type="hidden" name="action" value="listarProposicoesVotadas">
-        <button type="submit" class="btn-action btn-success" title="Lista proposições cujas votações oficiais já foram carregadas" data-bs-toggle="tooltip" data-bs-placement="top">
+        <button type="submit" class="btn-action btn-success" title="Lista proposições cujas votações oficiais já foram carregadas no banco de dados" data-bs-toggle="tooltip" data-bs-placement="top">
             <span class="icon">✅</span> Proposições com votações oficiais
         </button>
     </form>
@@ -334,7 +334,7 @@ Só atualiza as proposições, não busca seus temas ou votações
     </button>
 
     <!-- Botão: mostrar/ocultar Listagem por Período -->
-    <button type="button" class="btn-action btn-primary" onclick="toggleSection('listarPeriodoSection')" title="Exibe/oculta a seção de listagem por período" data-bs-toggle="tooltip" data-bs-placement="top">
+    <button type="button" class="btn-action btn-primary" onclick="toggleSection('listarPeriodoSection')" title="Exibe/oculta a seção de listagem por período. Só lista baseado em https://dadosabertos.camara.leg.br/api/v2/proposicoes, não inclui no resultado no banco de dados." data-bs-toggle="tooltip" data-bs-placement="top">
         <span class="icon">📅</span> Listar Proposições Apresentadas num Período
     </button>
 

@@ -36,11 +36,18 @@
                             </form>
                         </div>
                     {% elif votacao.is_active %}
-                        <span class="badge bg-primary fs-6">
+                        <span class="btn btn-sm btn-outline-primary" title="Votação ativa no site VoteBem. Votação já encerrada na Câmara">
                             <i class="bi bi-clock"></i> Votação Ativa
                         </span>
+                        <span class="ms-2 text-muted" title="Data de votação na Câmara dos Deputados">
+                            {% if votacao.proposicao_votacao and votacao.proposicao_votacao.data_votacao %}
+                                {{ votacao.proposicao_votacao.data_votacao|date:"d/m/Y" }}
+                            {% else %}
+                                {{ votacao.data_hora_votacao|date:"d/m/Y" }}
+                            {% endif %}
+                        </span>
                     {% else %}
-                        <span class="badge bg-secondary fs-6">
+                        <span class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-pause-circle"></i> Votação Inativa
                         </span>
                     {% endif %}
@@ -49,6 +56,10 @@
             
             <div class="card-body">
                 <h4 class="card-title">
+                    <!-- Botão de informação: posicionado no início da linha -->
+                    <button id="toggleExplicacaoBtn" type="button" class="btn btn-outline-secondary btn-sm me-2" aria-expanded="false" title="Mostrar/ocultar explicação">
+                        <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    </button>
                     {% if votacao.proposicao.id_proposicao %}
                         <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
                             {{ votacao.titulo }}
@@ -57,13 +68,20 @@
                         {{ votacao.titulo }}
                     {% endif %}
                 </h4>
-                <p class="card-text"><i><b>{{ votacao.resumo }}</b></i></p>
+                <p class="card-text mb-0"><i><b>{{ votacao.resumo }}</b></i></p>
                 
                 <!-- Ajuste solicitado: remover labels <strong> e exibir apenas uma data
                      A data deve vir de ProposicaoVotacao.data_votacao -->
                 <div class="row mb-3">
                     <!-- Ajuste: usar largura total para o conteúdo -->
                     <div class="col-12">
+                        <!-- Texto de explicação: inicialmente oculto, alternado pelo botão de informação acima -->
+                        {% if votacao.explicacao %}
+                        <div class="explicacao-text d-none mb-1">
+                            {{ votacao.explicacao }}
+                        </div>
+                        {% endif %}
+                        <hr />
                         <!-- Data da votação (ProposicaoVotacao.data_votacao) -->
                         <span class="text-muted">Votada, pelos deputados, em: {{ votacao.proposicao_votacao.data_votacao|date:"d/m/Y H:i" }}</span>
                         <br>
@@ -78,6 +96,32 @@
                         </i>
                     </div>
                 </div>
+
+                <!-- Script: alterna a visibilidade do texto de explicação ao clicar no botão -->
+                <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                  var btn = document.getElementById('toggleExplicacaoBtn');
+                  if (!btn) return;
+                  var textos = document.querySelectorAll('.explicacao-text');
+                  btn.addEventListener('click', function () {
+                    textos.forEach(function (el) { el.classList.toggle('d-none'); });
+                    // Alterna estado e estilos: quando ativo, usar fundo cinza claro (btn-light)
+                    var expanded = btn.getAttribute('aria-expanded') === 'true';
+                    var expandedAfter = !expanded;
+                    btn.setAttribute('aria-expanded', String(expandedAfter));
+                    // Limpa estilos anteriores para evitar acumular classes
+                    btn.classList.remove('btn-info', 'btn-secondary', 'btn-light', 'btn-outline-info', 'btn-outline-secondary');
+                    // Aplica estilo conforme novo estado
+                    if (expandedAfter) {
+                      // Ativo: fundo cinza claro
+                      btn.classList.add('btn-light');
+                    } else {
+                      // Inativo: volta para contorno cinza (layout do botão de palavras‑chave)
+                      btn.classList.add('btn-outline-secondary');
+                    }
+                  });
+                });
+                </script>
                 
                 <!-- Proposition Details -->
                 <div class="border-top pt-3">
@@ -85,6 +129,11 @@
                     <h6>Detalhes da proposição na Câmara</h6>
                     <!-- Ementa da proposição: sem negrito e usando voting_proposicao.ementa -->
                     <p>Ementa: {{ voting_proposicao.ementa|default:votacao.proposicao_votacao.proposicao.ementa }}</p>
+                    {% with kw=voting_proposicao.keywords|default:votacao.proposicao_votacao.proposicao.keywords %}
+                        {% if kw %}
+                            <i><p>Palavras-chave: {{ kw }}</p></i>
+                        {% endif %}
+                    {% endwith %}
                     <!-- Botão para ver proposição original na Câmara -->
 {% if votacao.proposicao_votacao.proposicao.id_proposicao %}
 <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm mt-2">

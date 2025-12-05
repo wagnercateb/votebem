@@ -69,7 +69,14 @@ ROOT_URLCONF = 'votebem.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR.parent / 'templates'],
+        # Ensure Django looks for templates in both the project root
+        # and the parent directory (for container setups).
+        # This fixes cases where edits under "django_votebem/templates" were not reflected
+        # because only the parent path was configured.
+        'DIRS': [
+            BASE_DIR / 'templates',           # e.g., .../django_votebem/templates
+            BASE_DIR.parent / 'templates',    # e.g., .../VotoBomPython/templates (container)
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

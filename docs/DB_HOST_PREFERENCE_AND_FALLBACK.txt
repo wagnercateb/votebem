@@ -1,0 +1,27 @@
+DB host preference and SQLite fallback (development)
+
+Context
+- When running Django directly on Windows, the Docker hostname `db` is not resolvable outside the Docker network. If the settings try `db` first, Django may fall back to SQLite even when the MariaDB container is healthy.
+
+Development behavior (patched)
+- The development settings prefer MariaDB on `127.0.0.1:3306` first.
+- If environment provides `DB_HOST`, it is tried next.
+- Then `localhost` is attempted.
+- If none are reachable, Django falls back to SQLite (development-only) to avoid blocking local work.
+
+How to use
+- Ensure the MariaDB container is running and publishing port `3306`.
+- Run migrations and use development settings explicitly:
+  - `python manage.py showmigrations voting --settings=votebem.settings.development; python manage.py migrate --settings=votebem.settings.development`
+- Start the server with development settings:
+  - `python manage.py runserver 127.0.0.1:8000 --settings=votebem.settings.development`
+
+VSCode launch option
+- Use the "VSCode: Run Django (development, auto-migrate)" launch configuration. It runs migrations first, then starts the server on `127.0.0.1:8000` with `votebem.settings.development`.
+
+Troubleshooting
+- If migrations still fall back to SQLite:
+  - Confirm the container exposes `3306` to the host.
+  - Verify credentials match `.env.local`.
+  - Check firewall rules for local `3306`.
+  - Try `python manage.py migrate --settings=votebem.settings.development` manually and inspect errors.

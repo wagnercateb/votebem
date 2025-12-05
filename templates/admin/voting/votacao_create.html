@@ -82,6 +82,13 @@
             <textarea name="resumo" id="resumo" required dir="ltr">{{ prefill.resumo }}</textarea>
         </div>
 
+        {# Campo novo: explicação detalhada (opcional) a ser exibida aos usuários #}
+        <div class="form-group">
+            <label for="explicacao">Explicação (opcional)</label>
+            <textarea name="explicacao" id="explicacao" dir="ltr" style="width:100%; min-height: 160px; resize: vertical;" placeholder="Contexto adicional, pontos de destaque, justificativas..."></textarea>
+            <small class="text-muted">Texto livre opcional com contexto e justificativas sobre a votação.</small>
+        </div>
+
         <div class="row">
             <div class="form-group">
                 <label for="data_hora_votacao">Data/Hora da Votação Original 1*</label>
@@ -89,14 +96,14 @@
             </div>
 
             <div class="form-group">
-                <label for="no_ar_desde">No Ar Desde *</label>
+                <label for="no_ar_desde">Ativa desde *</label>
                 <input type="datetime-local" id="no_ar_desde" name="no_ar_desde" value="{{ prefill.no_ar_desde }}" required>
             </div>
         </div>
 
         <div class="row">
             <div class="form-group">
-                <label for="no_ar_ate">No Ar Até (opcional)</label>
+                <label for="no_ar_ate">Ativa até (opcional)</label>
                 <input type="datetime-local" id="no_ar_ate" name="no_ar_ate" value="{{ prefill.no_ar_ate }}">
                 <small class="text-muted">Deixe em branco para manter ativo indefinidamente</small>
             </div>
@@ -105,14 +112,14 @@
                 <label>&nbsp;</label>
                 <div class="checkbox-group">
                     <input type="checkbox" id="ativo" name="ativo" {% if prefill.ativo %}checked{% endif %}>
-                    <label for="ativo">Votação Ativa</label>
+                    <label for="ativo">Exibir na página principal enquanto ativa</label>
                 </div>
             </div>
         </div>
 
         {# Contagens oficiais removidas do formulário: são mantidas em ProposicaoVotacao e populadas somente via import #}
 
-        <button type="submit" class="btn btn-primary">Criar Votação</button>
+        <button type="submit" class="btn btn-primary" title"Adicionar registro à tabela voting_votacaovotebem">Criar Votação</button>
     </form>
 </div>
 

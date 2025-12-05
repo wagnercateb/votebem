@@ -20,14 +20,13 @@ class VotacoesDisponiveisView(ListView):
     paginate_by = 20
     
     def get_queryset(self):
-        # Only show active voting sessions
+        # Show voting sessions that are marked active and have started.
+        # Even if the end date is in the past, keep them listed but they will render as "Inativa".
         now = timezone.now()
         # Prefetch proposição and its temas to avoid N+1 when rendering cards
         return VotacaoVoteBem.objects.filter(
             ativo=True,
             no_ar_desde__lte=now
-        ).filter(
-            Q(no_ar_ate__isnull=True) | Q(no_ar_ate__gte=now)
         ).select_related('proposicao_votacao__proposicao') \
          .prefetch_related('proposicao_votacao__proposicao__proposicaotema_set__tema') \
          .order_by('-no_ar_desde')

@@ -52,11 +52,11 @@
         <input id="proposicao_id" name="proposicao_id" type="number" min="1" class="form-control" style="max-width:160px;" value="{{ prefill_proposicao_id }}">
 
         <button id="btn-carregar-db" type="button" class="btn btn-outline-primary" title="Buscar apenas o que já está no BD local (sem consultar API)">Buscar no BD local</button>
-        <button id="btn-carregar-api" type="button" class="btn btn-primary" title="Buscar diretamente na API, ignorando o cache local">Buscar na API</button>
+        <button id="btn-carregar-api" type="button" class="btn btn-primary" title="Buscar diretamente na API, ignorando o cache local, e salva em voting_proposicaovotacao se ainda não existir">Buscar na API</button>
 
         <label for="votacao_id" style="margin-left:12px;">Votação ID:</label>
         <input id="votacao_id" name="votacao_id" type="text" class="form-control" style="max-width:160px;" placeholder="ex: 2270800-160">
-        <button id="btn-carregar-votacao" type="button" class="btn btn-success" style="display:none;">Carregar votos oficiais</button>
+        <button id="btn-carregar-votacao" type="button" class="btn btn-success" style="display:none;" title="Carregar votos oficiais da votação selecionada. Salva os votos individuais em voting_congressmanvote. Se não houver votação, salva 1 voto 'Dummy Deputado'">Carregar votos oficiais</button>
       </form>
       <div class="form-text" id="vb-votos-hint" aria-live="polite">
         <span id="vb-votos-hint-text">Dica: pesquise por proposição, selecione uma votação e carregue a votação oficial.</span>

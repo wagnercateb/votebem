@@ -298,9 +298,9 @@
                     {# Usa flags calculadas na view conforme o novo modelo #}
                     {% if proposicao.has_votacao %}
                         {% if proposicao.preferred_votacao_is_active %}
-                            <span class="badge badge-success">Ativa</span>
+                            <span class="btn btn-sm btn-outline-success">Ativa</span>
                         {% else %}
-                            <span class="badge badge-warning">Inativa</span>
+                            <span class="btn btn-sm btn-outline-warning">Inativa</span>
                         {% endif %}
                         {% if proposicao.id_proposicao %}
                             {# Link admin: usar URL tag para seguir a origem atual #}

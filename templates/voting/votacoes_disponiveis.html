@@ -14,6 +14,14 @@
                     <span id="totalActiveCount" title="Total de votações ativas">0</span>
                      Votações Disponíveis
                 </h1>
+                <!-- Botão para mostrar/ocultar palavras-chave das proposições -->
+                <button id="toggleKeywordsBtn"
+                        type="button"
+                        class="btn btn-outline-secondary btn-sm ms-3"
+                        title="Mostrar/ocultar palavras-chave"
+                        aria-label="Mostrar ou ocultar palavras-chave">
+                  <i class="bi bi-key"></i>
+                </button>
             </div>
             {% if user.is_authenticated %}
                 <a href="{% url 'voting:meus_votos' %}" class="btn btn-outline-primary me-2">
@@ -59,11 +67,9 @@
                                     {{ votacao.titulo }}
                                 </h6>
                                 {% if votacao.is_active %}
-                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="badge bg-primary text-decoration-none">
-                                        <i class="bi bi-clock"></i> Ativa
-                                    </a>
+                                    {# Active badge intentionally removed on list page per request #}
                                 {% else %}
-                                    <span class="badge bg-secondary">
+                                    <span class="btn btn-sm btn-outline-secondary">
                                         <i class="bi bi-pause-circle"></i> Inativa
                                     </span>
                                 {% endif %}
@@ -76,8 +82,12 @@
                                         {{ votacao.resumo }}
                                     </a>
                                 </h6>
-                                <!-- Middle: primary action (Vote agora!) -->
-                                <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-primary my-2 w-100">Vote agora!</a>
+                                <!-- Middle: primary action: show 'Vote agora!' for active; 'Ver detalhes' for inactive -->
+                                {% if votacao.is_active %}
+                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-primary my-2 w-100">Vote agora!</a>
+                                {% else %}
+                                    <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-outline-secondary my-2 w-100">Ver detalhes</a>
+                                {% endif %}
                                 <!-- Bottom: stats and temas grouped to remain a single column item -->
                                 <div class="mt-2">
                                     <div class="row text-center mb-3">
@@ -103,6 +113,17 @@
                                                     {% endfor %}
                                                 </div>
                                             {% endif %}
+                                        {% endwith %}
+                                        {# Palavras-chave da proposição: inicialmente ocultas, visíveis via botão com ícone de chave #}
+                                        {% with kw=votacao.proposicao_votacao.proposicao.keywords %}
+                                          {% if kw %}
+                                            <div class="mt-2 keywords-text d-none">
+                                                <i><small class="text-muted">
+                                                    Palavras-chave:
+                                                    <span class="text-muted">{{ kw }}</span>
+                                                </small></i>
+                                            </div>
+                                          {% endif %}
                                         {% endwith %}
                                     </div>
                                 </div>
@@ -166,6 +187,17 @@
                                                     {% endfor %}
                                                 </div>
                                             {% endif %}
+                                        {% endwith %}
+                                        {# Palavras-chave da proposição: inicialmente ocultas, visíveis via botão com ícone de chave #}
+                                        {% with kw=votacao.proposicao_votacao.proposicao.keywords %}
+                                          {% if kw %}
+                                            <div class="mt-2 keywords-text d-none">
+                                                <i><small class="text-muted">
+                                                    Palavras-chave:
+                                                    <span class="text-muted">{{ kw }}</span>
+                                                </small></i>
+                                            </div>
+                                          {% endif %}
                                         {% endwith %}
                                     </div>
                                 </div>
@@ -364,6 +396,28 @@
       var totalActiveEl = document.getElementById('totalActiveCount');
       if (totalActiveEl) {
         totalActiveEl.textContent = String(countTotalActive());
+      }
+
+      // Toggle global de exibição das palavras-chave
+      // - O botão com ícone de chave alterna a visibilidade de todos os elementos
+      //   com a classe .keywords-text.
+      // - Estado inicial: oculto (classe d-none). Ao clicar, remove/insere d-none.
+      var toggleBtn = document.getElementById('toggleKeywordsBtn');
+      if (toggleBtn) {
+        // Atributo para acompanhar estado (true = visível)
+        toggleBtn.setAttribute('data-visible', 'false');
+        toggleBtn.addEventListener('click', function () {
+          var nowVisible = toggleBtn.getAttribute('data-visible') === 'true' ? false : true;
+          toggleBtn.setAttribute('data-visible', String(nowVisible));
+          // Alterna estilo do botão para feedback visual
+          toggleBtn.classList.toggle('btn-secondary', nowVisible);
+          toggleBtn.classList.toggle('btn-outline-secondary', !nowVisible);
+          // Alterna a visibilidade das palavras-chave
+          var kwEls = Array.prototype.slice.call(document.querySelectorAll('.keywords-text'));
+          for (var i = 0; i < kwEls.length; i++) {
+            kwEls[i].classList.toggle('d-none', !nowVisible);
+          }
+        });
       }
     }
 
