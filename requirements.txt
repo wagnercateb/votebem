@@ -15,3 +15,7 @@ django-allauth==0.57.0
 django-debug-toolbar==4.2.0
 PyMySQL>=1.1.0
 redis>=5.0.0
+chromadb>=0.4.22
+# Local embedding models (CPU-friendly; avoids OpenAI embedding costs)
+sentence-transformers>=2.2.2
+openai

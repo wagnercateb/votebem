@@ -297,3 +297,13 @@ try:
 except Exception:
     # Fail-safe: never break settings import due to fallback logic.
     pass
+
+# Embedding provider and Chroma persistence configuration for production
+EMBEDDING_PROVIDER = os.environ.get('EMBEDDING_PROVIDER') or config('EMBEDDING_PROVIDER', default='openai')
+LOCAL_EMBED_MODEL = os.environ.get('LOCAL_EMBED_MODEL') or config('LOCAL_EMBED_MODEL', default='all-MiniLM-L6-v2')
+CHROMA_PERSIST_PATH = os.environ.get('CHROMA_PERSIST_PATH') or config('CHROMA_PERSIST_PATH', default='')
+
+# LLM model for OpenAI usage in production.
+# Enforced globally to ensure consistent behavior and costs.
+# Do NOT override via environment; always use 'gpt-4o-mini'.
+OPENAI_LLM_MODEL = 'gpt-4o-mini'

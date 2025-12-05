@@ -1,0 +1,247 @@
+
+{% extends "admin/voting/base_administrativo.html" %}
+{% comment %} 
+  Página administrativa para a ferramenta RAG (sem LangChain).
+  Objetivo: permitir editar variáveis (DOC_FOLDER, CHROMA_COLLECTION_NAME, HASH_FILE)
+  e textos (system_prompt, query, context_text), além de submeter a consulta
+  e exibir a resposta da API ou um fallback baseado no contexto.
+  Esta página carrega valores padrão do arquivo de configuração JSON e persiste alterações nele.
+{% endcomment %}
+
+{% block title %}RAG – Votações Votebem{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'gerencial:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">RAG Votebem</li>
+{% endblock %}
+
+{# Estilos simples para melhorar a legibilidade dos campos e da resposta #}
+{% block extra_css %}
+<style>
+  .rag-card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+  .rag-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .form-label { font-weight: 600; }
+  textarea { min-height: 140px; }
+  .answer-box { white-space: pre-wrap; background: #f8f9fa; border-radius: 6px; padding: 12px; border: 1px solid #e1e3e6; }
+  .small-muted { font-size: 0.9em; color: #6c757d; }
+</style>
+{% endblock %}
+
+{# Conteúdo principal da página: formulário com variáveis e áreas de texto #}
+{% block content %}
+<div class="rag-card">
+  <h2>RAG sem LangChain – Embeddings e Consulta</h2>
+  <p class="small-muted">Arquivo de configuração: {{ config_path }}</p>
+
+  {% if error_msg %}
+    <div class="alert alert-danger">{{ error_msg }}</div>
+  {% endif %}
+
+{% comment %} 
+    Estrutura em abas (tabs) para separar tarefas:
+    - Aba 1: Embeddings e persistência no ChromaDB
+    - Aba 2: Consulta usando embeddings e OpenAI API
+    Mantemos UM único <form> para enviar e persistir variáveis comuns.
+    Os botões definem ações diferentes via name/value:
+      * embed_docs=1 para varrer e embutir documentos
+      * submit_query=1 para submeter a consulta 
+{% endcomment %}
+
+  <div class="tab-nav d-flex gap-2" role="tablist" aria-label="RAG tabs">
+    <button type="button" class="btn btn-outline-secondary tab-btn" data-tab="tab-embed" title="Gerencia embeddings e armazenamento no ChromaDB; persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}">Embeddings & Chroma</button>
+    <button type="button" class="btn btn-outline-secondary tab-btn active" data-tab="tab-query">Consulta com OpenAI</button>
+  </div>
+  <br />
+
+  {# Formulário único, contendo ambos painéis (embed e query) #}
+  <form method="post" action="" class="rag-grid" id="rag-form">
+    {% csrf_token %}
+
+    {# Painel da Aba 1: Embeddings e persistência #}
+    <section id="tab-embed" class="tab-panel" aria-labelledby="btn-tab-embed" style="display:none;">
+
+      {# Variável DOC_FOLDER: pasta onde os arquivos de contexto (.md / .pdf) residem #}
+      <div>
+        <label for="DOC_FOLDER" class="form-label">DOC_FOLDER</label>
+        {# Title explains path semantics and effective resolution #}
+        <input type="text" id="DOC_FOLDER" name="DOC_FOLDER" value="{{ DOC_FOLDER }}" class="form-control" 
+               title="Folder with .md and .pdf context files. Relative paths resolve to {{ DOC_FOLDER_ABS }}." />
+        <div class="small-muted">Pasta com arquivos .md, .pdf e .txt usados para embedding:
+          <code>{{ DOC_FOLDER_ABS }}</code>
+        </div>
+      </div>
+      <br />
+
+      {# Variáveis auxiliares da coleção CHROMA e arquivo de hash #}
+      <div class="row">
+        <div class="col-md-6">
+          <label for="CHROMA_COLLECTION_NAME" class="form-label">CHROMA_COLLECTION_NAME</label>
+          {# Title clarifies this is the ChromaDB collection used for embeddings #}
+          <input type="text" id="CHROMA_COLLECTION_NAME" name="CHROMA_COLLECTION_NAME" value="{{ CHROMA_COLLECTION_NAME }}" class="form-control" 
+                 title="Coleção ChromaDB onde embeddings são armazenados/consultados. Persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}. Provider: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}." />
+          <div class="small-muted">Persistência do ChromaDB: <code>{% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}</code></div>
+          <div class="small-muted">Provider de embeddings: <code>{{ EMBEDDING_PROVIDER }}</code>{% if EMBEDDING_PROVIDER == 'local' %} — modelo: <code>{{ LOCAL_EMBED_MODEL }}</code>{% endif %}</div>
+        </div>
+        <div class="col-md-6">
+          <label for="HASH_FILE" class="form-label">HASH_FILE</label>
+          {# Title explains dedup mechanism via SHA256 hashes #}
+          <input type="text" id="HASH_FILE" name="HASH_FILE" value="{{ HASH_FILE }}" class="form-control" 
+                 title="JSON file tracking SHA256 hashes to skip unchanged files during embedding." />
+        </div>
+      </div>
+
+      {# Botão para varrer e embutir documentos em Chroma #}
+      <div class="d-flex gap-2">
+{% comment %} 
+Seletor de provider de embedding para a ação de 'embed_docs'.
+Permite escolher entre usar OpenAI (requer OPENAI_API_KEY) ou modelo local
+via sentence-transformers. O valor selecionado é enviado com name="embed_provider".
+O padrão vem de EMBEDDING_PROVIDER nas settings. 
+{% endcomment %}
+<div class="mb-2" style="display:flex; align-items:center; gap:12px;">
+  <div class="form-check form-check-inline" title="Usa API OpenAI para gerar embeddings (requer OPENAI_API_KEY)">
+    <input class="form-check-input" type="radio" name="embed_provider" id="embed_provider_openai" value="openai" {% if EMBEDDING_PROVIDER == 'openai' %}checked{% endif %}>
+    <label class="form-check-label" for="embed_provider_openai">OpenAI (embeddings)</label>
+  </div>
+  <div class="form-check form-check-inline" title="Usa modelo local via sentence-transformers (ex.: {{ LOCAL_EMBED_MODEL }})">
+    <input class="form-check-input" type="radio" name="embed_provider" id="embed_provider_local" value="local" {% if EMBEDDING_PROVIDER == 'local' %}checked{% endif %}>
+    <label class="form-check-label" for="embed_provider_local">Local (sentence-transformers)</label>
+  </div>
+  <small class="text-muted">Provider atual: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}</small>
+  <button type="submit" name="embed_docs" value="1" class="btn btn-warning" title="Cria/atualiza embeddings e salva na coleção Chroma. Persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste){% endif %}. Provider: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}.">Varrer e embutir novos documentos no Chroma</button>
+</div>
+      </div>
+
+      {% if embed_result %}
+        <div class="alert alert-info" style="margin-top:8px;">{{ embed_result }}</div>
+      {% endif %}
+    </section>
+
+
+
+    {# Painel da Aba 2: Consulta com OpenAI usando embeddings #}
+    <section id="tab-query" class="tab-panel" aria-labelledby="btn-tab-query">
+
+      {# Consulta do usuário: há um botão dedicado para enviar a query #}
+      <div>
+        <label for="query" class="form-label">query</label>
+        <div class="d-flex gap-2">
+          {# Title clarifies this is the user question sent to the API #}
+          <textarea id="query" name="query" class="form-control" style="flex: 1; min-height: 90px;" 
+                    title="Your question; combined with context and system prompt and sent to the API.">{{ query }}</textarea>
+          <button type="submit" name="submit_query" value="1" class="btn btn-primary align-self-start">Enviar consulta</button>
+        </div>
+        <div class="small-muted">Submete a consulta usando o contexto recuperado acima.</div>
+      </div>
+      <br />
+
+      {# Texto de contexto: pode ser carregado dos arquivos ou editado manualmente #}
+      <div>
+        <label for="context_text" class="form-label">context_text</label>
+        {# Title clarifies source and that it is editable #}
+        <textarea id="context_text" name="context_text" class="form-control" 
+                  title="Aggregated context from documents in DOC_FOLDER; editable before submitting queries.">{{ context_text }}</textarea>
+        <div class="small-muted">Gerado pela busca dos documentos em DOC_FOLDER. Você pode editar manualmente.</div>
+      </div>
+
+      {# Prompt de sistema: aceita placeholders {context_text} e {query} #}
+      <div>
+        <label for="system_prompt" class="form-label">system_prompt</label>
+        {# Title describes placeholders and purpose in answer generation #}
+        <textarea id="system_prompt" name="system_prompt" class="form-control" 
+                  title="System prompt template for answer generation; supports {context_text} and {query} placeholders.">{{ system_prompt }}</textarea>
+        <div class="small-muted">Aceita placeholders: {context_text} e {query}.</div>
+      </div>
+
+      
+      {# Exibição da resposta da API/fallback somente após submissão de consulta #}
+      {% if ran_query %}
+        <div>
+          <label class="form-label">Resposta da API</label>
+          <div class="answer-box">{{ answer }}</div>
+          {% if not OPENAI_API_KEY_set %}
+            <div class="alert alert-warning mt-2">OPENAI_API_KEY não configurada. Exibindo resposta de fallback baseada no contexto.</div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </section>
+
+    <div class="d-flex justify-content-end">
+      <button type="submit" class="btn btn-outline-secondary" title="Salvar os campos sem executar embedding ou consulta">Salvar alterações na configuração</button>
+    </div>
+  </form>
+
+  {# Registro detalhado de embedding: aparece após execução do botão "Varrer e embutir" #}
+  {% if embed_log_items and embed_log_items|length > 0 %}
+    <hr />
+    <section aria-label="Registro de Embedding">
+      <h5>Registro de Embedding</h5>
+      {% if embed_summary %}
+        <p class="small-muted">
+          Candidatos: {{ embed_summary.candidatos }} · Novos/atualizados: {{ embed_summary.novos_ou_atualizados }} · Processados: {{ embed_summary.processados }} · Chunks totais: {{ embed_summary.total_chunks }}
+        </p>
+      {% endif %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th style="width:45%">Arquivo</th>
+              <th style="width:15%">Status</th>
+              <th style="width:20%">Caracteres</th>
+              <th style="width:10%">Chunks</th>
+              <th style="width:10%">Observações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in embed_log_items %}
+              <tr>
+                <td><code>{{ item.file }}</code></td>
+                <td>{{ item.status }}</td>
+                <td>{{ item.chars }}</td>
+                <td>{{ item.chunks }}</td>
+                <td class="small-muted">{{ item.detail }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  {# Script mínimo para alternância de abas sem dependências externas #}
+  <script>
+    (function(){
+      // Obter elementos de navegação e painéis
+      const btns = document.querySelectorAll('.tab-btn');
+      const panels = {
+        'tab-embed': document.getElementById('tab-embed'),
+        'tab-query': document.getElementById('tab-query')
+      };
+
+      // Função para ativar uma aba e esconder a outra
+      function activate(tabId) {
+        Object.keys(panels).forEach(id => {
+          const isActive = (id === tabId);
+          panels[id].style.display = isActive ? '' : 'none';
+        });
+        btns.forEach(b => {
+          const target = b.getAttribute('data-tab');
+          if (target === tabId) {
+            b.classList.add('active');
+          } else {
+            b.classList.remove('active');
+          }
+        });
+      }
+
+      // Bind de clique nos botões de navegação
+      btns.forEach(b => {
+        b.addEventListener('click', () => activate(b.getAttribute('data-tab')));
+      });
+
+      // Estado inicial: Aba de Consulta ativa
+      activate('tab-query');
+    })();
+  </script>
+</div>
+{% endblock %}

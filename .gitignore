@@ -323,3 +323,7 @@ local_settings.py
 #veio do projeto VideoDownloader para unificar o que for possível
 vdLinuxScripts/
 docs/Noticias/noticias_falta_converter_2_mb/
+file_hashes.npy
+docs/Noticias_bak/
+docs/embeddings/
+docs/respostas_ia/

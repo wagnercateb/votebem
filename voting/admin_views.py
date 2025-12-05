@@ -19,6 +19,13 @@ from votebem.utils.devlog import dev_log  # Dev logger for console + file output
 from django.db import transaction
 from django.core.cache import cache
 import threading
+import os
+import glob
+import hashlib
+from typing import Dict, Any, List, Tuple
+from pathlib import Path
+from django.conf import settings
+from decouple import config as env_config
 
 # Background task helpers
 # ------------------------
@@ -75,6 +82,593 @@ def admin_dashboard(request):
     }
     
     return render(request, 'admin/voting/admin_dashboard.html', context)
+
+
+@staff_member_required
+def rag_tool(request):
+    """
+    Página administrativa simples para executar a lógica do notebook RAG (sem LangChain).
+
+    - Lê valores padrão do notebook `.ipynb` para variáveis de página (DOC_FOLDER, CHROMA_COLLECTION_NAME, HASH_FILE,
+      system_prompt, query). O `context_text` é preenchido dinamicamente ao rodar a consulta.
+    - Permite editar esses valores via formulário e submeter a `query`.
+    - Executa uma recuperação básica de contexto lendo arquivos `.md` (e `.pdf` se pdfplumber disponível) em `DOC_FOLDER`.
+    - Tenta chamar a API OpenAI se `OPENAI_API_KEY` estiver configurada; caso contrário, retorna uma resposta de fallback.
+
+    Observação: esta implementação evita dependências externas (chromadb) e oferece uma lógica de recuperação simplificada
+    para manter compatibilidade imediata.
+    """
+
+    # Caminho do arquivo de configuração persistente (JSON) dentro do app
+    config_path = os.path.join(os.path.dirname(__file__), 'rag_config.json')
+
+    # Valores padrão (hardcoded) extraídos do notebook .ipynb;
+    # O .ipynb NÃO é necessário para executar o app após esta cópia.
+    HARDCODED_DEFAULTS: Dict[str, Any] = {
+        'DOC_FOLDER': r"C:\\Users\\desig.cateb\\Dados\\R\\testeRAG\\",
+        'CHROMA_COLLECTION_NAME': "rag_docs",
+        'HASH_FILE': "file_hashes.npy",
+        'query': "Explique o que foi o pl antifaccção votado na câmara",
+        'system_prompt': (
+            "You are a helpful assistant. Write in portuguese with the simplest language possible. "
+            "Answer the user’s questions using the provided context. DO NOT DEDUCE ANY EXPLANATION THAT IS NOT IN THE CONTEXT.\n"
+            "If the context do not have information to answer the question, ignore the rest of this prompt.\n"
+            "The answer should provide this information:\n"
+            "1) votacao: inform when the proposta/lei was approved, formatted dd/mm/YYYY. if the article does not mention, inform the article date. \n"
+            "    if possible, inform a code or number of the proposicao or PL (projeto de lei) or PEC (proposta de emenda à constituição)\n"
+            "    or any code that helps identify it. If there is no code, do not mention anything about it. Mention the number of votes for and against it. \n"
+            "2) titulo: provide a title explaining what this is about in up to 100 characters;\n"
+            "3) resumo: do not repeat information provided in items (1) or (2). Provide an abstract of what was approved in no more than 500 characters.  Use a concise and simple language. \n"
+            "4) explicacao: create a thorough explanation about the question in aproximately 2000 characters. Whenever more technical expressions are used (e.g., trânsito em julgado, ), avoid it or briefly explain them in parentheses right afterwards. Try to elaborate on who gains and who loses with it, how it can affect employment, its economic and political implications, etc. Explain how it is important or harmful to the country. At the end, briefly mention the sources of the information, including author, where and date.\n"
+        ),
+    }
+
+    def _read_config_defaults(path: str) -> Dict[str, Any]:
+        """Lê o arquivo JSON de configuração se existir; caso contrário, retorna hardcoded defaults."""
+        try:
+            if os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                # Garantir chaves presentes; completar com hardcoded se faltar
+                merged = {**HARDCODED_DEFAULTS, **(data or {})}
+                return merged
+        except Exception:
+            pass
+        return HARDCODED_DEFAULTS.copy()
+
+    def _write_config_defaults(path: str, payload: Dict[str, Any]) -> bool:
+        """Persiste as variáveis atuais no JSON. Retorna True em sucesso."""
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception:
+            return False
+
+    def _read_md_file(path: str) -> str:
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception:
+            return ''
+
+    def _read_pdf_file(path: str) -> str:
+        try:
+            import pdfplumber  # optional
+            with pdfplumber.open(path) as pdf:
+                return "\n\n".join(page.extract_text() or '' for page in pdf.pages)
+        except Exception:
+            return ''
+
+    def _read_txt_file(path: str) -> str:
+        """Leitura simples para arquivos .txt como contexto adicional."""
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception:
+            return ''
+
+    def _retrieve_context(doc_folder: str, query_text: str, max_chars: int = 3000) -> str:
+        """Naive retrieval: read .md, .pdf and .txt from folder, score by keyword hits and join top snippets."""
+        if not doc_folder:
+            return ''
+        try:
+            files = (
+                glob.glob(os.path.join(doc_folder, '*.md')) +
+                glob.glob(os.path.join(doc_folder, '*.pdf')) +
+                glob.glob(os.path.join(doc_folder, '*.txt'))
+            )
+        except Exception:
+            files = []
+        q = (query_text or '').strip().lower()
+        tokens = [t for t in re.split(r"\W+", q) if t]
+        scored: List[Tuple[str, int, str]] = []  # (path, score, content)
+        for fp in files:
+            lowfp = fp.lower()
+            if lowfp.endswith('.md'):
+                content = _read_md_file(fp)
+            elif lowfp.endswith('.pdf'):
+                content = _read_pdf_file(fp)
+            else:
+                content = _read_txt_file(fp)
+            low = content.lower()
+            score = sum(low.count(tok) for tok in tokens)
+            if score > 0:
+                scored.append((fp, score, content))
+        scored.sort(key=lambda x: x[1], reverse=True)
+        out = []
+        total = 0
+        for _, _, txt in scored:
+            if not txt:
+                continue
+            if total >= max_chars:
+                break
+            chunk = txt[:max_chars - total]
+            out.append(chunk)
+            total += len(chunk)
+        return "\n\n".join(out)
+
+    defaults = _read_config_defaults(config_path)
+
+    # Inputs from notebook or environment
+    initial_doc_folder = defaults.get('DOC_FOLDER') or os.getenv('VB_DOC_FOLDER') or ''
+    initial_collection = defaults.get('CHROMA_COLLECTION_NAME') or 'rag_docs'
+    initial_hash_file = defaults.get('HASH_FILE') or 'file_hashes.npy'
+    initial_query = defaults.get('query') or ''
+    initial_system_prompt = defaults.get('system_prompt') or ''
+
+    # Submitted values
+    doc_folder = request.POST.get('DOC_FOLDER', initial_doc_folder)
+    # Resolve DOC_FOLDER relative to app root (BASE_DIR) when given as relative
+    # This ensures users can set paths like "docs\\Noticias\\" and we will search
+    # under <project_root>/docs/Noticias/ for content files.
+    # Resolve DOC_FOLDER to an absolute path. Many projects set BASE_DIR to the
+    # Django package root (e.g., <project>/votebem), while content folders like
+    # "docs" live at the project root (parent of BASE_DIR). We try both.
+    if doc_folder and os.path.isabs(doc_folder):
+        doc_folder_abs = doc_folder
+    elif doc_folder:
+        base_candidate = os.path.join(settings.BASE_DIR, doc_folder)
+        project_root = os.path.dirname(settings.BASE_DIR)
+        root_candidate = os.path.join(project_root, doc_folder)
+        if os.path.isdir(base_candidate):
+            doc_folder_abs = base_candidate
+        elif os.path.isdir(root_candidate):
+            doc_folder_abs = root_candidate
+        else:
+            # Default to BASE_DIR join; glob will simply return empty if not found
+            doc_folder_abs = base_candidate
+    else:
+        doc_folder_abs = ''
+    chroma_collection = request.POST.get('CHROMA_COLLECTION_NAME', initial_collection)
+    hash_file = request.POST.get('HASH_FILE', initial_hash_file)
+    system_prompt = request.POST.get('system_prompt', initial_system_prompt)
+    query_text = request.POST.get('query', initial_query)
+    context_text = request.POST.get('context_text', '')
+
+    # Carregar OPENAI_API_KEY centralmente dos settings; fallback para decouple/env e leitura manual
+    api_key = (
+        getattr(settings, 'OPENAI_API_KEY', '')
+        or env_config('OPENAI_API_KEY', default='')
+        or os.getenv('OPENAI_API_KEY')
+        or ''
+    )
+    if not api_key:
+        # 2) Fallback manual: varrer possíveis caminhos do projeto
+        try:
+            base_dir = Path(getattr(settings, 'BASE_DIR', os.path.dirname(os.path.dirname(__file__))))
+            candidates_dirs = [base_dir, base_dir.parent]
+            candidates_files = ['.env.local', '.env']  # prioridade: .env.local, depois .env
+            for d in candidates_dirs:
+                for fname in candidates_files:
+                    env_path = d / fname
+                    if env_path.exists():
+                        with open(env_path, 'r', encoding='utf-8') as f:
+                            for raw_line in f:
+                                line = raw_line.strip()
+                                if not line or line.startswith('#'):
+                                    continue
+                                # Aceitar formatos: OPENAI_API_KEY=..., OPENAI_API_KEY="..."
+                                if line.startswith('OPENAI_API_KEY'):
+                                    try:
+                                        k, v = line.split('=', 1)
+                                        if k.strip() == 'OPENAI_API_KEY':
+                                            v = v.strip().strip('"').strip("'")
+                                            if v:
+                                                api_key = v
+                                                break
+                                    except Exception:
+                                        pass
+                            if api_key:
+                                break
+                if api_key:
+                    break
+        except Exception:
+            # Silencioso: se falhar, seguimos sem chave e o fluxo usará fallback
+            pass
+
+    answer = None
+    ran_query = False
+    error_msg = None
+    embed_result = None  # textual summary after embedding
+
+    # Submissão de consulta: usa os valores preenchidos e tenta gerar resposta
+    if request.method == 'POST' and request.POST.get('submit_query'):
+        ran_query = True
+        try:
+            # Retrieve context using the resolved absolute DOC_FOLDER path, so
+            # relative folders in config/UI work correctly from the project root.
+            ctx = _retrieve_context(doc_folder_abs, query_text)
+            context_text = ctx
+            # Build final prompt by formatting with placeholders if present
+            try:
+                if system_prompt and ('{context_text}' in system_prompt or '{query}' in system_prompt):
+                    final_prompt = system_prompt.format(context_text=context_text, query=query_text)
+                else:
+                    final_prompt = system_prompt
+            except Exception:
+                final_prompt = system_prompt
+
+            # Try OpenAI call if available
+            try:
+                if api_key:
+                    from openai import OpenAI
+                    client = OpenAI(api_key=api_key)
+                    # Use a small, cost-effective model if unspecified; model name omitted in UI
+                    # Enforce OpenAI LLM model from settings (fixed to gpt-4o-mini)
+                    resp = client.chat.completions.create(
+                        model=getattr(settings, 'OPENAI_LLM_MODEL', 'gpt-4o-mini'),
+                        messages=[
+                            {"role": "system", "content": final_prompt or ""},
+                            {"role": "user", "content": query_text or ""},
+                        ],
+                        temperature=0.2,
+                    )
+                    answer = (resp.choices[0].message.content if getattr(resp, 'choices', None) else '')
+                else:
+                    raise RuntimeError('OPENAI_API_KEY missing')
+            except Exception:
+                # Fallback: return a trimmed excerpt of context as pseudo-answer
+                base = (context_text or '').strip()
+                if base:
+                    answer = base[:800]
+                else:
+                    answer = 'Nenhuma resposta disponível (contexto vazio e API indisponível).'
+        except Exception as e:
+            error_msg = f'Erro ao processar consulta: {e}'
+
+        # Após obter a resposta, salvar registro em arquivo conforme ambiente
+        try:
+            from django.utils import timezone
+            now_date = timezone.localtime().date().isoformat()  # yyyy-mm-dd
+            # Diretórios de destino: produção e desenvolvimento
+            # Observação: não dependemos apenas de DEBUG, pois em desenvolvimento
+            # o usuário pode definir DEBUG=False para testar comportamentos.
+            # Em vez disso, usamos o módulo de settings ativo para decidir.
+            prod_dir = '/dados/votebem/docs/respostas_ia'
+            local_dir = os.path.join(os.path.dirname(settings.BASE_DIR), 'docs', 'respostas_ia')
+
+            # Detecta o módulo de settings ativo (ex.: 'votebem.settings.development')
+            env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
+            is_dev = env_mod.endswith('.development')
+            is_prodlike = env_mod.endswith('.production') or env_mod.endswith('.build')
+
+            # Escolha preferencial baseada no módulo de settings
+            preferred_dir = local_dir if is_dev else (prod_dir if is_prodlike else local_dir)
+
+            # Fallbacks robustos:
+            # - Se o diretório preferencial não existir, criamos; se falhar, alternamos.
+            # - Se 'local_dir' existir/for criável, preferimos em ambiente não-prod.
+            save_dir = preferred_dir
+            try:
+                os.makedirs(save_dir, exist_ok=True)
+            except Exception:
+                # Se falhou ao criar preferred_dir, tenta local_dir; caso contrário, prod_dir.
+                try:
+                    save_dir = local_dir
+                    os.makedirs(save_dir, exist_ok=True)
+                except Exception:
+                    save_dir = prod_dir
+                    os.makedirs(save_dir, exist_ok=True)
+
+            # Sanitização do nome de arquivo derivado da query
+            q = (query_text or '').strip()
+            safe_q = re.sub(r"[^\w\-]+", "_", q)  # substituir espaços e símbolos por '_'
+            if len(safe_q) > 80:
+                safe_q = safe_q[:80]
+            if not safe_q:
+                safe_q = 'consulta'
+            fname = f"{now_date}_{safe_q}.txt"
+            fpath = os.path.join(save_dir, fname)
+
+            content_lines = [
+                "query:", q,
+                "",
+                "system_prompt:", system_prompt or '',
+                "",
+                "context_text:", context_text or '',
+                "",
+                "answer:", answer or '',
+            ]
+            with open(fpath, 'w', encoding='utf-8') as f:
+                f.write("\n".join(content_lines))
+            try:
+                messages.success(request, f"Resposta registrada em: {fpath}")
+            except Exception:
+                pass
+        except Exception:
+            # Não bloquear a resposta por falha ao salvar arquivo
+            pass
+
+    # Comando de embed: varre DOC_FOLDER por novos/atualizados arquivos e envia para Chroma
+    if request.method == 'POST' and request.POST.get('embed_docs'):
+        try:
+            # Preparação de caminhos e persistência de hash
+            import hashlib
+            import numpy as np  # opcional; usamos se disponível para .npy
+
+            # Resolver HASH_FILE absoluto
+            hash_path = (
+                hash_file if (hash_file and os.path.isabs(hash_file))
+                else (os.path.join(settings.BASE_DIR, hash_file) if hash_file else '')
+            )
+
+            # Carregar hashes existentes (suporta .npy com allow_pickle e .json simples)
+            existing_hashes = {}
+            try:
+                if hash_path.endswith('.npy'):
+                    try:
+                        arr = np.load(hash_path, allow_pickle=True)
+                        if isinstance(arr, np.ndarray) and arr.size == 1:
+                            existing_hashes = arr.item() if isinstance(arr.item(), dict) else {}
+                        elif isinstance(arr, dict):
+                            existing_hashes = arr
+                    except Exception:
+                        existing_hashes = {}
+                else:
+                    try:
+                        if os.path.exists(hash_path):
+                            with open(hash_path, 'r', encoding='utf-8') as f:
+                                existing_hashes = json.load(f)
+                    except Exception:
+                        existing_hashes = {}
+            except Exception:
+                existing_hashes = {}
+
+            # Função de hash de arquivo robusta (SHA256)
+            def compute_hash(fp: str) -> str:
+                h = hashlib.sha256()
+                try:
+                    with open(fp, 'rb') as f:
+                        for chunk in iter(lambda: f.read(8192), b''):
+                            h.update(chunk)
+                    return h.hexdigest()
+                except Exception:
+                    return ''
+
+            # Listar candidatos em DOC_FOLDER (md/pdf/txt)
+            try:
+                files = (
+                    glob.glob(os.path.join(doc_folder_abs, '*.md')) +
+                    glob.glob(os.path.join(doc_folder_abs, '*.pdf')) +
+                    glob.glob(os.path.join(doc_folder_abs, '*.txt'))
+                )
+            except Exception:
+                files = []
+
+            embed_log_items: List[Dict[str, Any]] = []
+            new_or_updated = []  # (path, hash)
+            for fp in files:
+                h = compute_hash(fp)
+                if not h:
+                    embed_log_items.append({
+                        'file': fp,
+                        'status': 'erro',
+                        'detail': 'Falha ao calcular hash',
+                        'chars': 0,
+                        'chunks': 0,
+                    })
+                    continue
+                prev = existing_hashes.get(fp)
+                if prev != h:
+                    new_or_updated.append((fp, h))
+                else:
+                    embed_log_items.append({
+                        'file': fp,
+                        'status': 'inalterado',
+                        'detail': 'Hash idêntico; ignorado',
+                        'chars': 0,
+                        'chunks': 0,
+                    })
+
+            # Inicializar Chroma e função de embedding conforme provider configurado
+            try:
+                import chromadb
+                from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
+            except Exception as e:
+                raise RuntimeError(f"chromadb não instalado: {e}")
+
+            # Permitir seleção do provider via formulário (embed_provider) com fallback para settings
+            provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'openai')
+            provider = provider if provider in ('openai', 'local') else 'openai'
+            persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
+            local_model = getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2')
+
+            if provider == 'local':
+                # Embeddings locais via sentence-transformers (CPU ou GPU)
+                ef = SentenceTransformerEmbeddingFunction(model_name=local_model)
+            else:
+                # Provider 'openai' (padrão) requer chave de API
+                if not api_key:
+                    raise RuntimeError('OPENAI_API_KEY ausente para embeddings OpenAI')
+                ef = OpenAIEmbeddingFunction(
+                    api_key=api_key,
+                    model_name=getattr(settings, 'OPENAI_EMBED_MODEL', 'text-embedding-3-small')
+                )
+
+            # Cliente Chroma: persistente se CHROMA_PERSIST_PATH estiver definido
+            try:
+                client = chromadb.PersistentClient(path=persist_path) if persist_path else chromadb.Client()
+            except Exception as e:
+                # Se falhar criar persistente, cair para cliente em memória
+                client = chromadb.Client()
+            # Obter ou criar coleção
+            try:
+                names = [c.name for c in client.list_collections()]
+                if chroma_collection in names:
+                    collection = client.get_collection(chroma_collection, embedding_function=ef)
+                else:
+                    collection = client.create_collection(name=chroma_collection, embedding_function=ef)
+            except Exception:
+                # fallback get_or_create
+                try:
+                    collection = client.get_or_create_collection(name=chroma_collection, embedding_function=ef)
+                except Exception as e:
+                    raise RuntimeError(f"Falha ao inicializar coleção Chroma: {e}")
+
+            # Funções auxiliares de leitura e split
+            def extract_text(fp: str) -> str:
+                lowfp = fp.lower()
+                if lowfp.endswith('.md'):
+                    return _read_md_file(fp)
+                if lowfp.endswith('.pdf'):
+                    return _read_pdf_file(fp)
+                return _read_txt_file(fp)
+
+            def split_text(text: str, chunk_size: int = 1500) -> list[str]:
+                # quebra por tamanho fixo mantendo simples; evita dependências
+                t = text or ''
+                chunks = []
+                i = 0
+                while i < len(t):
+                    chunks.append(t[i:i+chunk_size])
+                    i += chunk_size
+                return chunks
+
+            total_chunks = 0
+            processed_files = 0
+            for fpath, file_hash in new_or_updated:
+                text = extract_text(fpath)
+                if not text:
+                    embed_log_items.append({
+                        'file': fpath,
+                        'status': 'vazio',
+                        'detail': 'Sem conteúdo legível',
+                        'chars': 0,
+                        'chunks': 0,
+                    })
+                    continue
+                chunks = split_text(text)
+                if not chunks:
+                    embed_log_items.append({
+                        'file': fpath,
+                        'status': 'vazio',
+                        'detail': 'Sem chunks gerados',
+                        'chars': len(text or ''),
+                        'chunks': 0,
+                    })
+                    continue
+                ids = [f"{os.path.basename(fpath)}_chunk_{i}" for i in range(len(chunks))]
+                metadatas = [{"source": os.path.basename(fpath), "chunk": i} for i in range(len(chunks))]
+                try:
+                    collection.add(documents=chunks, metadatas=metadatas, ids=ids)
+                    existing_hashes[fpath] = file_hash
+                    total_chunks += len(chunks)
+                    processed_files += 1
+                    embed_log_items.append({
+                        'file': fpath,
+                        'status': 'embutido',
+                        'detail': 'Embeddings adicionados/atualizados',
+                        'chars': len(text or ''),
+                        'chunks': len(chunks),
+                    })
+                except Exception as e:
+                    # prossegue nos demais
+                    embed_log_items.append({
+                        'file': fpath,
+                        'status': 'falha',
+                        'detail': f'Erro ao adicionar à coleção: {e}',
+                        'chars': len(text or ''),
+                        'chunks': len(chunks),
+                    })
+                    continue
+
+            # Persistir hashes atualizados
+            try:
+                if hash_path.endswith('.npy'):
+                    try:
+                        np.save(hash_path, existing_hashes)
+                    except Exception:
+                        # se falhar, gravar .json ao lado
+                        try:
+                            alt = os.path.splitext(hash_path)[0] + '.json'
+                            with open(alt, 'w', encoding='utf-8') as f:
+                                json.dump(existing_hashes, f, ensure_ascii=False, indent=2)
+                        except Exception:
+                            pass
+                else:
+                    with open(hash_path, 'w', encoding='utf-8') as f:
+                        json.dump(existing_hashes, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
+            embed_result = f"Embedded {total_chunks} chunks from {processed_files} new/updated files."
+            embed_summary = {
+                'candidatos': len(files),
+                'novos_ou_atualizados': len(new_or_updated),
+                'processados': processed_files,
+                'total_chunks': total_chunks,
+            }
+            try:
+                messages.success(request, embed_result)
+            except Exception:
+                # manter também no contexto em caso de templates sem mensagens
+                pass
+        except Exception as e:
+            error_msg = f'Erro ao embutir documentos: {e}'
+            embed_log_items = []
+            embed_summary = None
+
+    # Atualização de variáveis sem consultar: persistir no arquivo JSON
+    if request.method == 'POST' and not request.POST.get('submit_query'):
+        to_save = {
+            'DOC_FOLDER': doc_folder,
+            'CHROMA_COLLECTION_NAME': chroma_collection,
+            'HASH_FILE': hash_file,
+            'system_prompt': system_prompt,
+            'query': query_text,
+        }
+        ok = _write_config_defaults(config_path, to_save)
+        if ok:
+            messages.success(request, 'Configuração do RAG atualizada com sucesso.')
+        else:
+            messages.error(request, 'Falha ao salvar configuração do RAG.')
+
+    context = {
+        'DOC_FOLDER': doc_folder,  # original value as shown in UI (can be relative)
+        # Provide the resolved absolute folder for debugging purposes (not required in UI)
+        'DOC_FOLDER_ABS': doc_folder_abs,
+        'CHROMA_COLLECTION_NAME': chroma_collection,
+        'HASH_FILE': hash_file,
+        'system_prompt': system_prompt,
+        'query': query_text,
+        'context_text': context_text,
+        'answer': answer,
+        'embed_result': embed_result,
+        'embed_log_items': locals().get('embed_log_items', []),
+        'embed_summary': locals().get('embed_summary', None),
+        'ran_query': ran_query,
+        'error_msg': error_msg,
+        'config_path': config_path,
+        'OPENAI_API_KEY_set': bool(api_key),
+        # Masked preview of the key to confirm it reached the template without exposing secrets
+        'OPENAI_API_KEY': (f"{api_key[:8]}…" if api_key else ''),
+        # Informações de provider e persistência do Chroma
+        'EMBEDDING_PROVIDER': getattr(settings, 'EMBEDDING_PROVIDER', 'openai'),
+        'LOCAL_EMBED_MODEL': getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2'),
+        'CHROMA_PERSIST_PATH_EFFECTIVE': getattr(settings, 'CHROMA_PERSIST_PATH', ''),
+    }
+    return render(request, 'admin/voting/rag_tool.html', context)
 
 
 @staff_member_required

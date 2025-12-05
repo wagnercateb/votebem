@@ -1,6 +1,12 @@
 from .base import *
 import os
 from decouple import config
+import pymysql
+try:
+    # Permite uso de PyMySQL como substituto do MySQLdb em desenvolvimento
+    pymysql.install_as_MySQLdb()
+except Exception:
+    pass
 from votebem.utils.devlog import dev_log  # Development log utility
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -11,6 +17,18 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-me')
 
 # Allowed hosts for development
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0').split(',')
+
+# OPENAI API Key for development: centralize here for consistent access
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY') or config('OPENAI_API_KEY', default='')
+
+# Default embedding model used by Chroma's OpenAIEmbeddingFunction
+# This can be overridden via environment variable OPENAI_EMBED_MODEL.
+OPENAI_EMBED_MODEL = os.environ.get('OPENAI_EMBED_MODEL', 'text-embedding-3-small')
+
+# LLM model for OpenAI usage in development.
+# Enforced globally to ensure consistent behavior and costs.
+# Do NOT override via environment; always use 'gpt-4o-mini'.
+OPENAI_LLM_MODEL = 'gpt-4o-mini'
 
 # Explicitly keep development HTTP-only to avoid accidental HTTPS redirects
 # and HSTS persistence when testing locally.
@@ -300,3 +318,11 @@ LOGGING = {
 # import debugpy
 # debugpy.listen(('0.0.0.0', 5678))
 # print('Development debugpy listening on port 5678')
+
+# Embedding provider selection and local model configuration for development
+# EMBEDDING_PROVIDER: 'openai' (default) or 'local'
+# LOCAL_EMBED_MODEL: sentence-transformers model when using local provider
+# CHROMA_PERSIST_PATH: if set non-empty, use chromadb.PersistentClient(path=...)
+EMBEDDING_PROVIDER = os.environ.get('EMBEDDING_PROVIDER') or config('EMBEDDING_PROVIDER', default='local')
+LOCAL_EMBED_MODEL = os.environ.get('LOCAL_EMBED_MODEL') or config('LOCAL_EMBED_MODEL', default='all-MiniLM-L6-v2')
+CHROMA_PERSIST_PATH = os.environ.get('CHROMA_PERSIST_PATH') or config('CHROMA_PERSIST_PATH', default='')

@@ -70,4 +70,6 @@ urlpatterns = [
     path('ajax/referencias/delete/', admin_views.ajax_referencias_delete, name='ajax_referencias_delete'),
     # Background task status polling
     path('ajax/task-status/', admin_views.ajax_task_status, name='ajax_task_status'),
+    # RAG tool page
+    path('rag-tool/', admin_views.rag_tool, name='rag_tool'),
 ]

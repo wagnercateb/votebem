@@ -153,6 +153,8 @@
         <h3>Votações Votebem</h3>
         <ul class="action-list">
             <li><a href="{% url 'gerencial:votacoes_management' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Ativa, pausa ou encerra votações no aplicativo">Votações Cadastradas</a></li>
+            {# Novo botão: abre a ferramenta RAG em uma aba/target separado #}
+            <li><a href="{% url 'gerencial:rag_tool' %}" target="_rag" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre ferramenta RAG (sem LangChain) com PDFs e Markdown">RAG de notícias</a></li>
             <li><a href="/admin/voting/votacaovotebem/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista todas as votações disponíveis no Django Admin">Listar Todas as Votações via Django</a></li>
             <li><a href="/admin/voting/votacaovotebem/add/" data-bs-toggle="tooltip" data-bs-placement="top" title="Cria uma nova votação pelo Django Admin">Criar Nova Votação via Django</a></li>
         </ul>
