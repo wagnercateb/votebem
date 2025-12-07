@@ -297,6 +297,13 @@
                             <i class="fas fa-link"></i> Referencias
                         </a>
                     {% endif %}
+                    <form method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="delete" value="1" />
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja apagar esta votação? Esta ação não pode ser desfeita.')">
+                            <i class="fas fa-trash"></i> Apagar
+                        </button>
+                    </form>
                 </div>
             </form>
 

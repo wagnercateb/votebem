@@ -16,6 +16,7 @@ class Proposicao(models.Model):
     data_apresentacao = models.DateField(blank=True, null=True, verbose_name="Data de Apresentação")
     autor = models.CharField(max_length=200, blank=True, null=True, verbose_name="Autor")
     estado = models.CharField(max_length=100, blank=True, null=True, verbose_name="Estado")
+    conhecida_por = models.TextField(blank=True, null=True, verbose_name="Conhecida por")
     url_foto1 = models.URLField(blank=True, null=True, verbose_name="URL Foto 1")
     alt_foto1 = models.CharField(max_length=200, blank=True, null=True, verbose_name="Alt Foto 1")
     url_foto2 = models.URLField(blank=True, null=True, verbose_name="URL Foto 2")

@@ -17,6 +17,7 @@ urlpatterns = [
     path('proposicoes/list/', admin_views.proposicoes_list, name='proposicoes_list'),
     path('proposicao/add/', admin_views.proposicao_add, name='proposicao_add'),
     path('proposicao/import/', admin_views.proposicao_import, name='proposicao_import'),
+    path('proposicao/edit/', admin_views.proposicao_edit_choose, name='proposicao_edit_choose'),
     path('proposicao/<int:pk>/edit/', admin_views.proposicao_edit, name='proposicao_edit'),
     path('proposicoes/atualizar-temas/', admin_views.proposicoes_atualizar_temas, name='proposicoes_atualizar_temas'),
     path('votacao/<int:pk>/edit/', admin_views.votacao_edit, name='votacao_edit'),

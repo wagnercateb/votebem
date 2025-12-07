@@ -12,9 +12,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
 {% if votacao.proposicao_votacao.proposicao.id_proposicao %}
-{% comment %} <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none"> {% endcomment %}
 {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
-                            </a>
                         {% else %}
 {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
                         {% endif %}
@@ -39,18 +37,31 @@
                         <span class="btn btn-sm btn-outline-primary" title="Votação ativa no site VoteBem. Votação já encerrada na Câmara">
                             <i class="bi bi-clock"></i> Votação Ativa
                         </span>
+                        {% if votacao.proposicao_votacao and votacao.proposicao_votacao.data_votacao %}
                         <span class="ms-2 text-muted" title="Data de votação na Câmara dos Deputados">
-                            {% if votacao.proposicao_votacao and votacao.proposicao_votacao.data_votacao %}
-                                {{ votacao.proposicao_votacao.data_votacao|date:"d/m/Y" }}
-                            {% else %}
-                                {{ votacao.data_hora_votacao|date:"d/m/Y" }}
-                            {% endif %}
+                            {{ votacao.proposicao_votacao.data_votacao|date:"d/m/Y" }}
                         </span>
+                        {% elif votacao.data_hora_votacao %}
+                        <span class="ms-2 text-muted" title="Data de votação na Câmara dos Deputados">
+                            {{ votacao.data_hora_votacao|date:"d/m/Y" }}
+                        </span>
+                        {% endif %}
                     {% else %}
                         <span class="btn btn-sm btn-outline-secondary">
                             <i class="bi bi-pause-circle"></i> Votação Inativa
                         </span>
                     {% endif %}
+                    <div class="dropdown ms-2">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-share"></i> Compartilhar
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" onclick="shareTo('x'); return false;">X (Twitter)</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="shareTo('facebook'); return false;">Facebook</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="shareTo('linkedin'); return false;">LinkedIn</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="shareTo('instagram'); return false;">Instagram</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             
@@ -83,8 +94,9 @@
                         {% endif %}
                         <hr />
                         <!-- Data da votação (ProposicaoVotacao.data_votacao) -->
-                        <span class="text-muted">Votada, pelos deputados, em: {{ votacao.proposicao_votacao.data_votacao|date:"d/m/Y H:i" }}</span>
-                        <br>
+                        {% if votacao.proposicao_votacao and votacao.proposicao_votacao.data_votacao %}
+                        <span class="text-muted">Votada, pelos deputados, em: {{ votacao.proposicao_votacao.data_votacao|date:"d/m/Y H:i" }}</span><br>
+                        {% endif %}
                         <!-- Linha adicional com a descrição da ProposicaoVotacao
                              Suporta duas chaves de contexto: voting_proposicaovotacao e votacao.proposicao_votacao -->
                         <i>
@@ -440,7 +452,28 @@
             <a href="{% url 'voting:meus_votos' %}" class="btn btn-outline-primary ms-2">
                 <i class="bi bi-list-check"></i> Meus Votos
             </a>
-        </div>
-    </div>
 </div>
+</div>
+</div>
+<script>
+  function shareTo(platform) {
+    var url = window.location.href;
+    var text = document.title || '';
+    var u = encodeURIComponent(url);
+    var t = encodeURIComponent(text);
+    var target = '';
+    if (platform === 'x') {
+      target = 'https://x.com/intent/tweet?url=' + u + '&text=' + t;
+    } else if (platform === 'facebook') {
+      target = 'https://www.facebook.com/sharer/sharer.php?u=' + u;
+    } else if (platform === 'linkedin') {
+      target = 'https://www.linkedin.com/sharing/share-offsite/?url=' + u;
+    } else if (platform === 'instagram') {
+      try { navigator.clipboard.writeText(url); } catch (e) {}
+      alert('Link copiado. Abra o Instagram e cole no seu post ou story.');
+      return;
+    }
+    if (target) { window.open(target, '_blank', 'noopener'); }
+  }
+</script>
 {% endblock %}

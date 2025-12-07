@@ -2247,6 +2247,7 @@ def proposicao_edit(request, pk):
         numero = request.POST.get('numero', '').strip()
         ano = request.POST.get('ano', '').strip()
         estado = request.POST.get('estado', '').strip()
+        conhecida_por = request.POST.get('conhecida_por', '').strip()
         
         # Validações básicas
         if not titulo:
@@ -2266,6 +2267,7 @@ def proposicao_edit(request, pk):
                 proposicao.numero = int(numero)
                 proposicao.ano = int(ano)
                 proposicao.estado = estado
+                proposicao.conhecida_por = conhecida_por
                 proposicao.save()
                 
                 messages.success(request, f'Proposição "{proposicao.titulo}" atualizada com sucesso!')
@@ -2294,6 +2296,34 @@ def proposicao_edit(request, pk):
     return render(request, 'admin/voting/proposicao_edit.html', context)
 
 @staff_member_required
+def proposicao_edit_choose(request):
+    """
+    Página simples para localizar uma proposição e redirecionar para edição.
+    Aceita `pk` (ID interno) ou `id_proposicao` (ID da Câmara).
+    """
+    context = {
+        'title': 'Editar Proposição',
+    }
+    if request.method == 'POST':
+        pk_raw = (request.POST.get('pk') or '').strip()
+        ext_raw = (request.POST.get('id_proposicao') or '').strip()
+        target = None
+        try:
+            if pk_raw:
+                target = Proposicao.objects.get(pk=int(pk_raw))
+            elif ext_raw:
+                target = Proposicao.objects.filter(id_proposicao=int(ext_raw)).first()
+        except Exception:
+            target = None
+
+        if target:
+            return redirect('gerencial:proposicao_edit', pk=target.pk)
+        else:
+            messages.error(request, 'Proposição não encontrada. Informe um ID válido.')
+
+    return render(request, 'admin/voting/proposicao_edit_choose.html', context)
+
+@staff_member_required
 def votacao_edit(request, pk):
     """Edita uma votação disponível OU lista as votações por proposição.
 
@@ -2308,6 +2338,17 @@ def votacao_edit(request, pk):
         votacao = VotacaoVoteBem.objects.get(pk=pk)
 
         if request.method == 'POST':
+            # Deleção (confirmação feita no cliente via prompt)
+            if request.POST.get('delete') == '1':
+                try:
+                    titulo_prev = votacao.titulo
+                    votacao.delete()
+                    messages.success(request, f'Votação "{titulo_prev}" apagada com sucesso.')
+                    return redirect('gerencial:votacoes_management')
+                except Exception as e:
+                    messages.error(request, f'Erro ao apagar votação: {str(e)}')
+                    return redirect('gerencial:votacao_edit', pk=pk)
+
             # Handle form submission
             votacao.titulo = request.POST.get('titulo', votacao.titulo)
             votacao.resumo = request.POST.get('resumo', votacao.resumo)

@@ -178,7 +178,8 @@
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
-                        <strong>proposicao_votacao_id={{votacao.proposicao_votacao_id}}:</strong> {{ votacao.titulo|default:"(sem título)" }}
+                        <h3>proposicao_votacao_id={{votacao.proposicao_votacao_id}}:</h3> 
+                        {{ votacao.titulo|default:"(sem título)" }}
                     </div>
                     <div class="btn-group">
                         <a class="btn btn-outline-secondary btn-sm" href="{% url 'gerencial:votacao_edit' votacao.pk %}">
@@ -264,6 +265,7 @@
                     {# info-section removed as requested to delete the frame completely #}
                 </div>
             </div>
+            <br />
         {% endfor %}
     {% else %}
         <div class="alert alert-info">Nenhuma votação disponível vinculada a esta proposição.</div>

@@ -19,7 +19,15 @@
 
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
-    <h2 class="card-title mb-0">Votação oficial</h2>
+    <h2 class="card-title mb-0">Votação oficial
+      {% if pv and pv.proposicao %}
+        {{ pv.proposicao.tipo }} {{ pv.proposicao.numero }}/{{ pv.proposicao.ano }}
+        {% if pv.proposicao.conhecida_por %}<br /><i>Conhecida por: {{ pv.proposicao.conhecida_por }}</i>{% endif %}
+      {% elif votacao and votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao %}
+        {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
+        {% if votacao.proposicao_votacao.proposicao.conhecida_por %}<br /><i>Conhecida por: {{ votacao.proposicao_votacao.proposicao.conhecida_por }}</i>{% endif %}
+      {% endif %}
+    </h2>
     {% if votacao %}
       <!-- Atualiza rótulo para deixar claro que volta à página VoteBem -->
       <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
@@ -28,6 +36,7 @@
     {% endif %}
   </div>
   <div class="card-body">
+
     {# Mostrar o título da proposição logo abaixo do título da página #}
     <!-- {% if pv and pv.proposicao and pv.proposicao.titulo %}
       <div class="text-muted mb-2">Proposição: {{ pv.proposicao.titulo }}</div>
@@ -37,6 +46,9 @@
     {% comment %} Show description only when a proposição/votação context (pv) exists {% endcomment %}
     {% if pv %}
       <div class="text-muted"><b>Descrição: {{ pv.descricao|default:"(sem descrição)" }}</b></div>
+      {% if pv.data_votacao %}
+      <div class="text-muted mt-1">Votado em {{ pv.data_votacao|date:"d/m/Y H:i" }}</div>
+      {% endif %}
     {% endif %}
     {# Exibir ementa completa, sem truncamento #}
     {% if pv and pv.proposicao and pv.proposicao.ementa %}
