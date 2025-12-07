@@ -1,6 +1,13 @@
 from .base import *
 import os
-from decouple import config
+try:
+    # Preferir .env.local em desenvolvimento para sobrepor variáveis do .env
+    # Isso garante que configurações específicas do Windows/local prevaleçam.
+    from decouple import Config, RepositoryEnv
+    config = Config(RepositoryEnv('.env.local'))
+except Exception:
+    # Fallback: usa o leitor padrão do decouple, que busca .env
+    from decouple import config
 import pymysql
 try:
     # Permite uso de PyMySQL como substituto do MySQLdb em desenvolvimento
@@ -325,4 +332,7 @@ LOGGING = {
 # CHROMA_PERSIST_PATH: if set non-empty, use chromadb.PersistentClient(path=...)
 EMBEDDING_PROVIDER = os.environ.get('EMBEDDING_PROVIDER') or config('EMBEDDING_PROVIDER', default='local')
 LOCAL_EMBED_MODEL = os.environ.get('LOCAL_EMBED_MODEL') or config('LOCAL_EMBED_MODEL', default='all-MiniLM-L6-v2')
-CHROMA_PERSIST_PATH = os.environ.get('CHROMA_PERSIST_PATH') or config('CHROMA_PERSIST_PATH', default='')
+CHROMA_PERSIST_PATH = (
+    os.environ.get('CHROMA_PERSIST_PATH')
+    or config('CHROMA_PERSIST_PATH', default='docs\\nao_versionados\\embeddings\\')
+)

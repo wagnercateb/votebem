@@ -72,26 +72,50 @@
       </div>
       <br />
 
-      {# Variáveis auxiliares da coleção CHROMA e arquivo de hash #}
-      <div class="row">
-        <div class="col-md-6">
-          <label for="CHROMA_COLLECTION_NAME" class="form-label">CHROMA_COLLECTION_NAME</label>
-          {# Title clarifies this is the ChromaDB collection used for embeddings #}
-          <input type="text" id="CHROMA_COLLECTION_NAME" name="CHROMA_COLLECTION_NAME" value="{{ CHROMA_COLLECTION_NAME }}" class="form-control" 
-                 title="Coleção ChromaDB onde embeddings são armazenados/consultados. Persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}. Provider: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}." />
-          <div class="small-muted">Persistência do ChromaDB: <code>{% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}</code></div>
-          <div class="small-muted">Provider de embeddings: <code>{{ EMBEDDING_PROVIDER }}</code>{% if EMBEDDING_PROVIDER == 'local' %} — modelo: <code>{{ LOCAL_EMBED_MODEL }}</code>{% endif %}</div>
+      {# Layout: tornamos os campos e informações associados de largura total.
+         Removemos a grade de 2 colunas (row/col-md-6) para evitar que
+         conteúdos ricos (estatísticas/avisos) fiquem espremidos.
+         Seções abaixo são blocos independentes ocupando 100%.
+      #}
+
+      {# Bloco: campo CHROMA_COLLECTION_NAME (largura total) + botão Estatísticas #}
+      <div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <label for="CHROMA_COLLECTION_NAME" class="form-label" style="margin:0;">CHROMA_COLLECTION_NAME</label>
+          <button type="submit" name="chroma_stats" value="1" form="rag-form" class="btn btn-sm btn-outline-info" title="Mostrar estatísticas da coleção Chroma atual">Estatísticas</button>
         </div>
-        <div class="col-md-6">
-          <label for="HASH_FILE" class="form-label">HASH_FILE</label>
-          {# Title explains dedup mechanism via SHA256 hashes #}
-          <input type="text" id="HASH_FILE" name="HASH_FILE" value="{{ HASH_FILE }}" class="form-control" 
-                 title="JSON file tracking SHA256 hashes to skip unchanged files during embedding." />
-        </div>
+        {# Title clarifies this is the ChromaDB collection used for embeddings #}
+        <input type="text" id="CHROMA_COLLECTION_NAME" name="CHROMA_COLLECTION_NAME" value="{{ CHROMA_COLLECTION_NAME }}" class="form-control" 
+               title="Coleção ChromaDB onde embeddings são armazenados/consultados. Persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}. Provider: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}." />
+      </div>
+
+      {# Bloco: metadados e mensagens relacionadas (largura total) #}
+      <div>
+        <div class="small-muted">Persistência do ChromaDB: <code>{% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}</code></div>
+        <div class="small-muted">Provider de embeddings: <code>{{ EMBEDDING_PROVIDER }}</code>{% if EMBEDDING_PROVIDER == 'local' %} — modelo: <code>{{ LOCAL_EMBED_MODEL }}</code>{% endif %}</div>
+        <div class="small-muted">Coleção efetiva: <code id="effective-collection">{{ CHROMA_COLLECTION_NAME_EFFECTIVE }}</code></div>
+        {% if chroma_stats %}
+          <div class="alert alert-info mt-2" role="alert" style="padding:6px 10px; font-size:0.95em;">
+            {{ chroma_stats }}
+          </div>
+        {% endif %}
+        {% if chroma_sources_html %}
+          <div class="alert alert-info mt-2" role="alert" style="padding:6px 10px; font-size:0.95em;">
+            {{ chroma_sources_html|safe }}
+          </div>
+        {% endif %}
+      </div>
+
+      {# Bloco: campo HASH_FILE (largura total) #}
+      <div>
+        <label for="HASH_FILE" class="form-label">HASH_FILE</label>
+        {# Title explains dedup mechanism via SHA256 hashes #}
+        <input type="text" id="HASH_FILE" name="HASH_FILE" value="{{ HASH_FILE }}" class="form-control" 
+               title="JSON file tracking SHA256 hashes to skip unchanged files during embedding." />
       </div>
 
       {# Botão para varrer e embutir documentos em Chroma #}
-      <div class="d-flex gap-2">
+  <div class="d-flex gap-2">
 {% comment %} 
 Seletor de provider de embedding para a ação de 'embed_docs'.
 Permite escolher entre usar OpenAI (requer OPENAI_API_KEY) ou modelo local
@@ -108,6 +132,10 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
     <label class="form-check-label" for="embed_provider_local">Local (sentence-transformers)</label>
   </div>
   <small class="text-muted">Provider atual: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}</small>
+  <div class="form-check" title="Ignora hashes e re-embute todos os candidatos; remove itens existentes dessa fonte na coleção para evitar ids duplicados.">
+    <input class="form-check-input" type="checkbox" id="force_reembed" name="force_reembed" value="1">
+    <label class="form-check-label" for="force_reembed">Forçar re-embed</label>
+  </div>
   <button type="submit" name="embed_docs" value="1" class="btn btn-warning" title="Cria/atualiza embeddings e salva na coleção Chroma. Persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste){% endif %}. Provider: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}.">Varrer e embutir novos documentos no Chroma</button>
 </div>
       </div>
@@ -122,16 +150,33 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
     {# Painel da Aba 2: Consulta com OpenAI usando embeddings #}
     <section id="tab-query" class="tab-panel" aria-labelledby="btn-tab-query">
 
-      {# Consulta do usuário: há um botão dedicado para enviar a query #}
+      {# Consulta do usuário: dois botões — Buscar contexto (popular textarea) e Enviar consulta (API) #}
       <div>
         <label for="query" class="form-label">query</label>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap align-items-start gap-2">
           {# Title clarifies this is the user question sent to the API #}
           <textarea id="query" name="query" class="form-control" style="flex: 1; min-height: 90px;" 
                     title="Your question; combined with context and system prompt and sent to the API.">{{ query }}</textarea>
-          <button type="submit" name="submit_query" value="1" class="btn btn-primary align-self-start">Enviar consulta</button>
+          <div class="d-flex flex-column gap-2" style="min-width: 280px;">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <button type="submit" name="fetch_context" value="1" class="btn btn-outline-secondary" title="Busca contexto via ChromaDB (usando provider selecionado) com fallback para leitura de arquivos.">Buscar contexto</button>
+              <button type="submit" name="submit_query" value="1" class="btn btn-primary" title="Envia a pergunta para a API, incluindo o contexto.">Enviar consulta</button>
+            </div>
+            {# Provider sempre visível ao lado dos botões, pois afeta recuperação de contexto #}
+            <div class="d-flex align-items-center gap-3 flex-wrap" title="Provider de embeddings utilizado na consulta ao ChromaDB">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="embed_provider" id="embed_provider_openai_query" value="openai" {% if EMBEDDING_PROVIDER == 'openai' %}checked{% endif %}>
+                <label class="form-check-label" for="embed_provider_openai_query">OpenAI</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="embed_provider" id="embed_provider_local_query" value="local" {% if EMBEDDING_PROVIDER == 'local' %}checked{% endif %}>
+                <label class="form-check-label" for="embed_provider_local_query">Local</label>
+              </div>
+              <small class="text-muted">Provider atual: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}</small>
+            </div>
+          </div>
         </div>
-        <div class="small-muted">Submete a consulta usando o contexto recuperado acima.</div>
+        <div class="small-muted">Use “Buscar contexto” para popular o campo abaixo e “Enviar consulta” para gerar a resposta.</div>
       </div>
       <br />
 
@@ -155,10 +200,13 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
 
       
       {# Exibição da resposta da API/fallback somente após submissão de consulta #}
-      {% if ran_query %}
+      {% if ran_query or context_fetched %}
         <div>
           <label class="form-label">Resposta da API</label>
           <div class="answer-box">{{ answer }}</div>
+          {% if context_status %}
+            <div class="small-muted mt-1">{{ context_status }}</div>
+          {% endif %}
           {% if not OPENAI_API_KEY_set %}
             <div class="alert alert-warning mt-2">OPENAI_API_KEY não configurada. Exibindo resposta de fallback baseada no contexto.</div>
           {% endif %}
@@ -241,6 +289,66 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
 
       // Estado inicial: Aba de Consulta ativa
       activate('tab-query');
+    })();
+  </script>
+  
+  <!--
+    Script de UI: atualiza "Coleção efetiva" em tempo real.
+    Explicação detalhada:
+    - O back-end define "CHROMA_COLLECTION_NAME" (nome base da coleção, sem sufixo)
+      e "EMBEDDING_PROVIDER" (local/openai) e tenta preencher
+      "CHROMA_COLLECTION_NAME_EFFECTIVE" (com sufixo) no render.
+    - Contudo, quando o usuário alterna o provider (radios) ou edita o nome
+      base da coleção no cliente, o valor renderizado pode ficar desatualizado
+      até um novo POST. Para evitar confusão, este script recalcula
+      dinamicamente e escreve no <code id="effective-collection">.
+    - A regra é simples: effective = base + "__" + providerSelecionado.
+    - O cálculo é feito ao carregar a página, ao alternar provider
+      e ao editar o campo de nome da coleção.
+  -->
+  <script>
+    (function(){
+      /**
+       * Obtém o provider atual selecionado nas radios name="embed_provider".
+       * Retorna 'openai' ou 'local'; se nada estiver selecionado, retorna string vazia.
+       */
+      function getSelectedProvider() {
+        const r = document.querySelector('input[name="embed_provider"]:checked');
+        return r ? (r.value || '').trim() : '';
+      }
+
+      /**
+       * Recalcula e atualiza o texto do elemento <code id="effective-collection">.
+       * Fórmula: base + "__" + provider.
+       * Inclui títulos (title) com dica para acessibilidade.
+       */
+      function updateEffectiveCollection() {
+        const baseInput = document.getElementById('CHROMA_COLLECTION_NAME');
+        const codeEl = document.getElementById('effective-collection');
+        if (!baseInput || !codeEl) return; // Guarda contra estrutura ausente
+        const base = (baseInput.value || '').trim();
+        const provider = getSelectedProvider();
+        const effective = (base && provider) ? `${base}__${provider}` : '';
+        codeEl.textContent = effective;
+        codeEl.setAttribute('title', effective
+          ? `Coleção efetiva resolvida dinamicamente (provider: ${provider})`
+          : 'Coleção efetiva ainda não definida — informe nome e provider');
+      }
+
+      // Liga eventos nos radios de provider (change/click) e no input do nome da coleção (input)
+      document.querySelectorAll('input[name="embed_provider"]').forEach(r => {
+        r.addEventListener('change', updateEffectiveCollection);
+        r.addEventListener('click', updateEffectiveCollection);
+      });
+      const baseInput = document.getElementById('CHROMA_COLLECTION_NAME');
+      if (baseInput) {
+        baseInput.addEventListener('input', updateEffectiveCollection);
+        baseInput.addEventListener('change', updateEffectiveCollection);
+      }
+
+      // Inicializa no carregamento do DOM e faz uma chamada imediata por segurança
+      document.addEventListener('DOMContentLoaded', updateEffectiveCollection);
+      updateEffectiveCollection();
     })();
   </script>
 </div>

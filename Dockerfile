@@ -60,7 +60,10 @@ RUN pip install --no-cache-dir \
 COPY . /app/
 
 # Create necessary directories
-RUN mkdir -p /app/staticfiles /app/logs /app/media
+# Ensure RAG-related folders exist to avoid runtime errors when saving embeddings/respostas_ia
+RUN mkdir -p /app/staticfiles /app/logs /app/media \
+    && mkdir -p /app/docs/nao_versionados/embeddings \
+    && mkdir -p /app/docs/nao_versionados/respostas_ia
 
 # Collect static files using build settings (optimized for Docker build)
 ENV DJANGO_SETTINGS_MODULE=votebem.settings.build

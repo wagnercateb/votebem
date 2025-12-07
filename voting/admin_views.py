@@ -105,7 +105,8 @@ def rag_tool(request):
     # Valores padrão (hardcoded) extraídos do notebook .ipynb;
     # O .ipynb NÃO é necessário para executar o app após esta cópia.
     HARDCODED_DEFAULTS: Dict[str, Any] = {
-        'DOC_FOLDER': r"C:\\Users\\desig.cateb\\Dados\\R\\testeRAG\\",
+        # Default to project-relative docs\nao_versionados\ where non-versioned inputs may reside
+        'DOC_FOLDER': r"docs\\Noticias\\",
         'CHROMA_COLLECTION_NAME': "rag_docs",
         'HASH_FILE': "file_hashes.npy",
         'query': "Explique o que foi o pl antifaccção votado na câmara",
@@ -220,8 +221,8 @@ def rag_tool(request):
     # Submitted values
     doc_folder = request.POST.get('DOC_FOLDER', initial_doc_folder)
     # Resolve DOC_FOLDER relative to app root (BASE_DIR) when given as relative
-    # This ensures users can set paths like "docs\\Noticias\\" and we will search
-    # under <project_root>/docs/Noticias/ for content files.
+    # This ensures users can set paths like "docs\\nao_versionados\\" and we will search
+    # under <project_root>/docs/nao_versionados/ for content files.
     # Resolve DOC_FOLDER to an absolute path. Many projects set BASE_DIR to the
     # Django package root (e.g., <project>/votebem), while content folders like
     # "docs" live at the project root (parent of BASE_DIR). We try both.
@@ -291,35 +292,198 @@ def rag_tool(request):
     ran_query = False
     error_msg = None
     embed_result = None  # textual summary after embedding
+    # Track whether Chroma was the source for retrieved context (for UI status)
+    chroma_used = False
+    # Flag to indicate a context-only fetch was performed (no API call)
+    context_fetched = False
 
-    # Submissão de consulta: usa os valores preenchidos e tenta gerar resposta
+    # Ação "Buscar contexto": apenas popula o textarea de contexto sem chamar a API
+    if request.method == 'POST' and request.POST.get('fetch_context'):
+        try:
+            # Tenta recuperar via Chroma com o provider selecionado; fallback para leitura de arquivos
+            try:
+                import chromadb
+                from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
+                provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'openai')
+                provider = provider if provider in ('openai', 'local') else 'openai'
+                local_model = getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2')
+                persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
+                effective_collection = f"{chroma_collection}__{provider}"
+
+                # Definir função de embedding conforme provider
+                if provider == 'local':
+                    ef = SentenceTransformerEmbeddingFunction(model_name=local_model)
+                else:
+                    if not api_key:
+                        raise RuntimeError('OPENAI_API_KEY ausente para embeddings OpenAI')
+                    ef = OpenAIEmbeddingFunction(api_key=api_key, model_name=getattr(settings, 'OPENAI_EMBED_MODEL', 'text-embedding-3-small'))
+
+                # Cliente Chroma (persistente se caminho configurado)
+                try:
+                    client = chromadb.PersistentClient(path=persist_path) if persist_path else chromadb.Client()
+                except Exception:
+                    client = chromadb.Client()
+
+                # Obter/criar coleção
+                try:
+                    names = [c.name for c in client.list_collections()]
+                    if effective_collection in names:
+                        coll = client.get_collection(effective_collection, embedding_function=ef)
+                    else:
+                        coll = client.create_collection(name=effective_collection, embedding_function=ef)
+                except Exception:
+                    coll = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
+
+                # Consulta por similaridade
+                qr = coll.query(query_texts=[query_text], n_results=5)
+                docs = (qr.get('documents') or [[]])[0]
+                metas = (qr.get('metadatas') or [[]])[0]
+                if docs:
+                    parts = []
+                    for i, d in enumerate(docs):
+                        src = ''
+                        try:
+                            src = metas[i].get('source') if isinstance(metas[i], dict) else ''
+                        except Exception:
+                            src = ''
+                        header = f"[Fonte: {src}]" if src else "[Fonte: desconhecida]"
+                        parts.append(header)
+                        parts.append(d or '')
+                        parts.append("\n---\n")
+                    context_text = "\n".join(parts)
+                    chroma_used = True
+                    try:
+                        from django.contrib import messages as dj_messages
+                        dj_messages.info(request, f"Contexto recuperado via ChromaDB (top-5). Persistência: {persist_path or 'memória'}")
+                    except Exception:
+                        pass
+                else:
+                    raise RuntimeError('Nenhum resultado na consulta da coleção Chroma.')
+            except Exception:
+                # Fallback: recuperar contexto diretamente dos arquivos locais
+                ctx = _retrieve_context(doc_folder_abs, query_text)
+                context_text = ctx
+                chroma_used = False
+                try:
+                    from django.contrib import messages as dj_messages
+                    dj_messages.warning(request, "ChromaDB indisponível ou vazio; usando contexto por leitura de arquivos.")
+                except Exception:
+                    pass
+            context_fetched = True
+        except Exception as e:
+            error_msg = f'Erro ao buscar contexto: {e}'
+
+    # Submissão de consulta: recupera contexto pelo ChromaDB (embeddings) com fallback para leitura de arquivos
     if request.method == 'POST' and request.POST.get('submit_query'):
         ran_query = True
         try:
-            # Retrieve context using the resolved absolute DOC_FOLDER path, so
-            # relative folders in config/UI work correctly from the project root.
-            ctx = _retrieve_context(doc_folder_abs, query_text)
-            context_text = ctx
-            # Build final prompt by formatting with placeholders if present
+            # 1) Tenta recuperar contexto via ChromaDB (similaridade por embeddings)
+            #    - Usa provider configurado (OpenAI ou local sentence-transformers)
+            #    - Usa persistência se CHROMA_PERSIST_PATH estiver configurado
+            #    - Fallback para leitura direta de arquivos do DOC_FOLDER se Chroma falhar ou não retornar resultados
+            chroma_used = False
             try:
-                if system_prompt and ('{context_text}' in system_prompt or '{query}' in system_prompt):
+                import chromadb
+                from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
+                provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'openai')
+                provider = provider if provider in ('openai', 'local') else 'openai'
+                local_model = getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2')
+                persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
+                effective_collection = f"{chroma_collection}__{provider}"
+
+                # Definir função de embedding conforme provider
+                if provider == 'local':
+                    ef = SentenceTransformerEmbeddingFunction(model_name=local_model)
+                else:
+                    if not api_key:
+                        raise RuntimeError('OPENAI_API_KEY ausente para embeddings OpenAI')
+                    ef = OpenAIEmbeddingFunction(api_key=api_key, model_name=getattr(settings, 'OPENAI_EMBED_MODEL', 'text-embedding-3-small'))
+
+                # Cliente Chroma (persistente se caminho configurado)
+                try:
+                    client = chromadb.PersistentClient(path=persist_path) if persist_path else chromadb.Client()
+                except Exception:
+                    client = chromadb.Client()
+
+                # Obter/criar coleção
+                try:
+                    names = [c.name for c in client.list_collections()]
+                    if effective_collection in names:
+                        coll = client.get_collection(effective_collection, embedding_function=ef)
+                    else:
+                        coll = client.create_collection(name=effective_collection, embedding_function=ef)
+                except Exception:
+                    coll = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
+
+                # Consulta por similaridade
+                qr = coll.query(query_texts=[query_text], n_results=5)
+                docs = (qr.get('documents') or [[]])[0]
+                metas = (qr.get('metadatas') or [[]])[0]
+                if docs:
+                    parts = []
+                    for i, d in enumerate(docs):
+                        src = ''
+                        try:
+                            src = metas[i].get('source') if isinstance(metas[i], dict) else ''
+                        except Exception:
+                            src = ''
+                        header = f"[Fonte: {src}]" if src else "[Fonte: desconhecida]"
+                        parts.append(header)
+                        parts.append(d or '')
+                        parts.append("\n---\n")
+                    context_text = "\n".join(parts)
+                    chroma_used = True
+                    try:
+                        from django.contrib import messages as dj_messages
+                        dj_messages.info(request, f"Contexto recuperado via ChromaDB (top-5). Persistência: {persist_path or 'memória'}")
+                    except Exception:
+                        pass
+                else:
+                    raise RuntimeError('Nenhum resultado na consulta da coleção Chroma.')
+            except Exception:
+                # 2) Fallback: recuperar contexto diretamente dos arquivos locais
+                ctx = _retrieve_context(doc_folder_abs, query_text)
+                context_text = ctx
+                chroma_used = False
+                try:
+                    from django.contrib import messages as dj_messages
+                    dj_messages.warning(request, "ChromaDB indisponível ou vazio; usando contexto por leitura de arquivos.")
+                except Exception:
+                    pass
+            # Build final prompt and ensure context is injected even when placeholders are absent
+            try:
+                has_placeholders = bool(system_prompt and ('{context_text}' in system_prompt or '{query}' in system_prompt))
+                if has_placeholders:
                     final_prompt = system_prompt.format(context_text=context_text, query=query_text)
                 else:
                     final_prompt = system_prompt
             except Exception:
                 final_prompt = system_prompt
 
-            # Try OpenAI call if available
+            # 3) Geração de resposta (se OPENAI_API_KEY disponível)
             try:
                 if api_key:
                     from openai import OpenAI
                     client = OpenAI(api_key=api_key)
                     # Use a small, cost-effective model if unspecified; model name omitted in UI
                     # Enforce OpenAI LLM model from settings (fixed to gpt-4o-mini)
+                    # Guarantee context inclusion when system_prompt lacks placeholders by appending it.
+                    system_content = (final_prompt or '')
+                    try:
+                        if not has_placeholders and (context_text or '').strip():
+                            # Append contextual passage to the system content so the model has grounding.
+                            # Keep size reasonable to avoid excessive token usage.
+                            ctx = (context_text or '').strip()
+                            # Soft cap context to ~4000 characters for chat safety
+                            if len(ctx) > 4000:
+                                ctx = ctx[:4000]
+                            system_content = f"{system_content}\n\nContexto:\n{ctx}"
+                    except Exception:
+                        pass
                     resp = client.chat.completions.create(
                         model=getattr(settings, 'OPENAI_LLM_MODEL', 'gpt-4o-mini'),
                         messages=[
-                            {"role": "system", "content": final_prompt or ""},
+                            {"role": "system", "content": system_content},
                             {"role": "user", "content": query_text or ""},
                         ],
                         temperature=0.2,
@@ -346,7 +510,9 @@ def rag_tool(request):
             # o usuário pode definir DEBUG=False para testar comportamentos.
             # Em vez disso, usamos o módulo de settings ativo para decidir.
             prod_dir = '/dados/votebem/docs/respostas_ia'
-            local_dir = os.path.join(os.path.dirname(settings.BASE_DIR), 'docs', 'respostas_ia')
+            # Em desenvolvimento, salvar em <project_root>/docs/nao_versionados/respostas_ia/
+            # BASE_DIR aponta para '<project_root>/votebem', então subimos um nível para o root do projeto.
+            local_dir = os.path.join(os.path.dirname(settings.BASE_DIR), 'docs', 'nao_versionados', 'respostas_ia')
 
             # Detecta o módulo de settings ativo (ex.: 'votebem.settings.development')
             env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
@@ -381,14 +547,15 @@ def rag_tool(request):
             fname = f"{now_date}_{safe_q}.txt"
             fpath = os.path.join(save_dir, fname)
 
+            sep = ["", "-" * 80, ""]
             content_lines = [
-                "query:", q,
-                "",
-                "system_prompt:", system_prompt or '',
-                "",
-                "context_text:", context_text or '',
-                "",
-                "answer:", answer or '',
+                (q or ''),
+                *sep,
+                (answer or ''),
+                *sep,
+                (context_text or ''),
+                *sep,
+                (system_prompt or ''),
             ]
             with open(fpath, 'w', encoding='utf-8') as f:
                 f.write("\n".join(content_lines))
@@ -446,18 +613,24 @@ def rag_tool(request):
                 except Exception:
                     return ''
 
-            # Listar candidatos em DOC_FOLDER (md/pdf/txt)
+            # Listar candidatos em DOC_FOLDER (md/pdf/txt), agora recursivo em subpastas
+            # Observações:
+            # - Muitos cenários colocam arquivos em subdiretórios de 'Noticias'; com busca recursiva evitamos perder candidatos.
+            # - Mantemos tipos simples (.md, .pdf, .txt) para evitar ruído.
             try:
-                files = (
-                    glob.glob(os.path.join(doc_folder_abs, '*.md')) +
-                    glob.glob(os.path.join(doc_folder_abs, '*.pdf')) +
-                    glob.glob(os.path.join(doc_folder_abs, '*.txt'))
-                )
+                files = []
+                for pat in ('**/*.md', '**/*.pdf', '**/*.txt'):
+                    files.extend(glob.glob(os.path.join(doc_folder_abs, pat), recursive=True))
             except Exception:
                 files = []
 
             embed_log_items: List[Dict[str, Any]] = []
             new_or_updated = []  # (path, hash)
+            force_flag = bool(request.POST.get('force_reembed'))
+            # Definir provider e coleção efetiva antes de comparar hashes, para prefixar corretamente
+            provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'openai')
+            provider = provider if provider in ('openai', 'local') else 'openai'
+            effective_collection = f"{chroma_collection}__{provider}"
             for fp in files:
                 h = compute_hash(fp)
                 if not h:
@@ -470,8 +643,10 @@ def rag_tool(request):
                     })
                     continue
                 prev = existing_hashes.get(fp)
-                if prev != h:
-                    new_or_updated.append((fp, h))
+                # Prefixar o hash com o provider atual para distinguir embeddings por engine
+                prefixed_hash = f"{provider}:{h}"
+                if force_flag or prev != prefixed_hash:
+                    new_or_updated.append((fp, prefixed_hash))
                 else:
                     embed_log_items.append({
                         'file': fp,
@@ -493,6 +668,7 @@ def rag_tool(request):
             provider = provider if provider in ('openai', 'local') else 'openai'
             persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
             local_model = getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2')
+            effective_collection = f"{chroma_collection}__{provider}"
 
             if provider == 'local':
                 # Embeddings locais via sentence-transformers (CPU ou GPU)
@@ -515,14 +691,14 @@ def rag_tool(request):
             # Obter ou criar coleção
             try:
                 names = [c.name for c in client.list_collections()]
-                if chroma_collection in names:
-                    collection = client.get_collection(chroma_collection, embedding_function=ef)
+                if effective_collection in names:
+                    collection = client.get_collection(effective_collection, embedding_function=ef)
                 else:
-                    collection = client.create_collection(name=chroma_collection, embedding_function=ef)
+                    collection = client.create_collection(name=effective_collection, embedding_function=ef)
             except Exception:
                 # fallback get_or_create
                 try:
-                    collection = client.get_or_create_collection(name=chroma_collection, embedding_function=ef)
+                    collection = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
                 except Exception as e:
                     raise RuntimeError(f"Falha ao inicializar coleção Chroma: {e}")
 
@@ -568,17 +744,44 @@ def rag_tool(request):
                         'chunks': 0,
                     })
                     continue
-                ids = [f"{os.path.basename(fpath)}_chunk_{i}" for i in range(len(chunks))]
-                metadatas = [{"source": os.path.basename(fpath), "chunk": i} for i in range(len(chunks))]
+                basename = os.path.basename(fpath)
+                ids = [f"{basename}_chunk_{i}" for i in range(len(chunks))]
+                metadatas = [{"source": basename, "chunk": i} for i in range(len(chunks))]
                 try:
+                    # Se forçar re-embed, remover itens existentes dessa fonte para evitar ids duplicados
+                    if force_flag:
+                        try:
+                            collection.delete(where={"source": basename})
+                        except Exception:
+                            pass
                     collection.add(documents=chunks, metadatas=metadatas, ids=ids)
                     existing_hashes[fpath] = file_hash
                     total_chunks += len(chunks)
                     processed_files += 1
+                    # Após embutir com sucesso, mover arquivo processado para a pasta 'noticias_ja_embedded'
+                    # Ambiente: desenvolvimento -> <project_root>/docs/nao_versionados/embeddings/noticias_ja_embedded/
+                    #            produção      -> /dados/embeddings/votebem/noticias_ja_embedded/
+                    try:
+                        import shutil
+                        # Calcular o root do projeto de forma robusta
+                        project_root = os.path.dirname(settings.BASE_DIR)
+                        # Detectar ambiente atual de forma independente deste bloco
+                        env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
+                        is_dev = env_mod.endswith('.development')
+                        is_prodlike = env_mod.endswith('.production') or env_mod.endswith('.build')
+                        dev_embedded_dir = os.path.join(project_root, 'docs', 'nao_versionados', 'embeddings', 'noticias_ja_embedded')
+                        prod_embedded_dir = '/dados/embeddings/votebem/noticias_ja_embedded'
+                        archive_dir = dev_embedded_dir if is_dev else (prod_embedded_dir if is_prodlike else dev_embedded_dir)
+                        os.makedirs(archive_dir, exist_ok=True)
+                        dest_path = os.path.join(archive_dir, os.path.basename(fpath))
+                        shutil.move(fpath, dest_path)
+                        move_detail = f"Arquivo movido para: {dest_path}"
+                    except Exception as e:
+                        move_detail = f"Falha ao mover arquivo para pasta de embutidos: {e}"
                     embed_log_items.append({
                         'file': fpath,
                         'status': 'embutido',
-                        'detail': 'Embeddings adicionados/atualizados',
+                        'detail': 'Embeddings adicionados/atualizados. ' + move_detail,
                         'chars': len(text or ''),
                         'chunks': len(chunks),
                     })
@@ -612,7 +815,7 @@ def rag_tool(request):
             except Exception:
                 pass
 
-            embed_result = f"Embedded {total_chunks} chunks from {processed_files} new/updated files."
+            embed_result = f"Embedded {total_chunks} chunks from {processed_files} {'forced ' if force_flag else ''}new/updated files."
             embed_summary = {
                 'candidatos': len(files),
                 'novos_ou_atualizados': len(new_or_updated),
@@ -629,6 +832,84 @@ def rag_tool(request):
             embed_log_items = []
             embed_summary = None
 
+    # Botão "Estatísticas" da coleção Chroma: mostra contagem e persistência
+    if request.method == 'POST' and request.POST.get('chroma_stats'):
+        try:
+            import chromadb
+            persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
+            try:
+                client = chromadb.PersistentClient(path=persist_path) if persist_path else chromadb.Client()
+            except Exception:
+                client = chromadb.Client()
+
+            try:
+                # Sufixo por provider para evitar conflito de embedding_function
+                provider_sel = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'openai')
+                provider_sel = provider_sel if provider_sel in ('openai', 'local') else 'openai'
+                effective_collection = f"{chroma_collection}__{provider_sel}"
+                coll = client.get_or_create_collection(name=effective_collection)
+            except Exception:
+                coll = None
+
+            total_items = 0
+            if coll:
+                try:
+                    total_items = coll.count()
+                except Exception:
+                    total_items = 0
+
+            if persist_path:
+                chroma_stats = f"Coleção '{effective_collection}' possui {total_items} itens. Persistência em: {persist_path}"
+            else:
+                chroma_stats = f"Coleção '{effective_collection}' possui {total_items} itens. Persistência: memória (não persiste em disco)"
+            try:
+                from django.contrib import messages as dj_messages
+                dj_messages.info(request, chroma_stats)
+            except Exception:
+                pass
+
+            # Detalhar fontes dos itens embutidos a partir das metadatas (amostra)
+            try:
+                if coll and total_items:
+                    sample_limit = min(total_items, 2000)
+                    batch = coll.get(include=["metadatas"], limit=sample_limit)
+                    metas = batch.get("metadatas") or []
+                    from collections import Counter
+                    c = Counter()
+                    for m in metas:
+                        # Cada m deve ser um dict por item
+                        if isinstance(m, dict):
+                            src = m.get("source") or "(desconhecida)"
+                            c[src] += 1
+                        # Algumas versões retornam lista de metadatas por item; tratar genericamente
+                        elif isinstance(m, list):
+                            for mm in m:
+                                if isinstance(mm, dict):
+                                    src = mm.get("source") or "(desconhecida)"
+                                    c[src] += 1
+                    if c:
+                        # Construir HTML com lista não ordenada (<ul><li>) de todas as fontes encontradas
+                        ordered = sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))
+                        items = "".join([f"<li>{name} ({count})</li>" for name, count in ordered])
+                        chroma_sources_html = f"<div><strong>Fontes encontradas (amostra de {sample_limit}):</strong><ul>{items}</ul></div>"
+                        # Também enviar como mensagem texto simples para ambientes que não renderizam HTML
+                        try:
+                            from django.contrib import messages as dj_messages
+                            dj_messages.info(request, f"Fontes encontradas (amostra de {sample_limit}): " + ", ".join([f"{name} ({count})" for name, count in ordered]))
+                        except Exception:
+                            pass
+                    else:
+                        try:
+                            from django.contrib import messages as dj_messages
+                            dj_messages.info(request, "Nenhuma fonte encontrada nas metadatas da coleção.")
+                        except Exception:
+                            pass
+            except Exception:
+                # Não bloquear estatísticas se detalhamento de fontes falhar
+                pass
+        except Exception as e:
+            chroma_stats = f"Falha ao obter estatísticas da coleção: {e}"
+
     # Atualização de variáveis sem consultar: persistir no arquivo JSON
     if request.method == 'POST' and not request.POST.get('submit_query'):
         to_save = {
@@ -644,6 +925,14 @@ def rag_tool(request):
         else:
             messages.error(request, 'Falha ao salvar configuração do RAG.')
 
+    # Build a concise status string about included context for the UI
+    try:
+        _ctx_len = len((context_text or '').strip())
+    except Exception:
+        _ctx_len = 0
+    _ctx_source = 'ChromaDB' if (ran_query and chroma_used) else ('Arquivos' if ran_query else '')
+    context_status = f"Contexto incluído: {_ctx_len} caracteres ({_ctx_source})" if (ran_query or context_fetched) else ''
+
     context = {
         'DOC_FOLDER': doc_folder,  # original value as shown in UI (can be relative)
         # Provide the resolved absolute folder for debugging purposes (not required in UI)
@@ -654,6 +943,8 @@ def rag_tool(request):
         'query': query_text,
         'context_text': context_text,
         'answer': answer,
+        'context_status': context_status,
+        'context_fetched': context_fetched,
         'embed_result': embed_result,
         'embed_log_items': locals().get('embed_log_items', []),
         'embed_summary': locals().get('embed_summary', None),
@@ -664,9 +955,12 @@ def rag_tool(request):
         # Masked preview of the key to confirm it reached the template without exposing secrets
         'OPENAI_API_KEY': (f"{api_key[:8]}…" if api_key else ''),
         # Informações de provider e persistência do Chroma
-        'EMBEDDING_PROVIDER': getattr(settings, 'EMBEDDING_PROVIDER', 'openai'),
+        'EMBEDDING_PROVIDER': (request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'openai')),
         'LOCAL_EMBED_MODEL': getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2'),
         'CHROMA_PERSIST_PATH_EFFECTIVE': getattr(settings, 'CHROMA_PERSIST_PATH', ''),
+        'CHROMA_COLLECTION_NAME_EFFECTIVE': f"{chroma_collection}__" + (request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'openai')),
+        'chroma_stats': locals().get('chroma_stats'),
+        'chroma_sources_html': locals().get('chroma_sources_html'),
     }
     return render(request, 'admin/voting/rag_tool.html', context)
 
