@@ -225,38 +225,26 @@
     {% block extrahead %}{% endblock %}
 </head>
 <body>
-    <!-- Header -->
-    <div class="admin-header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <h1>🗳️ VoteBem - Painel Administrativo</h1>
-                </div>
-                <div class="col-md-6 text-end">
-                    <a href="/admin/" class="btn btn-outline-light btn-sm">Django Admin</a>
-                    <a href="/home/" class="btn btn-outline-light btn-sm">Site Principal</a>
-                </div>
-            </div>
-        </div>
-    </div>
     
-    <!-- Navigation -->
-    <div class="admin-nav">
-        <div class="container">
-            <nav class="nav">
-                <a class="nav-link" href="/gerencial/dashboard/">🏠 Dashboard</a>
-                {# Removido conforme solicitação: link de navegação para Estatísticas de Proposições #}
-                {# <a class="nav-link" href="/gerencial/proposicoes/statistics/">📊 Proposições</a> #}
-                <a class="nav-link" href="/gerencial/votacoes/management/">🗳️ Votações Votebem</a>
-                <!-- Link removido conforme solicitação: Câmara Admin -->
-                <a class="nav-link" href="/gerencial/users/management/">👥 Usuários</a>
-                <a class="nav-link" href="/gerencial/data/import-export/">💾 Dados</a>
-            </nav>
-        </div>
-    </div>
     
     <!-- Content -->
     <div class="admin-content">
+        {% block minimal_header %}
+        <div class="admin-header">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h1>🗳️ VoteBem - Painel Administrativo</h1>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <a href="/gerencial/dashboard/" class="btn btn-outline-light btn-sm">Dashboard</a>
+                        <a href="/admin/" class="btn btn-outline-light btn-sm">Django Admin</a>
+                        <a href="/home/" class="btn btn-outline-light btn-sm" target="_principal">Site Principal</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock %}
         {% block breadcrumbs %}
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
@@ -266,6 +254,7 @@
         </nav>
         {% endblock %}
         
+        {% block messages %}
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -274,6 +263,7 @@
                 </div>
             {% endfor %}
         {% endif %}
+        {% endblock %}
         
         {% block content %}{% endblock %}
     </div>

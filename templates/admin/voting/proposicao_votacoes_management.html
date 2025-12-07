@@ -1,0 +1,66 @@
+{% extends "admin/voting/base_administrativo.html" %}
+
+{% block title %}Gerenciamento de Votações de Proposição - VoteBem{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">Gerenciamento de Votações de Proposição</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .management-container { display: grid; grid-template-columns: 1fr; gap: 12px; margin: 10px 0; }
+  .pv-list { background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 12px; }
+  .pv-item { padding: 10px; border-bottom: 1px solid #f8f9fa; display: flex; justify-content: space-between; align-items: center; }
+  .pv-item:last-child { border-bottom: none; }
+  .pv-info h4 { margin: 0 0 3px 0; color: #495057; font-size: 1em; }
+  .pv-info small { color: #6c757d; font-size: 0.85em; }
+  .pv-actions { display: flex; gap: 6px; align-items: center; }
+  .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600; }
+  .badge-info { background: #e9ecef; color: #495057; }
+  .btn { padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-size: 0.8em; display: inline-block; }
+  .btn-primary { background: #007bff; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'gerencial:votacoes_management' %}" class="btn btn-primary">Gerenciar Votações Votebem</a>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}" style="padding: 10px; margin: 10px 0; border-radius: 4px;
+         {% if message.tags == 'success' %}background: #d4edda; color: #155724; border: 1px solid #c3e6cb;{% endif %}
+         {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;{% endif %}">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="management-container">
+  <div class="pv-list">
+    <h3>Votações Oficiais por Proposição</h3>
+    {% for pv in proposicao_votacoes %}
+      <div class="pv-item">
+        <div class="pv-info">
+          <h4>
+            <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ pv.proposicao.id_proposicao }}" target="_proposicao">{{ pv.proposicao.id_proposicao }}</a>
+            - {{ pv.proposicao.tipo }} {{ pv.proposicao.numero }}/{{ pv.proposicao.ano }}
+            - Votação {{ pv.votacao_sufixo }}
+          </h4>
+          <small>Descrição: {{ pv.descricao|default:"(sem descrição)" }}</small><br>
+          <small>Prioridade: {{ pv.prioridade|default:"(não definida)" }}</small><br>
+          <small>Oficiais SIM: {{ pv.sim_oficial|default:0 }} • NÃO: {{ pv.nao_oficial|default:0 }}</small><br>
+          <small>Registros: Referências {{ pv.total_referencias|default:0 }} • Votos individuais {{ pv.total_votos_individuais|default:0 }}</small>
+        </div>
+        <div class="pv-actions">
+          <a href="/gerencial/?proposicao_id={{ pv.proposicao.id_proposicao }}" class="btn btn-primary" title="Abrir página da Proposição">Proposicao</a>
+        </div>
+      </div>
+    {% empty %}
+      <p>Nenhuma votação oficial cadastrada para proposições.</p>
+    {% endfor %}
+  </div>
+</div>
+
+ 
+
+{% endblock %}

@@ -110,7 +110,12 @@
     if (dbCacheByPropId[propId]) return dbCacheByPropId[propId];
     const url = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(propId)}&db_only=1`;
     try {
-      const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const r = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+      const ct = (r.headers && r.headers.get && r.headers.get('Content-Type')) ? r.headers.get('Content-Type') : '';
+      if (!ct || ct.indexOf('application/json') === -1) {
+        dbCacheByPropId[propId] = {};
+        return dbCacheByPropId[propId];
+      }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
       // Mapa sufixo -> info { pvId, votesCount }
@@ -161,7 +166,12 @@
     if (!propId) return;
     const url = `${window.location.origin}/gerencial/ajax/proposicao-votacoes/?proposicao_id=${encodeURIComponent(propId)}`;
     try {
-      const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const r = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+      const ct = (r.headers && r.headers.get && r.headers.get('Content-Type')) ? r.headers.get('Content-Type') : '';
+      if (!ct || ct.indexOf('application/json') === -1) {
+        log(`Proposição ${propId}: acesso negado ou sessão expirada. Faça login no admin.`);
+        return;
+      }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
       const qtd = Array.isArray(j?.dados) ? j.dados.length : 0;
@@ -212,7 +222,12 @@
     }
     const url = `${window.location.origin}/gerencial/ajax/import-congress-votes/?proposicao_id=${encodeURIComponent(propId)}&votacao_id=${encodeURIComponent(fullId || '')}&consulta_id=${encodeURIComponent(sufixo || '')}`;
     try {
-      const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const r = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+      const ct = (r.headers && r.headers.get && r.headers.get('Content-Type')) ? r.headers.get('Content-Type') : '';
+      if (!ct || ct.indexOf('application/json') === -1) {
+        log(`Falha ao importar ${fullId}: acesso negado ou sessão expirada. Faça login no admin.`);
+        return;
+      }
       const j = await r.json();
       if (!r.ok || !j.ok) {
         log(`Falha ao importar ${fullId}: ${j.error || 'erro'}${j.api_url ? ` (API: ${j.api_url})` : ''}`);
@@ -238,14 +253,21 @@
     const apiUrl = `https://dadosabertos.camara.leg.br/api/v2/votacoes?idOrgao=180&dataInicio=${encodeURIComponent(di)}&dataFim=${encodeURIComponent(df)}`;
     try {
       const resp = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      const json = await resp.json();
+      let json;
+      try { json = await resp.json(); } catch (_) { json = null; }
+      if (!resp.ok) {
+        const detail = (json && (json.detail || json.title || json.message)) || '';
+        const msg = detail ? `Erro: ${detail}` : `Erro ao consultar a API da Câmara: HTTP ${resp.status}. URL: ${apiUrl}`;
+        status.textContent = msg;
+        resultados.style.display = 'none';
+        if (finalMsg && detail) { finalMsg.textContent = detail; finalMsg.style.display = ''; }
+        return;
+      }
       const dados = Array.isArray(json?.dados) ? json.dados : [];
       const filtrados = dados.filter(it => shouldImportByDescricao(it.descricao || it.descrição));
       status.textContent = `Foram encontradas ${dados.length} votações; ${filtrados.length} correspondem aos critérios.`;
       resultados.style.display = 'block';
       tbody.innerHTML = '';
-      // Guarda conjunto para importação via botão e habilita se houver itens
       lastFiltrados = filtrados;
       if (btnImportarTodas) {
         btnImportarTodas.disabled = (lastFiltrados.length === 0);
@@ -298,7 +320,6 @@
       // Removido: fluxo automático. Agora importação é sob demanda.
       status.textContent = 'Consulta concluída. Use o botão "Importar" para processar as votações filtradas.';
     } catch (e) {
-      // Mensagem de erro com detalhes técnicos: tipo e mensagem do erro + URL da API
       const errName = e && e.name ? e.name : 'Erro';
       const errMsg = e && e.message ? e.message : String(e);
       status.textContent = `Erro ao consultar a API da Câmara: ${errName} - ${errMsg}. URL: ${apiUrl}`;

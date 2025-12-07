@@ -24,20 +24,39 @@
   textarea { min-height: 140px; }
   .answer-box { white-space: pre-wrap; background: #f8f9fa; border-radius: 6px; padding: 12px; border: 1px solid #e1e3e6; }
   .small-muted { font-size: 0.9em; color: #6c757d; }
+  .fs-active { position: fixed; inset: 0; z-index: 1060; background: #fff; padding: 12px; display: flex; flex-direction: column; }
+  .fs-active textarea { flex: 1; height: auto !important; min-height: 0 !important; }
+  .tab-nav { border-bottom: 1px solid #dee2e6; gap: 0; }
+  .tab-btn { background: transparent; border: 1px solid transparent; border-bottom: none; padding: 8px 16px; margin-bottom: -1px; border-radius: 6px 6px 0 0; color: #6c757d; cursor: pointer; }
+  .tab-btn:hover { color: #343a40; }
+  .tab-btn.active { color: #212529; background: #fff; border-color: #dee2e6 #dee2e6 #fff; }
 </style>
 {% endblock %}
 
 {# Conteúdo principal da página: formulário com variáveis e áreas de texto #}
+{% block messages %}{% endblock %}
 {% block content %}
+<div style="background:#fff; border:1px solid #e1e3e6; border-radius:8px; padding:10px; margin-bottom:12px;">
+  <p class="small-muted" style="margin:0;">Arquivo de configuração: {{ config_path }}</p>
+  <p class="small-muted" style="margin:0;">Arquivos candidatos em DOC_FOLDER: <strong>{{ doc_files_count }}</strong></p>
+</div>
+
+
+
 <div class="rag-card">
+  <div class="tab-nav d-flex" role="tablist" aria-label="RAG tabs">
+    <button type="button" class="tab-btn" data-tab="tab-embed" title="Gerencia embeddings e armazenamento no ChromaDB; persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}">Embeddings & Chroma</button>
+    <button type="button" class="tab-btn active" data-tab="tab-query">Consulta com OpenAI</button>
+  </div>
+  <br />
+
   <h2>RAG sem LangChain – Embeddings e Consulta</h2>
-  <p class="small-muted">Arquivo de configuração: {{ config_path }}</p>
 
   {% if error_msg %}
     <div class="alert alert-danger">{{ error_msg }}</div>
   {% endif %}
 
-{% comment %} 
+  {% comment %} 
     Estrutura em abas (tabs) para separar tarefas:
     - Aba 1: Embeddings e persistência no ChromaDB
     - Aba 2: Consulta usando embeddings e OpenAI API
@@ -45,13 +64,7 @@
     Os botões definem ações diferentes via name/value:
       * embed_docs=1 para varrer e embutir documentos
       * submit_query=1 para submeter a consulta 
-{% endcomment %}
-
-  <div class="tab-nav d-flex gap-2" role="tablist" aria-label="RAG tabs">
-    <button type="button" class="btn btn-outline-secondary tab-btn" data-tab="tab-embed" title="Gerencia embeddings e armazenamento no ChromaDB; persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}">Embeddings & Chroma</button>
-    <button type="button" class="btn btn-outline-secondary tab-btn active" data-tab="tab-query">Consulta com OpenAI</button>
-  </div>
-  <br />
+  {% endcomment %}
 
   {# Formulário único, contendo ambos painéis (embed e query) #}
   <form method="post" action="" class="rag-grid" id="rag-form">
@@ -72,11 +85,12 @@
       </div>
       <br />
 
-      {# Layout: tornamos os campos e informações associados de largura total.
-         Removemos a grade de 2 colunas (row/col-md-6) para evitar que
-         conteúdos ricos (estatísticas/avisos) fiquem espremidos.
-         Seções abaixo são blocos independentes ocupando 100%.
-      #}
+      {% comment %} 
+      Layout: tornamos os campos e informações associados de largura total.
+      Removemos a grade de 2 colunas (row/col-md-6) para evitar que
+      conteúdos ricos (estatísticas/avisos) fiquem espremidos.
+      Seções abaixo são blocos independentes ocupando 100%. 
+      {% endcomment %}
 
       {# Bloco: campo CHROMA_COLLECTION_NAME (largura total) + botão Estatísticas #}
       <div>
@@ -94,22 +108,21 @@
         <div class="small-muted">Persistência do ChromaDB: <code>{% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}</code></div>
         <div class="small-muted">Provider de embeddings: <code>{{ EMBEDDING_PROVIDER }}</code>{% if EMBEDDING_PROVIDER == 'local' %} — modelo: <code>{{ LOCAL_EMBED_MODEL }}</code>{% endif %}</div>
         <div class="small-muted">Coleção efetiva: <code id="effective-collection">{{ CHROMA_COLLECTION_NAME_EFFECTIVE }}</code></div>
-        {% if chroma_stats %}
-          <div class="alert alert-info mt-2" role="alert" style="padding:6px 10px; font-size:0.95em;">
-            {{ chroma_stats }}
-          </div>
-        {% endif %}
+
         {% if chroma_sources_html %}
           <div class="alert alert-info mt-2" role="alert" style="padding:6px 10px; font-size:0.95em;">
             {{ chroma_sources_html|safe }}
           </div>
         {% endif %}
       </div>
+      <br />
 
       {# Bloco: campo HASH_FILE (largura total) #}
       <div>
-        <label for="HASH_FILE" class="form-label">HASH_FILE</label>
-        {# Title explains dedup mechanism via SHA256 hashes #}
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <label for="HASH_FILE" class="form-label" style="margin:0;">HASH_FILE</label>
+          <code class="small-muted">{{ HASH_FILE_ABS }}</code>
+        </div>
         <input type="text" id="HASH_FILE" name="HASH_FILE" value="{{ HASH_FILE }}" class="form-control" 
                title="JSON file tracking SHA256 hashes to skip unchanged files during embedding." />
       </div>
@@ -133,7 +146,7 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
   </div>
   <small class="text-muted">Provider atual: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}</small>
   <div class="form-check" title="Ignora hashes e re-embute todos os candidatos; remove itens existentes dessa fonte na coleção para evitar ids duplicados.">
-    <input class="form-check-input" type="checkbox" id="force_reembed" name="force_reembed" value="1">
+    <input class="form-check-input" type="checkbox" id="force_reembed" name="force_reembed" value="1" >
     <label class="form-check-label" for="force_reembed">Forçar re-embed</label>
   </div>
   <button type="submit" name="embed_docs" value="1" class="btn btn-warning" title="Cria/atualiza embeddings e salva na coleção Chroma. Persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste){% endif %}. Provider: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}.">Varrer e embutir novos documentos no Chroma</button>
@@ -181,8 +194,14 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
       <br />
 
       {# Texto de contexto: pode ser carregado dos arquivos ou editado manualmente #}
-      <div>
-        <label for="context_text" class="form-label">context_text</label>
+      <div id="block-context_text">
+        <div class="d-flex align-items-center justify-content-between">
+          <label for="context_text" class="form-label">context_text</label>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsEnter('block-context_text')">Tela cheia</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsExit('block-context_text')">Voltar</button>
+          </div>
+        </div>
         {# Title clarifies source and that it is editable #}
         <textarea id="context_text" name="context_text" class="form-control" 
                   title="Aggregated context from documents in DOC_FOLDER; editable before submitting queries.">{{ context_text }}</textarea>
@@ -190,8 +209,14 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
       </div>
 
       {# Prompt de sistema: aceita placeholders {context_text} e {query} #}
-      <div>
-        <label for="system_prompt" class="form-label">system_prompt</label>
+      <div id="block-system_prompt">
+        <div class="d-flex align-items-center justify-content-between">
+          <label for="system_prompt" class="form-label">system_prompt</label>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsEnter('block-system_prompt')">Tela cheia</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsExit('block-system_prompt')">Voltar</button>
+          </div>
+        </div>
         {# Title describes placeholders and purpose in answer generation #}
         <textarea id="system_prompt" name="system_prompt" class="form-control" 
                   title="System prompt template for answer generation; supports {context_text} and {query} placeholders.">{{ system_prompt }}</textarea>
@@ -287,8 +312,28 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
         b.addEventListener('click', () => activate(b.getAttribute('data-tab')));
       });
 
-      // Estado inicial: Aba de Consulta ativa
-      activate('tab-query');
+      const initialTab = "{{ active_tab|default:'tab-query' }}";
+      activate(initialTab);
+    })();
+  </script>
+  <script>
+    (function(){
+      function fsEnter(blockId){
+        var el = document.getElementById(blockId);
+        if(!el) return;
+        el.classList.add('fs-active');
+        document.body.style.overflow = 'hidden';
+      }
+      function fsExit(blockId){
+        var el = document.getElementById(blockId);
+        if(!el) return;
+        el.classList.remove('fs-active');
+        if(document.querySelectorAll('.fs-active').length === 0){
+          document.body.style.overflow = '';
+        }
+      }
+      window.fsEnter = fsEnter;
+      window.fsExit = fsExit;
     })();
   </script>
   

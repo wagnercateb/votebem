@@ -176,11 +176,8 @@
 {% endblock %}
 
 {% block content %}
-<div style="margin-bottom: 10px;">
-    {# Add 'Votebem' after occurrences of 'Votações'/'Votação' on this screen #}
-    <h1 style="margin-bottom: 3px; font-size: 1.8em;">Gerenciar Votações Votebem</h1>
-    <p style="margin-bottom: 0; color: #6c757d; font-size: 0.9em;">Controle as votações Votebem ativas e crie novas votações Votebem para proposições.</p>
-</div>
+<a href="{% url 'gerencial:dashboard' %}" class="btn btn-secondary">Dashboard</a>
+<a href="{% url 'gerencial:votacao_create' %}" class="btn btn-primary">Criar Votação Votebem</a>
 
 {# Component bar: actions for proposição/votações (obter votações, votos oficiais, editar) #}
 {% proposicao_action_bar %}
@@ -232,17 +229,7 @@
         {% endfor %}
     </div>
 
-    <div class="create-votacao">
-        <div>
-            {# Append 'Votebem' after 'Votação' and 'votações' #}
-            <h3>Criar Nova Votação Votebem</h3>
-            <p style="margin:0; color:#6c757d;">Use a página dedicada para criar novas votações Votebem.</p>
-        </div>
-        <div>
-            {# Append 'Votebem' after 'Votação' in button label #}
-            <a href="{% url 'gerencial:votacao_create' %}" class="btn btn-primary">Ir para Criar Votação Votebem</a>
-        </div>
-    </div>
+    
 </div>
 
 <div class="proposicoes-sem-votacao">
@@ -259,9 +246,7 @@
     {% endfor %}
 </div>
 
-<div style="margin: 30px 0; text-align: center;">
-    <a href="/gerencial/dashboard/" class="btn btn-primary">Voltar ao Painel Principal</a>
-</div>
+ 
 
 <script>
 // No inline creation form here; redirect to dedicated page

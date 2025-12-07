@@ -24,6 +24,7 @@ urlpatterns = [
     # Votações
     path('votacoes/management/', admin_views.votacoes_management, name='votacoes_management'),
     path('votacoes/list/', admin_views.votacoes_management, name='votacoes_list'),  # Placeholder
+    path('proposicao-votacoes/management/', admin_views.proposicao_votacoes_management, name='proposicao_votacoes_management'),
     # Lista votações oficiais armazenadas (ProposicaoVotacao) com contagem de votos individuais
     path('votacoes/oficiais/', admin_views.votacoes_oficiais_list, name='votacoes_oficiais_list'),
     path('votacao/create/', admin_views.votacao_create, name='votacao_create'),
