@@ -75,14 +75,15 @@ class VotacaoDetailView(DetailView):
         context['user_vote'] = user_vote
         context['can_vote'] = votacao.is_active() and user_vote is None
         
-        # Get voting statistics
-        context['total_votos'] = votacao.get_total_votos_populares()
-        context['votos_sim'] = votacao.get_votos_sim_populares()
-        context['votos_nao'] = votacao.get_votos_nao_populares()
-        try:
-            context['votos_abstencao'] = votacao.get_votos_abstencao_populares()
-        except Exception:
-            context['votos_abstencao'] = 0
+        # contagem de votos Votebem, comentei porque decidi não mostrar mais na página de votação Votebem
+        # # Get voting statistics
+        # context['total_votos'] = votacao.get_total_votos_populares()
+        # context['votos_sim'] = votacao.get_votos_sim_populares()
+        # context['votos_nao'] = votacao.get_votos_nao_populares()
+        # try:
+        #     context['votos_abstencao'] = votacao.get_votos_abstencao_populares()
+        # except Exception:
+        #     context['votos_abstencao'] = 0
 
         # Related votações from the same proposição (via proposicao_votacao -> proposicao)
         try:
