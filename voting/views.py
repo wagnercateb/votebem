@@ -73,7 +73,9 @@ class VotacaoDetailView(DetailView):
                 pass
         
         context['user_vote'] = user_vote
-        context['can_vote'] = votacao.is_active() and user_vote is None
+        context['can_vote'] = (
+            self.request.user.is_authenticated and votacao.is_active() and user_vote is None
+        )
         
         # contagem de votos Votebem, comentei porque decidi não mostrar mais na página de votação Votebem
         # # Get voting statistics

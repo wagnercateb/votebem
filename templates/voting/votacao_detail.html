@@ -260,7 +260,7 @@
             <div class="alert alert-info">
                 <i class="bi bi-info-circle"></i>
                 <strong>Faça login para votar!</strong>
-                <a href="{% url 'users:login' %}?next={{ request.path }}" class="btn btn-primary btn-sm ms-2">Entrar</a>
+                <a href="{% url 'users:login' %}?next={% url 'voting:votacao_detail' pk=votacao.id %}" class="btn btn-primary btn-sm ms-2">Entrar</a>
             </div>
         {% elif user_vote %}
             <div class="alert alert-success d-flex justify-content-between align-items-center">
