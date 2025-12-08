@@ -26,6 +26,8 @@ from typing import Dict, Any, List, Tuple
 from pathlib import Path
 from django.conf import settings
 from decouple import config as env_config
+from functools import wraps
+from django.http import HttpResponseForbidden
 
 # Background task helpers
 # ------------------------
@@ -65,7 +67,18 @@ def _get_status(status_key: str) -> dict:
     except Exception:
         return {}
 
-@staff_member_required
+def admin_required(view_func):
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            login_url = getattr(settings, 'LOGIN_URL', '/accounts/login/')
+            return redirect(f"{login_url}?next={request.get_full_path()}")
+        if not request.user.is_staff:
+            return HttpResponseForbidden("Você não tem permissão para acessar a área administrativa.")
+        return view_func(request, *args, **kwargs)
+    return _wrapped
+
+@admin_required
 def admin_dashboard(request):
     """
     Custom admin dashboard with statistics and management tools
@@ -1177,7 +1190,7 @@ def proposicoes_atualizar_temas(request):
     return redirect('gerencial:dashboard')
 
 
-@staff_member_required
+@admin_required
 def votos_oficiais_app(request):
     """Subpágina embutível de Votação oficial com filtros e estatísticas client-side.
     Aceita query param `votacao_id` para carregar votos de uma votação específica.
@@ -1999,7 +2012,7 @@ def votacao_obter_votacao(request, pk):
 
     return redirect('gerencial:votacao_edit', pk=pk)
 
-@staff_member_required
+@admin_required
 def proposicoes_statistics(request):
     """
     Display statistics about propositions similar to PHP admin
@@ -2083,7 +2096,7 @@ def proposicoes_statistics(request):
     return render(request, 'admin/voting/proposicoes_statistics.html', {'stats': stats})
 
 
-@staff_member_required
+@admin_required
 def proposicoes_list(request):
     """
     List and manage propositions
