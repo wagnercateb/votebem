@@ -96,6 +96,13 @@
     <!-- Footer -->
     <footer class="bg-light text-center text-muted py-3 mt-5">
         <div class="container">
+            <div class="mb-2">
+                <a href="{% url 'home:about' %}" class="text-decoration-none me-3">Quem somos</a>
+                <a href="{% url 'home:contact' %}" class="text-decoration-none me-3">Fale conosco</a>
+                <a href="{% url 'home:faq' %}" class="text-decoration-none me-3">FAQ</a>
+                <a href="{% url 'home:terms' %}" class="text-decoration-none me-3">Termos de uso</a>
+                <a href="{% url 'home:privacy' %}" class="text-decoration-none">Política de privacidade</a>
+            </div>
             <p>&copy; 2025 VoteBem - Sistema de Votação Popular</p>
         </div>
     </footer>

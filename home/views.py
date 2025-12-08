@@ -84,3 +84,31 @@ class ContactView(TemplateView):
         context = super().get_context_data(**kwargs)
         context['page_title'] = 'Contato - VoteBem'
         return context
+
+class AboutView(TemplateView):
+    template_name = 'home/about.html'
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Quem somos - VoteBem'
+        return context
+
+class FAQView(TemplateView):
+    template_name = 'home/faq.html'
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'FAQ - VoteBem'
+        return context
+
+class TermsView(TemplateView):
+    template_name = 'home/terms.html'
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Termos de uso - VoteBem'
+        return context
+
+class PrivacyView(TemplateView):
+    template_name = 'home/privacy.html'
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = 'Política de privacidade - VoteBem'
+        return context
