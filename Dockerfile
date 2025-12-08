@@ -59,9 +59,12 @@ RUN pip install --no-cache-dir \
 # Copy project
 COPY . /app/
 
+# Copy images to specific folders
+
+
 # Create necessary directories
 # Ensure RAG-related folders exist to avoid runtime errors when saving embeddings/respostas_ia
-RUN mkdir -p /app/staticfiles /app/logs /app/media \
+RUN mkdir -p /app/staticfiles /app/logs \
     && mkdir -p /app/docs/nao_versionados/embeddings \
     && mkdir -p /app/docs/nao_versionados/respostas_ia
 

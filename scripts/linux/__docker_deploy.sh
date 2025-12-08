@@ -141,7 +141,7 @@ COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
 ENV_FILE="${BASE_DIR}/.env"
 LOG_DIR="${BASE_DIR}/logs"
 STATIC_DIR="/dados/nginx/app/static"
-MEDIA_DIR="/dados/nginx/app/media"
+MEDIA_DIR="/dados/votebem/votebem/media"   #arquivos de midia ficam no próprio diretorio do repo original
 BACKUPS_DIR="${BASE_DIR}/backups"
 SSL_DIR="${BASE_DIR}/ssl"
 

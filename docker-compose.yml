@@ -50,7 +50,7 @@ services:
       - "127.0.0.1:8001:8000"
     volumes:
       - /dados/nginx/app/votebem/static:/app/staticfiles
-      - /dados/nginx/app/votebem/media:/app/media
+      - /dados/votebem/votebem/media:/app/media
       - /dados/votebem/logs:/app/logs
     depends_on:
       db:

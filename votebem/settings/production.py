@@ -95,8 +95,13 @@ STATICFILES_DIRS = []  # No additional static dirs in production, only STATIC_RO
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
+# compose maps the host folder with real files to the container path:
+#   docker-compose.yml:52-54 maps '/dados/votebem/votebem/media' to '/app/media' .
+# Nginx runs on the host, its location /media/ must alias the host path. 
+#   So, in config file /etc/nginx/sites-available/votebem:
+#       alias /dados/votebem/votebem/media/; (keep trailing slash)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = '/app/media'
 
 # Security settings
 SECURE_BROWSER_XSS_FILTER = True
