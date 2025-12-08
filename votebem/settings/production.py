@@ -24,6 +24,25 @@ SECRET_KEY = config('SECRET_KEY')
 # Allowed hosts
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
+# Proxy/host handling
+USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=True, cast=bool)
+
+# CSRF trusted origins
+_origins_raw = config('CSRF_TRUSTED_ORIGINS', default='')
+if _origins_raw.strip():
+    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _origins_raw.split(',') if o.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = []
+    for _h in ALLOWED_HOSTS:
+        _h = (_h or '').strip()
+        if not _h:
+            continue
+        if _h.startswith('http://') or _h.startswith('https://'):
+            CSRF_TRUSTED_ORIGINS.append(_h)
+        else:
+            CSRF_TRUSTED_ORIGINS.append(f'http://{_h}')
+            CSRF_TRUSTED_ORIGINS.append(f'https://{_h}')
+
 # Database (MariaDB/MySQL)
 # All sensitive values (passwords) are read from environment/.env only.
 DATABASES = {

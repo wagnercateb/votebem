@@ -4,7 +4,7 @@
 {% block title %}{{ page_title }}{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
 <style>
     :root {
         --vb-font-primary: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
@@ -17,7 +17,7 @@
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
-        color: blue;
+        color: var(--bs-primary);
         padding: 100px 0;
         text-align: center;
     }
@@ -143,6 +143,7 @@
     .social-links a:hover {
         transform: scale(1.1);
     }
+    .btn-main-cta { font-size: 1.25rem; }
 </style>
 {% endblock %}
 
@@ -162,9 +163,9 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-12 text-center">
-                <h2 class="section-heading animated-heading text-uppercase">Descubra quem vota como <b>você</b> pensa!</h2>
+                <h2 class="section-heading animated-heading" style="color: #4267b2;">Descubra quem vota como <b>você</b>!</h2>
                 <h3 class="section-subheading text-muted">
-                    Afinal, não é fácil lembrar tudo o que foi votado, por tanta gente, em tantos anos...
+                    Não é fácil lembrar tudo o que foi votado, por tanta gente, em tantos anos...
                     <br><br>Vamos ajudá-lo a achar <b>quem merece o seu voto</b>!
                 </h3>
             </div>
@@ -172,8 +173,8 @@
         <div class="row text-center">
             <div class="col-md-6">
                 <span class="fa-stack fa-4x text-primary">
-                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
-                    <i class="fa fa-newspaper-o fa-stack-1x fa-inverse"></i>
+                    <i class="fa-solid fa-circle fa-stack-2x text-primary"></i>
+                    <i class="fa-solid fa-newspaper fa-stack-1x fa-inverse"></i>
                 </span>
                 <h4 class="service-heading">Acompanhe conosco</h4>
                 <p class="text-muted">
@@ -183,8 +184,8 @@
             </div>
             <div class="col-md-6">
                 <span class="fa-stack fa-4x">
-                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
-                    <i class="fa fa-pencil-square-o fa-stack-1x fa-inverse"></i>
+                    <i class="fa-solid fa-circle fa-stack-2x text-primary"></i>
+                    <i class="fa-solid fa-pen-to-square fa-stack-1x fa-inverse"></i>
                 </span>
                 <h4 class="service-heading">Vote como <i>você</i> pensa</h4>
                 <p class="text-muted">
@@ -198,8 +199,8 @@
         <div class="row text-center">
             <div class="col-md-6">
                 <span class="fa-stack fa-4x">
-                    <i class="fa fa-circle fa-stack-2x text-primary"></i>
-                    <i class="fa fa-handshake-o fa-stack-1x fa-inverse"></i>
+                    <i class="fa-solid fa-circle fa-stack-2x text-primary"></i>
+                    <i class="fa-solid fa-handshake fa-stack-1x fa-inverse"></i>
                 </span>
                 <h4 class="service-heading">Veja quem te representou melhor</h4>
                 <p class="text-muted">
@@ -249,9 +250,8 @@
                 </div>
                 <h2 class="animated-heading">"Odeio esses políticos, vou votar nulo!"</h2>
                 <p>
-                    Infelizmente não ajuda muito. Quanto menos votos bons, menos votos os maus políticos precisarão para se elegerem, 
-                    mais difícil será derrotá-los no Congresso. Mais fisiologismo, mais toma lá dá cá... 
-                    Enfim, <b>é perpetuar o problema</b>!
+                    Infelizmente não ajuda. Quanto menos votos válidos, menos votos os maus políticos precisam para se elegerem. É mais fisiologismo, mais toma lá dá cá... 
+                    Isso <b>só perpetua o problema</b>!
                 </p>
             </div>
             <div class="col-md-4 text-center">
@@ -272,7 +272,13 @@
 <section id="que-faco-agora" class="bg-primary-3 nova-secao">
     <div class="container">
         <div class="text-center">
-            <div class="intro-text intro-lead-in">Gostei, quero participar!</div>
+            <div class="fa-4x">
+                    Gostei, quero participar!
+                    <a class="btn btn-primary btn-lg py-3 d-inline-flex align-items-center btn-main-cta" href="{% url 'voting:votacoes_disponiveis' %}" role="button">
+                        <img src="/media/full_logo_branco.png" alt="VoteBem" style="height:38px; margin-right:8px;" />
+                        Clique para votar
+                    </a>
+            </div>
         </div>
         <br><br>
         <div class="row">
@@ -282,17 +288,10 @@
                         <h3>Siga-nos</h3>
                     </div>
                     <div class="panel-body">
-                        Vamos soltando novas votações aos poucos pra não dar canseira. Siga-nos para saber quando as pusermos no ar 
-                        ou cadastre seu email para te informarmos.
+                        Cadastre seu email para te informarmos de atualizações, novas votações, etc.
                         <div class="social-links">
-                            <a href="https://x.com/votobom" target="_blank" title="Siga-nos no X">
-                                <span class="fa-stack fa-4x text-color x"><i class="fa fa-square fa-stack-2x"></i><strong class="fa-stack-1x fa-inverse">X</strong></span>
-                            </a>
-                            <a href="https://facebook.com/votobom" target="_blank" title="Siga-nos no Facebook">
-                                <span class="fa fa-facebook-square fa-4x text-color facebook"></span>
-                            </a>
                             <a href="#" onclick="abrirModalMalaDireta()" title="Informe seu email">
-                                <i class="fa fa-envelope fa-4x text-primary"></i>
+                                <i class="fa-solid fa-envelope fa-4x text-primary"></i>
                             </a>
                         </div>
                     </div>
@@ -310,14 +309,16 @@
                         <div class="social-links">
                             <a href="https://x.com/intent/tweet?text=Site bacana para saber que político te representa bem! Vote como um deputado e veja que deputados votaram como você&url={{ request.build_absolute_uri }}" 
                                target="_blank" title="Divulgue-nos no X">
-                                <span class="fa-stack fa-4x text-color x"><i class="fa fa-square fa-stack-2x"></i><strong class="fa-stack-1x fa-inverse">X</strong></span>
+                                <i class="fa-brands fa-x-twitter fa-4x text-color x"></i>
                             </a>
-                            <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri }}" 
+                            {% with fb_quote="Site bacana para saber que político te representa bem! Vote como um deputado e veja que deputados votaram como você" %}
+                            <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri }}&quote={{ fb_quote|urlencode }}" 
                                target="_blank" title="Divulgue-nos no Facebook">
-                                <span class="fa fa-facebook-square fa-4x text-color facebook"></span>
+                                <i class="fa-brands fa-square-facebook fa-4x text-color facebook"></i>
                             </a>
+                            {% endwith %}
                             <a href="#" onclick="divulgarPorEmail()" title="Divulgue-nos por email">
-                                <i class="fa fa-envelope fa-4x text-primary"></i>
+                                <i class="fa-solid fa-envelope fa-4x text-primary"></i>
                             </a>
                         </div>
                     </div>
@@ -336,11 +337,13 @@
                 </div>
             </div>
 
+            <br />
             <div class="col-md-12 text-center">
                 <h2>Comece a votar agora!</h2>
                 <p></p>
                 <p>
-                    <a class="btn btn-success btn-lg" href="{% url 'voting:votacoes_disponiveis' %}" role="button">
+                    <a class="btn btn-primary btn-lg py-3 px-4 d-inline-flex align-items-center btn-main-cta" href="{% url 'voting:votacoes_disponiveis' %}" role="button">
+                        <img src="/media/full_logo_branco.png" alt="VoteBem" style="height:48px; margin-right:8px;" />
                         Clique para votar
                     </a>
                 </p>
