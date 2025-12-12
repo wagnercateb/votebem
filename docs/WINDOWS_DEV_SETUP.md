@@ -118,19 +118,19 @@ python run_migrations.py
 **Method 2**: Manual migration with environment variables
 ```cmd
 .venv\Scripts\activate
-python manage.py migrate --settings=votebem.settings.development
+python manage.py migrate --settings=votebem.settings.production
 ```
 
 ### Step 7: Create Superuser (Optional)
 
 ```cmd
-python manage.py createsuperuser --settings=votebem.settings.development
+python manage.py createsuperuser --settings=votebem.settings.production
 ```
 
 ### Step 8: Collect Static Files
 
 ```cmd
-python manage.py collectstatic --noinput --settings=votebem.settings.development
+python manage.py collectstatic --noinput --settings=votebem.settings.production
 ```
 
 ### Step 9: Start Django Development Server
@@ -145,7 +145,7 @@ python run_server.py
 **Method 2**: Manual server start
 ```cmd
 .venv\Scripts\activate
-python manage.py runserver 0.0.0.0:8000 --settings=votebem.settings.development
+python manage.py runserver 0.0.0.0:8000 --settings=votebem.settings.production
 ```
 
 ## Accessing the Application
@@ -252,7 +252,7 @@ If you prefer other tools:
    ```cmd
    docker-compose -f docker-compose.dev-services.yml up -d
    .venv\Scripts\activate
-   python manage.py runserver 0.0.0.0:8000 --settings=votebem.settings.development
+   python manage.py runserver 0.0.0.0:8000 --settings=votebem.settings.production
    ```
 
 ### Stopping the Application
@@ -277,14 +277,14 @@ If you prefer other tools:
   ```cmd
   docker-compose -f docker-compose.dev-services.yml down -v
   docker-compose -f docker-compose.dev-services.yml up -d
-  python manage.py migrate --settings=votebem.settings.development
+  python manage.py migrate --settings=votebem.settings.production
   ```
 
 ### Making Code Changes
 
 - Django will automatically reload when you make changes to Python files
 - For template changes, refresh your browser
-- For static file changes, you may need to run `python manage.py collectstatic --settings=votebem.settings.development`
+- For static file changes, you may need to run `python manage.py collectstatic --settings=votebem.settings.production`
 
 ## Troubleshooting
 
@@ -327,7 +327,7 @@ If you prefer other tools:
    - Check Redis URL in `.env.dev`: should be `redis://localhost:6379/0`
 
 8. **Static files not loading**:
-   - Run `python manage.py collectstatic --noinput --settings=votebem.settings.development`
+   - Run `python manage.py collectstatic --noinput --settings=votebem.settings.production`
    - Check if `static/` directory exists
    - Verify `STATIC_ROOT` and `STATICFILES_DIRS` in settings
 
@@ -358,10 +358,10 @@ python run_migrations.py
 python config_mariadb_admin.py
 
 # View Django logs with verbosity
-python manage.py runserver --verbosity=2 --settings=votebem.settings.development
+python manage.py runserver --verbosity=2 --settings=votebem.settings.production
 
 # Check database connection (MariaDB)
-python manage.py dbshell --settings=votebem.settings.development
+python manage.py dbshell --settings=votebem.settings.production
 
 # Connect to MariaDB directly
 docker exec -it <mariadb_container> mysql -u votebem_user -p -D votebem_dev
@@ -370,20 +370,20 @@ docker exec -it <mariadb_container> mysql -u votebem_user -p -D votebem_dev
 docker exec -it <redis_container> redis-cli
 
 # Run tests
-python manage.py test --settings=votebem.settings.development
+python manage.py test --settings=votebem.settings.production
 
 # Create new Django app
-python manage.py startapp <app_name> --settings=votebem.settings.development
+python manage.py startapp <app_name> --settings=votebem.settings.production
 
 # Make migrations after model changes
-python manage.py makemigrations --settings=votebem.settings.development
-python manage.py migrate --settings=votebem.settings.development
+python manage.py makemigrations --settings=votebem.settings.production
+python manage.py migrate --settings=votebem.settings.production
 
 # Collect static files
-python manage.py collectstatic --noinput --settings=votebem.settings.development
+python manage.py collectstatic --noinput --settings=votebem.settings.production
 
 # Create superuser
-python manage.py createsuperuser --settings=votebem.settings.development
+python manage.py createsuperuser --settings=votebem.settings.production
 
 # Check installed packages
 pip list

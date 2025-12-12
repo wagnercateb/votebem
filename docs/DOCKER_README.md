@@ -84,19 +84,19 @@ docker-compose -f docker-compose.dev.yml logs -f
 
 ```bash
 # Run migrations
-docker-compose -f docker-compose.dev.yml exec web python manage.py migrate --settings=votebem.settings.development
+docker-compose -f docker-compose.dev.yml exec web python manage.py migrate --settings=votebem.settings.production
 
 # Create superuser
-docker-compose -f docker-compose.dev.yml exec web python manage.py createsuperuser --settings=votebem.settings.development
+docker-compose -f docker-compose.dev.yml exec web python manage.py createsuperuser --settings=votebem.settings.production
 
 # Collect static files
-docker-compose -f docker-compose.dev.yml exec web python manage.py collectstatic --settings=votebem.settings.development
+docker-compose -f docker-compose.dev.yml exec web python manage.py collectstatic --settings=votebem.settings.production
 
 # Run tests
-docker-compose -f docker-compose.dev.yml exec web python manage.py test --settings=votebem.settings.development
+docker-compose -f docker-compose.dev.yml exec web python manage.py test --settings=votebem.settings.production
 
 # Access Django shell
-docker-compose -f docker-compose.dev.yml exec web python manage.py shell --settings=votebem.settings.development
+docker-compose -f docker-compose.dev.yml exec web python manage.py shell --settings=votebem.settings.production
 
 # Access container bash
 docker-compose -f docker-compose.dev.yml exec web bash

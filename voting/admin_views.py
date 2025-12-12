@@ -537,7 +537,7 @@ def rag_tool(request):
             # BASE_DIR aponta para '<project_root>/votebem', então subimos um nível para o root do projeto.
             local_dir = os.path.join(os.path.dirname(settings.BASE_DIR), 'docs', 'nao_versionados', 'respostas_ia')
 
-            # Detecta o módulo de settings ativo (ex.: 'votebem.settings.development')
+            # Detecta o módulo de settings ativo (ex.: 'votebem.settings.production')
             env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
             is_dev = env_mod.endswith('.development')
             is_prodlike = env_mod.endswith('.production') or env_mod.endswith('.build')

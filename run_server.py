@@ -12,7 +12,7 @@ from decouple import Config, RepositoryEnv
 config = Config(RepositoryEnv('.env.dev'))
 
 # Set environment variables
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'votebem.settings.development')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'votebem.settings.production')
 os.environ.setdefault('DB_NAME', config('DB_NAME', default='votebem_dev'))
 os.environ.setdefault('DB_USER', config('DB_USER', default='votebem_user'))
 os.environ.setdefault('DB_PASSWORD', config('DB_PASSWORD', default='votebem_dev_password'))

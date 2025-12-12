@@ -69,7 +69,7 @@ This script will:
 ### Environment Configuration
 
 The development environment uses these settings:
-- **Settings Module**: `votebem.settings.development`
+- **Settings Module**: `votebem.settings.production`
 - **DEBUG**: `True`
 - **Database**: SQLite (fallback to MariaDB if Docker available)
 - **Cache**: Local memory cache

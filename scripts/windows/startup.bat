@@ -72,7 +72,7 @@ REM Set environment variables
 set DJANGO_SETTINGS_MODULE=votebem.settings.production
 
 REM Start Django development server
-python manage.py runserver 0.0.0.0:8000 --settings=votebem.settings.development
+python manage.py runserver 0.0.0.0:8000 --settings=votebem.settings.production
 
 echo.
 echo ========================================

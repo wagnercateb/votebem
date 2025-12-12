@@ -101,7 +101,7 @@ def project_paths() -> Tuple[str, str, str, List[str], str, str]:
     # Prefer environment variable if set; else allow CLI override; fallback to
     # the project's default used in manage.py.
     env_settings = os.environ.get("DJANGO_SETTINGS_MODULE")
-    settings_module = env_settings or "votebem.settings.development"
+    settings_module = env_settings or "votebem.settings.production"
 
     templates_root = os.path.join(project_root, "templates")
     app_roots = [

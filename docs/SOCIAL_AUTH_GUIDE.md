@@ -48,7 +48,7 @@ FACEBOOK_APP_SECRET=your-facebook-app-secret
 
 ```bash
 # Local development
-python manage.py migrate --settings=votebem.settings.development
+python manage.py migrate --settings=votebem.settings.production
 
 # Docker
 make migrate
@@ -378,7 +378,7 @@ make migrate
    ```bash
    make dev
    # or
-   python manage.py runserver --settings=votebem.settings.development
+   python manage.py runserver --settings=votebem.settings.production
    ```
 
 2. **Test Login Flow**:
@@ -440,17 +440,17 @@ LOGGING = {
 
 ```bash
 # Check social applications
-python manage.py shell --settings=votebem.settings.development
+python manage.py shell --settings=votebem.settings.production
 >>> from allauth.socialaccount.models import SocialApp
 >>> SocialApp.objects.all()
 
 # Clear social account data
-python manage.py shell --settings=votebem.settings.development
+python manage.py shell --settings=votebem.settings.production
 >>> from allauth.socialaccount.models import SocialAccount
 >>> SocialAccount.objects.all().delete()
 
 # Create superuser
-python manage.py createsuperuser --settings=votebem.settings.development
+python manage.py createsuperuser --settings=votebem.settings.production
 ```
 
 ## 📚 Additional Resources
@@ -541,7 +541,7 @@ To complete the setup:
 3. 3.
    Set Environment Variables : Add your OAuth credentials to .env
 4. 4.
-   Run Migrations : Execute python manage.py migrate --settings=votebem.settings.development
+   Run Migrations : Execute python manage.py migrate --settings=votebem.settings.production
 5. 5.
    Configure Social Apps : Set up applications in Django admin
 6. 6.

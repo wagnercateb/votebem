@@ -4,7 +4,7 @@
 
 - Local (Windows): você escolhe explicitamente o arquivo ao subir os serviços.
   - Banco e cache locais: docker compose -f docker-compose-local.yml up -d db ; docker compose -f docker-compose-local.yml up -d valkey
-  - O app Django roda fora do Docker via python manage.py runserver ou pelo run_server.py , usando votebem.settings.development .
+  - O app Django roda fora do Docker via python manage.py runserver ou pelo run_server.py , usando votebem.settings.production .
 - VPS (produção): o arquivo é docker-compose.yml executado no servidor.
   - Sobe db , valkey e web com docker compose -f docker-compose.yml up -d
   - O serviço web roda Gunicorn e usa .env como env_file . Ele executa:
@@ -14,7 +14,7 @@
 
 # Como o settings é escolhido (Windows x VPS)
 
-- Local (Windows, host): manage.py define por padrão DJANGO_SETTINGS_MODULE='votebem.settings.development' . Então runserver usa sempre desenvolvimento, salvo se você passar --settings ou definir DJANGO_SETTINGS_MODULE no ambiente.
+- Local (Windows, host): manage.py define por padrão DJANGO_SETTINGS_MODULE='votebem.settings.production' . Então runserver usa sempre desenvolvimento, salvo se você passar --settings ou definir DJANGO_SETTINGS_MODULE no ambiente.
 - Produção (VPS, containers):
   - O .env do projeto define DJANGO_SETTINGS_MODULE=votebem.settings.production (conforme .env.example ). O web container carrega esse .env e, junto com os comandos --settings=votebem.settings.production , garante que produção seja usado.
   - wsgi.py faz os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'votebem.settings') , mas o valor do .env tem precedência e aponta para votebem.settings.production
@@ -29,7 +29,7 @@
   - python run_server.py
 - Alternativa direta:
   - python manage.py runserver 127.0.0.1:8000
-  - O manage.py usa votebem.settings.development ; o settings.development agora está explicitamente HTTP-only.
+  - O manage.py usa votebem.settings.production ; o settings.development agora está explicitamente HTTP-only.
 
   ## Como subir containers locais com este .env.dev
 
@@ -79,7 +79,7 @@ Short answer: those records come from the `VotacaoVoteBem` table in whatever dat
 
 Why you still see records after deleting from MariaDB
 
-- Your server uses the `votebem.settings.development` settings module (set in `manage.py`).
+- Your server uses the `votebem.settings.production` settings module (set in `manage.py`).
 - In `votebem/settings/development.py`, the app tries to connect to MariaDB using environment variables (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`). If the connection fails, it silently falls back to SQLite at `votebem/db.sqlite3`.
 - The defaults in development settings use `DB_NAME='votebem_db'`. If you deleted data from `votebem_db` but the app is pointing at `votebem_outro_nome` (or fell back to SQLite), your deletions won’t affect what you see.
 
@@ -127,7 +127,7 @@ If you want, tell me the current `settings.DATABASES` output and I’ll confirm 
 Short answer: both `development.py` and `production.py` read from the same source of environment variables via `python-decouple`. Decouple first checks OS environment variables, and if a variable isn’t set there, it looks for a `.env` file in the current working directory. In your setup, the `.env` sitting next to `manage.py` is the one being used, because the server is started with the project root as the working directory.
 
 Key points
-- Settings selection: `manage.py` sets `DJANGO_SETTINGS_MODULE` to `votebem.settings.development`, so the server uses `votebem/settings/development.py`. In production, you would start the server with `DJANGO_SETTINGS_MODULE=votebem.settings.production` (isso está em docker-compose.yml > services > web > command)
+- Settings selection: `manage.py` sets `DJANGO_SETTINGS_MODULE` to `votebem.settings.production`, so the server uses `votebem/settings/development.py`. In production, you would start the server with `DJANGO_SETTINGS_MODULE=votebem.settings.production` (isso está em docker-compose.yml > services > web > command)
 - Env resolution order: `from decouple import config` reads
   - OS environment variables first,
   - then falls back to values in `.env` in the current working directory,
@@ -218,7 +218,7 @@ Yes, you can (and should) reset the MariaDB user’s password directly in the da
   - `DB_PASSWORD=NEW_STRONG_PASSWORD`
   - `DB_HOST=127.0.0.1` (or your container service name if Django connects via Docker networking)
   - `DB_PORT=3306`
-- Note: Your `.env` currently sets `DJANGO_SETTINGS_MODULE=votebem.settings.production`. That means production settings load, and they will read these `DB_*` values via `python-decouple`. If you intend to use development settings, change this to `votebem.settings.development`.
+- Note: Your `.env` currently sets `DJANGO_SETTINGS_MODULE=votebem.settings.production`. That means production settings load, and they will read these `DB_*` values via `python-decouple`. If you intend to use development settings, change this to `votebem.settings.production`.
 
 **Verify**
 - In DBeaver: Edit Connection → set the new password → Test Connection.

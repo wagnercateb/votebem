@@ -111,10 +111,10 @@ restore:
 
 # Testing & Quality
 test:
-	docker-compose -f docker-compose.dev.yml exec web python manage.py test --settings=votebem.settings.development
+	docker-compose -f docker-compose.dev.yml exec web python manage.py test --settings=votebem.settings.production
 
 coverage:
-	docker-compose -f docker-compose.dev.yml exec web coverage run --source='.' manage.py test --settings=votebem.settings.development
+	docker-compose -f docker-compose.dev.yml exec web coverage run --source='.' manage.py test --settings=votebem.settings.production
 	docker-compose -f docker-compose.dev.yml exec web coverage report
 	docker-compose -f docker-compose.dev.yml exec web coverage html
 	@echo "Coverage report generated in htmlcov/"
@@ -235,7 +235,7 @@ load-test:
 # Security scan
 security-scan:
 	@echo "Running security scan..."
-	docker-compose -f docker-compose.dev.yml exec web python manage.py check --deploy --settings=votebem.settings.development
+	docker-compose -f docker-compose.dev.yml exec web python manage.py check --deploy --settings=votebem.settings.production
 
 # Documentation
 docs:

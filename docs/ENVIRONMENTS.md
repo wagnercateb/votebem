@@ -25,7 +25,7 @@ docker-compose up -d
 
 **Key Features**:
 - **Environment**: Development settings (`DEBUG=True`)
-- **Django Settings**: `votebem.settings.development`
+- **Django Settings**: `votebem.settings.production`
 - **Database**: `votebem_dev` (separate dev database)
 - **Web Server**: Uses Django's **development server** (`runserver`)
 - **Code Mounting**: Maps local code directory (`.:/app`) for live editing

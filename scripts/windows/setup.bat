@@ -111,7 +111,7 @@ echo [7-8/10] Skipping Docker services (will use SQLite)...
 echo.
 echo [9/10] Setting up Django database...
 set DJANGO_SETTINGS_MODULE=votebem.settings.production
-python manage.py migrate --settings=votebem.settings.development
+python manage.py migrate --settings=votebem.settings.production
 if %errorlevel% neq 0 (
     echo ERROR: Failed to run Django migrations
     echo Make sure Django is properly installed
@@ -122,7 +122,7 @@ if %errorlevel% neq 0 (
 echo.
 echo [10/10] Creating static files directory...
 if not exist "static" mkdir static
-python manage.py collectstatic --noinput --settings=votebem.settings.development
+python manage.py collectstatic --noinput --settings=votebem.settings.production
 if %errorlevel% neq 0 (
     echo WARNING: Failed to collect static files, continuing...
 )
@@ -144,6 +144,6 @@ echo - Nginx Proxy: http://localhost (when enabled)
 echo.
 echo To create a superuser, run:
 echo   .venv\Scripts\activate
-echo   python manage.py createsuperuser --settings=votebem.settings.development
+echo   python manage.py createsuperuser --settings=votebem.settings.production
 echo.
 pause

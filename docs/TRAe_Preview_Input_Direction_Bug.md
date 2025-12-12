@@ -11,11 +11,11 @@
 ## Environment
 - OS: Windows (user dev machine)
 - Framework: Django (development server)
-- Server command: `python manage.py runserver localhost:8000 --settings=votebem.settings.development`
+- Server command: `python manage.py runserver localhost:8000 --settings=votebem.settings.production`
 - Trae IDE: Preview pane used to render the page; external browser renders correctly
 
 ## Reproduction Steps
-1. Start the dev server: `python manage.py runserver localhost:8000 --settings=votebem.settings.development`.
+1. Start the dev server: `python manage.py runserver localhost:8000 --settings=votebem.settings.production`.
 2. Open the create page in the Trae preview: `http://localhost:8000/gerencial/votacao/create/?proposicao_id=2270800`.
 3. Click into the `Título da Votação` (`#titulo`) and `Resumo` (`#resumo`) fields and begin typing:
    - Caret appears on the right.

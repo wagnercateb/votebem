@@ -12,16 +12,16 @@ Development behavior (patched)
 How to use
 - Ensure the MariaDB container is running and publishing port `3306`.
 - Run migrations and use development settings explicitly:
-  - `python manage.py showmigrations voting --settings=votebem.settings.development; python manage.py migrate --settings=votebem.settings.development`
+  - `python manage.py showmigrations voting --settings=votebem.settings.production; python manage.py migrate --settings=votebem.settings.production`
 - Start the server with development settings:
-  - `python manage.py runserver 127.0.0.1:8000 --settings=votebem.settings.development`
+  - `python manage.py runserver 127.0.0.1:8000 --settings=votebem.settings.production`
 
 VSCode launch option
-- Use the "VSCode: Run Django (development, auto-migrate)" launch configuration. It runs migrations first, then starts the server on `127.0.0.1:8000` with `votebem.settings.development`.
+- Use the "VSCode: Run Django (development, auto-migrate)" launch configuration. It runs migrations first, then starts the server on `127.0.0.1:8000` with `votebem.settings.production`.
 
 Troubleshooting
 - If migrations still fall back to SQLite:
   - Confirm the container exposes `3306` to the host.
   - Verify credentials match `.env.local`.
   - Check firewall rules for local `3306`.
-  - Try `python manage.py migrate --settings=votebem.settings.development` manually and inspect errors.
+  - Try `python manage.py migrate --settings=votebem.settings.production` manually and inspect errors.
