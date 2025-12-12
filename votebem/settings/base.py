@@ -83,6 +83,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Expose selected settings to templates (e.g., SOCIAL_LOGIN_ENABLED)
+                'votebem.utils.context_processors.social_login_settings',
             ],
             # Explicitly register custom template tag libraries to ensure reliable loading
             'libraries': {
@@ -189,6 +191,14 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 LOGIN_URL = '/users/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Feature flags / template toggles
+# --------------------------------
+# Control social login rendering via a setting to maintain stable deployments
+# even when provider configuration is temporarily invalid.
+# - Base: enabled by default (dev/local).
+# - Production: override to False until providers are properly configured.
+SOCIAL_LOGIN_ENABLED = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

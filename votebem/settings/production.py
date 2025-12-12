@@ -264,6 +264,10 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+# Disable social login rendering in production by default until providers are
+# properly configured (prevents runtime errors on template render).
+SOCIAL_LOGIN_ENABLED = False
+
 # Remote debugging configuration
 if config('ENABLE_REMOTE_DEBUG', default=False, cast=bool):
     import debugpy
