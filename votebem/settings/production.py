@@ -29,11 +29,28 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(','
 USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=True, cast=bool)
 
 # CSRF trusted origins
+# Sanitize and normalize values that may include stray quotes/backticks/spaces.
 _origins_raw = config('CSRF_TRUSTED_ORIGINS', default='')
-if _origins_raw.strip():
-    CSRF_TRUSTED_ORIGINS = [o.strip() for o in _origins_raw.split(',') if o.strip()]
-else:
-    CSRF_TRUSTED_ORIGINS = []
+
+def _clean_origin(val: str) -> str:
+    """
+    Normalize an origin string by:
+    - trimming whitespace
+    - stripping stray quotes/backticks
+    - returning the cleaned value
+    This function does not add schemes; use normalization below if needed.
+    """
+    v = (val or '').strip()
+    # Remove common stray characters from envs like: `https://example.com` or ' https://... '
+    v = v.strip("`'")
+    # Also collapse internal excessive spaces around the value
+    return v.strip()
+
+raw_list = [_clean_origin(o) for o in _origins_raw.split(',')] if _origins_raw.strip() else []
+CSRF_TRUSTED_ORIGINS = [o for o in raw_list if o]
+
+# If env did not provide, build from ALLOWED_HOSTS with http/https variants
+if not CSRF_TRUSTED_ORIGINS:
     for _h in ALLOWED_HOSTS:
         _h = (_h or '').strip()
         if not _h:
@@ -46,21 +63,33 @@ else:
 
 # Defensive merge: ensure HTTPS origins for all ALLOWED_HOSTS are present
 try:
-    _origins_set = set(CSRF_TRUSTED_ORIGINS)
+    _origins_set = set()
+    # Start with cleaned env-provided
+    for o in CSRF_TRUSTED_ORIGINS:
+        o = _clean_origin(o)
+        if not o:
+            continue
+        # Ensure scheme present; prefer https
+        if o.startswith('http://') or o.startswith('https://'):
+            _origins_set.add(o)
+        else:
+            _origins_set.add(f'https://{o}')
+            _origins_set.add(f'http://{o}')
+
+    # Merge HTTPS origins for all ALLOWED_HOSTS
     for _h in ALLOWED_HOSTS:
-        _h = (_h or '').strip()
+        _h = _clean_origin(_h)
         if not _h:
             continue
         # Normalize hosts that may already include schemes
         if _h.startswith('http://') or _h.startswith('https://'):
-            # Extract host portion
             from urllib.parse import urlparse
             _parsed = urlparse(_h)
             _host = _parsed.netloc or _parsed.path or _h.replace('https://','').replace('http://','')
         else:
             _host = _h
-        https_origin = f'https://{_host}'
-        _origins_set.add(https_origin)
+        _origins_set.add(f'https://{_host}')
+
     CSRF_TRUSTED_ORIGINS = sorted(_origins_set)
 except Exception:
     # Never break settings import due to origin normalization

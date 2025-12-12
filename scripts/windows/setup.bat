@@ -110,7 +110,7 @@ echo [7-8/10] Skipping Docker services (will use SQLite)...
 :setup_django
 echo.
 echo [9/10] Setting up Django database...
-set DJANGO_SETTINGS_MODULE=votebem.settings.development
+set DJANGO_SETTINGS_MODULE=votebem.settings.production
 python manage.py migrate --settings=votebem.settings.development
 if %errorlevel% neq 0 (
     echo ERROR: Failed to run Django migrations

@@ -65,7 +65,7 @@ Edit `.env.dev` with the following development settings:
 
 ```env
 # Django Settings
-DJANGO_SETTINGS_MODULE=votebem.settings.development
+DJANGO_SETTINGS_MODULE=votebem.settings.production
 DEBUG=True
 SECRET_KEY=dev-secret-key-change-this
 

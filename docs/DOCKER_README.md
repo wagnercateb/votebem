@@ -63,7 +63,7 @@ cp .env.example .env.dev
 
 # Edit .env.dev for development
 DEBUG=True
-DJANGO_SETTINGS_MODULE=votebem.settings.development
+DJANGO_SETTINGS_MODULE=votebem.settings.production
 ENABLE_REMOTE_DEBUG=True
 ```
 

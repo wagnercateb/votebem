@@ -103,7 +103,7 @@ If you prefer manual control:
 .venv\Scripts\activate.bat
 
 # Set environment variables
-set DJANGO_SETTINGS_MODULE=votebem.settings.development
+set DJANGO_SETTINGS_MODULE=votebem.settings.production
 set DEBUG=True
 
 # Start server

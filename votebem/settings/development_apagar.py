@@ -20,7 +20,7 @@ from votebem.utils.devlog import dev_log  # Development log utility
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-me')
+SECRET_KEY = config('SECRET_KEY', default='django-secret-key-from-wagner')
 
 # Allowed hosts for development
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0').split(',')

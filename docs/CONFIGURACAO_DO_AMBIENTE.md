@@ -46,7 +46,7 @@
 ## Conteúdo principal de .env.dev
 
 - Ambiente e segurança
-  - DJANGO_SETTINGS_MODULE=votebem.settings.development
+  - DJANGO_SETTINGS_MODULE=votebem.settings.production
   - DEBUG=True
   - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
   - USE_HTTPS=False

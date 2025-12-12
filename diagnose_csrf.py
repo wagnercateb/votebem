@@ -262,6 +262,9 @@ def online_probe(base_url: str) -> Dict[str, object]:
     - GET `/users/login/`: verify HTML contains `name="csrfmiddlewaretoken"`.
     - Record whether a `csrftoken` cookie was set.
     """
+    # Sanitize any accidental quoting/backticks in base_url provided via CLI
+    base_url = (base_url or '').strip().strip("`'\"")
+
     result: Dict[str, object] = {
         "base_url": base_url,
         "login_has_csrf_input": None,
@@ -459,6 +462,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         # Highlight common pitfalls for this deployment.
         # Note: adjust hosts/origins as you roll to production.
         cto = settings_diag.get("CSRF_TRUSTED_ORIGINS", []) or []
+        # Detect malformed origins with stray quotes/backticks/spaces
+        malformed = [str(o) for o in cto if ("`" in str(o) or "'" in str(o) or '"' in str(o) or str(o).strip() != str(o))]
         warn(not settings_diag.get("HAS_CSRF_MIDDLEWARE", False),
              "CsrfViewMiddleware missing from MIDDLEWARE.")
         warn(settings_diag.get("SESSION_COOKIE_SECURE", False) is not True,
@@ -478,6 +483,8 @@ def main(argv: Optional[List[str]] = None) -> int:
              "ALLOWED_HOSTS may be missing your production domains.")
         warn(not any(str(o).startswith("https://") for o in cto),
              "CSRF_TRUSTED_ORIGINS should include full 'https://' origins.")
+        warn(bool(malformed),
+             f"CSRF_TRUSTED_ORIGINS contains malformed entries (quotes/backticks/spaces): {malformed}")
         rpt.write("\n")
 
         rpt.write("[Templates Missing CSRF Tokens]\n")

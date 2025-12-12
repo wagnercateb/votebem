@@ -57,8 +57,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # Staff-only gate for all routes under "/gerencial/"
-    'votebem.middleware.StaffOnlyGerencialMiddleware',
+    # NOTE: Avoid global redirects/interception for "/gerencial/".
+    # Access control is enforced at the route level using
+    # `staff_member_required` in `voting/admin_urls.py`.
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',

@@ -36,7 +36,7 @@ if %errorlevel% neq 0 (
 echo.
 echo [2/4] Setting up development environment variables...
 REM Set Django to use development settings
-set DJANGO_SETTINGS_MODULE=votebem.settings.development
+set DJANGO_SETTINGS_MODULE=votebem.settings.production
 
 REM Ensure DEBUG is enabled for local development
 set DEBUG=True
