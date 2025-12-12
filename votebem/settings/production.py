@@ -15,7 +15,8 @@ except Exception:
     from decouple import config  # type: ignore
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
+# Wagner: alterar para False em produção
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # Read from environment/.env; do not ship hardcoded secrets in repository.
@@ -42,6 +43,28 @@ else:
         else:
             CSRF_TRUSTED_ORIGINS.append(f'http://{_h}')
             CSRF_TRUSTED_ORIGINS.append(f'https://{_h}')
+
+# Defensive merge: ensure HTTPS origins for all ALLOWED_HOSTS are present
+try:
+    _origins_set = set(CSRF_TRUSTED_ORIGINS)
+    for _h in ALLOWED_HOSTS:
+        _h = (_h or '').strip()
+        if not _h:
+            continue
+        # Normalize hosts that may already include schemes
+        if _h.startswith('http://') or _h.startswith('https://'):
+            # Extract host portion
+            from urllib.parse import urlparse
+            _parsed = urlparse(_h)
+            _host = _parsed.netloc or _parsed.path or _h.replace('https://','').replace('http://','')
+        else:
+            _host = _h
+        https_origin = f'https://{_host}'
+        _origins_set.add(https_origin)
+    CSRF_TRUSTED_ORIGINS = sorted(_origins_set)
+except Exception:
+    # Never break settings import due to origin normalization
+    CSRF_TRUSTED_ORIGINS = CSRF_TRUSTED_ORIGINS
 
 # Database (MariaDB/MySQL)
 # All sensitive values (passwords) are read from environment/.env only.

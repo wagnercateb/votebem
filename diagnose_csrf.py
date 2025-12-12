@@ -51,7 +51,39 @@ from typing import Tuple, Dict, List, Optional
 # -----------------------------
 # Configuration & Environment
 # -----------------------------
-def project_paths() -> Tuple[str, str, str, List[str], str]:
+def _is_project_root(path: str) -> bool:
+    """Heuristically decide if `path` is the Django project root.
+
+    We expect `manage.py` and the `votebem/` package to exist.
+    """
+    try:
+        return (
+            os.path.isfile(os.path.join(path, "manage.py"))
+            and os.path.isdir(os.path.join(path, "votebem"))
+        )
+    except Exception:
+        return False
+
+
+def _detect_project_root(script_path: str) -> str:
+    """Detect the project root robustly when running inside Docker at `/app`.
+
+    Tries the script directory, its parent, and grandparent. Falls back to the
+    script directory if nothing matches.
+    """
+    script_dir = os.path.dirname(script_path)
+    candidates = [
+        script_dir,
+        os.path.dirname(script_dir),
+        os.path.dirname(os.path.dirname(script_dir)),
+    ]
+    for cand in candidates:
+        if _is_project_root(cand):
+            return cand
+    return script_dir
+
+
+def project_paths() -> Tuple[str, str, str, List[str], str, str]:
     """
     Compute important paths relative to this script for the VoteBem project.
 
@@ -61,9 +93,10 @@ def project_paths() -> Tuple[str, str, str, List[str], str]:
         - templates_root: root-level templates directory
         - app_roots: list of app directories to scan (for templates and code)
         - report_path: path to write the text report
+        - docs_dir: directory to save diagnostic artifacts
     """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(script_dir)
+    script_path = os.path.abspath(__file__)
+    project_root = _detect_project_root(script_path)
 
     # Prefer environment variable if set; else allow CLI override; fallback to
     # the project's default used in manage.py.
@@ -77,8 +110,9 @@ def project_paths() -> Tuple[str, str, str, List[str], str]:
         os.path.join(project_root, "polls"),
         os.path.join(project_root, "home"),
     ]
-    report_path = os.path.join(project_root, "docs", "diagnostics_csrf_report.txt")
-    return project_root, settings_module, templates_root, app_roots, report_path
+    docs_dir = os.path.join(project_root, "docs")
+    report_path = os.path.join(docs_dir, "diagnostics_csrf_report.txt")
+    return project_root, settings_module, templates_root, app_roots, report_path, docs_dir
 
 
 def init_django(project_root: str, settings_module: str) -> Tuple[bool, Optional[str]]:
@@ -87,7 +121,9 @@ def init_django(project_root: str, settings_module: str) -> Tuple[bool, Optional
     """
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", settings_module)
+    # Force override to respect CLI '--settings' even if the environment
+    # already defines DJANGO_SETTINGS_MODULE (e.g., inside Docker).
+    os.environ["DJANGO_SETTINGS_MODULE"] = settings_module
     try:
         import django
         django.setup()
@@ -255,16 +291,7 @@ def online_probe(base_url: str) -> Dict[str, object]:
         cookie_names = set(session.cookies.keys())
         has_cookie = ("csrftoken" in cookie_names) or ("csrftoken=" in ",".join(resp.headers.get("Set-Cookie", "") for _ in [0]))
         result["csrftoken_cookie_present"] = has_cookie
-        # Save HTML snapshot to docs for inspection
-        try:
-            docs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs")
-            os.makedirs(docs_dir, exist_ok=True)
-            snapshot_path = os.path.join(docs_dir, "diagnostics_login.html")
-            with open(snapshot_path, "w", encoding="utf-8") as f:
-                f.write(html)
-            result["login_html_saved"] = snapshot_path
-        except Exception as write_exc:
-            result["errors"].append(f"failed saving login html: {write_exc}")
+        # HTML snapshot saving is delegated to caller, which knows docs_dir.
 
         # Health endpoint probe
         try:
@@ -294,16 +321,7 @@ def online_probe(base_url: str) -> Dict[str, object]:
             # Cookie detection is limited with urllib; mark as unknown.
             result["csrftoken_cookie_present"] = None
             result["login_status_code"] = None
-            # Save HTML snapshot where possible
-            try:
-                docs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "docs")
-                os.makedirs(docs_dir, exist_ok=True)
-                snapshot_path = os.path.join(docs_dir, "diagnostics_login.html")
-                with open(snapshot_path, "w", encoding="utf-8") as f:
-                    f.write(html)
-                result["login_html_saved"] = snapshot_path
-            except Exception as write_exc:
-                result["errors"].append(f"failed saving login html: {write_exc}")
+            # Snapshot saving delegated to caller
 
             # Health endpoint probe (basic urllib)
             try:
@@ -332,9 +350,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     i = 0
     while i < len(argv):
         arg = argv[i]
+        # Support both '--flag value' and '--flag=value' forms
+        if arg.startswith("--settings="):
+            override_settings = arg.split("=", 1)[1]
+            i += 1
+            continue
         if arg == "--settings" and i + 1 < len(argv):
             override_settings = argv[i + 1]
             i += 2
+            continue
+        if arg.startswith("--base-url="):
+            base_url = arg.split("=", 1)[1]
+            i += 1
             continue
         if arg == "--base-url" and i + 1 < len(argv):
             base_url = argv[i + 1]
@@ -342,7 +369,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             continue
         i += 1
 
-    project_root, settings_module, templates_root, app_roots, report_path = project_paths()
+    project_root, settings_module, templates_root, app_roots, report_path, docs_dir = project_paths()
     if override_settings:
         settings_module = override_settings
 
@@ -352,6 +379,26 @@ def main(argv: Optional[List[str]] = None) -> int:
     if not ok:
         print(f"[ERROR] {err}")
         return 1
+
+    # Ensure docs directory exists and is writable; fallback to /tmp if needed.
+    chosen_docs_dir = docs_dir
+    try:
+        os.makedirs(chosen_docs_dir, exist_ok=True)
+        # Write test file to confirm permissions
+        _test = os.path.join(chosen_docs_dir, ".write_test")
+        with open(_test, "w", encoding="utf-8") as tf:
+            tf.write("ok")
+        os.remove(_test)
+    except Exception:
+        chosen_docs_dir = "/tmp"
+        try:
+            os.makedirs(chosen_docs_dir, exist_ok=True)
+        except Exception:
+            pass
+    print(f"[INFO] Using docs dir: {chosen_docs_dir}")
+
+    # Rebind report_path to the confirmed docs dir
+    report_path = os.path.join(chosen_docs_dir, os.path.basename(report_path))
 
     settings_diag = collect_settings_diagnostics()
 
@@ -482,6 +529,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"  - Online probe base: {probe_result.get('base_url')} ")
         print(f"  - Login page has CSRF input: {probe_result.get('login_has_csrf_input')} ")
         print(f"  - csrftoken cookie present: {probe_result.get('csrftoken_cookie_present')} ")
+        # Save login HTML snapshot to chosen docs dir if present
+        try:
+            import requests  # type: ignore
+            login_url = base_url.rstrip("/") + "/users/login/"
+            resp = requests.get(login_url, timeout=10)
+            snapshot_path = os.path.join(chosen_docs_dir, "diagnostics_login.html")
+            with open(snapshot_path, "w", encoding="utf-8") as f:
+                f.write(resp.text)
+            print(f"  - Login HTML snapshot: {snapshot_path}")
+        except Exception as snap_exc:
+            print(f"  - Login HTML snapshot save failed: {snap_exc}")
     print("[NEXT] Review the report and apply fixes if any warnings are listed.")
     return 0
 
