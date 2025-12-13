@@ -5,3 +5,28 @@ __pycache__
 tmp/
 .venv
 
+# ----------------------------------------------------------------------------
+# Build context slimming: exclude large or non-runtime assets
+# ----------------------------------------------------------------------------
+# Exclude environment files (Compose passes env at runtime; no need to bake in)
+.env
+
+# Documentation and research content (can be very large)
+docs/
+
+# Editor/IDE workspace files
+workspace_djangoVotebem.code-workspace
+
+# Ops and local helper scripts are not needed inside the runtime image
+scripts/
+
+# Misc non-runtime artifacts
+prompts_de_ia.txt
+vps_provisioning_info.txt
+
+# Common heavy file types (keep if you truly need them in the image)
+*.pdf
+*.zip
+*.tar
+*.tar.gz
+

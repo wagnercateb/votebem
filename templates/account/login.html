@@ -13,7 +13,12 @@
                     <h3 class="text-center">Login</h3>
                 </div>
                 <div class="card-body">
-                    <!-- Social Login Buttons -->
+                    <!-- Social Login Buttons
+                         Render only when `SOCIAL_LOGIN_ENABLED` is True.
+                         In production we default to False to avoid errors
+                         if SocialApp is missing or duplicated for the Site.
+                    -->
+                    {% if SOCIAL_LOGIN_ENABLED %}
                     <div class="mb-4">
                         <div class="d-grid gap-2">
                             <a href="{% provider_login_url 'google' %}" class="btn btn-danger btn-lg">
@@ -24,6 +29,7 @@
                             </a>
                         </div>
                     </div>
+                    {% endif %}
                     
                     <hr class="my-4">
                     <p class="text-center text-muted">Or login with your email</p>

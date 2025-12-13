@@ -22,13 +22,12 @@
                         </button>
                     </div>
                 </form>
-                
-                {#
+                {% comment %}                 
                     Social login rendering is controlled by `SOCIAL_LOGIN_ENABLED`.
                     - In development, it's True by default.
                     - In production, it's False by default (to prevent runtime
                       errors if provider configuration has duplicates or is missing).
-                #}
+                {% endcomment %}
                 {% if SOCIAL_LOGIN_ENABLED %}
                 <hr>
                 <div class="text-center mb-3">

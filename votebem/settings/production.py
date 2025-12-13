@@ -14,6 +14,18 @@ except Exception:
     # use the standard environment-driven config function.
     from decouple import config  # type: ignore
 
+# Sites framework: override SITE_ID via environment to match deployed domain.
+# Base sets SITE_ID=1; in production you likely want it to correspond to
+# 'votebem.online' or 'www.votebem.online'.
+try:
+    SITE_ID = config('SITE_ID', default=SITE_ID, cast=int)  # override base
+except Exception:
+    try:
+        SITE_ID = int(os.environ.get('SITE_ID', str(SITE_ID)))
+    except Exception:
+        # Keep base value if conversion fails
+        SITE_ID = SITE_ID
+
 # SECURITY WARNING: don't run with debug turned on in production!
 # Wagner: alterar para False em produção
 DEBUG = config('DEBUG', default=True, cast=bool)
@@ -316,9 +328,17 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-# Disable social login rendering in production by default until providers are
-# properly configured (prevents runtime errors on template render).
-SOCIAL_LOGIN_ENABLED = False
+# Social login rendering control
+# --------------------------------
+# Make this configurable via environment/.env so you can enable social login
+# without changing code. Default False in production for safe deployments.
+try:
+    SOCIAL_LOGIN_ENABLED = config('SOCIAL_LOGIN_ENABLED', default=False, cast=bool)
+except Exception:
+    # If python-decouple is unavailable or misconfigured, fall back to env var.
+    SOCIAL_LOGIN_ENABLED = (
+        str(os.environ.get('SOCIAL_LOGIN_ENABLED', '')).strip().lower() in ('1', 'true', 'yes')
+    )
 
 # Remote debugging configuration
 if config('ENABLE_REMOTE_DEBUG', default=False, cast=bool):

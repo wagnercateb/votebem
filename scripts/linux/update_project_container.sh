@@ -118,14 +118,23 @@ $COMPOSE_CMD -f "$COMPOSE_FILE" down
 #------------------------------------------------------------------------------
 # Rebuild images
 #------------------------------------------------------------------------------
-echo "Rebuilding images (build)..."
-$COMPOSE_CMD -f "$COMPOSE_FILE" build
+echo "Rebuilding images (build, no-cache, pull base)..."
+# Use --no-cache to avoid stale layers; --pull to refresh base images
+$COMPOSE_CMD -f "$COMPOSE_FILE" build --no-cache --pull
+
+# Optional: prune dangling images left from previous builds to reclaim disk space
+echo "Pruning dangling images (safe cleanup)..."
+docker image prune -f || true
 
 #------------------------------------------------------------------------------
 # Restart containers in detached mode
 #------------------------------------------------------------------------------
-echo "Starting containers (up -d)..."
-$COMPOSE_CMD -f "$COMPOSE_FILE" up -d
+echo "Starting containers (up -d --force-recreate)..."
+$COMPOSE_CMD -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans
+
+# Show resulting image sizes for visibility (non-fatal if docker changes output)
+echo "Current image sizes (filtered)..."
+docker images | grep -E "mariadb|valkey|votebem-web" || true
 
 #------------------------------------------------------------------------------
 # Show service list and tail logs briefly to confirm

@@ -24,6 +24,14 @@
                 </form>
                 
                 <hr>
+                {#
+                  Social login rendering is gated by `SOCIAL_LOGIN_ENABLED`.
+                  In production, this defaults to False to avoid runtime
+                  errors if provider configuration (SocialApp) is missing or
+                  duplicated for the current Site. When enabled and configured,
+                  the buttons below will appear.
+                #}
+                {% if SOCIAL_LOGIN_ENABLED %}
                 <div class="text-center mb-3">
                     <p class="mb-2">Ou cadastre-se com:</p>
                     <div class="d-grid gap-2">
@@ -35,6 +43,7 @@
                         </a>
                     </div>
                 </div>
+                {% endif %}
                 
                 <hr>
                 

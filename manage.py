@@ -2,11 +2,35 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+import importlib
 
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'votebem.settings.development')
+    # Default to the production settings module if nothing is provided via
+    # environment. This maintains the intended runtime behavior.
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'votebem.settings.production')
+
+    # Defensive fallback:
+    # In some environments (e.g., Docker with an outdated .env), the
+    # DJANGO_SETTINGS_MODULE may be set to a non-existent module such as
+    # 'votebem.settings.development'. That causes management commands like
+    # `python manage.py shell` to crash BEFORE Django loads.
+    #
+    # To avoid that failure mode, try importing the configured settings
+    # module and, if the module is missing, force a fallback to
+    # 'votebem.settings.production'. This preserves expected production behavior
+    # while ensuring that CLI/admin commands remain usable even if the
+    # environment contains legacy values.
+    settings_module = os.environ.get('DJANGO_SETTINGS_MODULE')
+    if settings_module:
+        try:
+            importlib.import_module(settings_module)
+        except ModuleNotFoundError:
+            # Only fallback when the module itself is not found. We do NOT
+            # swallow other ImportError cases that indicate real problems
+            # inside the settings code.
+            os.environ['DJANGO_SETTINGS_MODULE'] = 'votebem.settings.production'
 
     # Optional: enable debugpy remote attach when environment variables are set.
     # This allows running the server in TRAE and attaching breakpoints from VSCode.
