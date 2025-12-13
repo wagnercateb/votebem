@@ -9,13 +9,30 @@ from django.conf import settings
 
 
 def social_login_settings(request):
-    """Expose `SOCIAL_LOGIN_ENABLED` boolean to all templates.
+    def _provider_available(provider: str) -> bool:
+        cfg = getattr(settings, "SOCIALACCOUNT_PROVIDERS", {})
+        app_cfg = (cfg.get(provider) or {}).get("APP") or {}
+        client_id = (app_cfg.get("client_id") or "").strip()
+        secret = (app_cfg.get("secret") or "").strip()
+        if client_id and secret:
+            return True
+        try:
+            from allauth.socialaccount.models import SocialApp
+            site_id = getattr(settings, "SITE_ID", None)
+            qs = SocialApp.objects.filter(provider=provider)
+            if site_id:
+                qs = qs.filter(sites__id=site_id)
+            return qs.count() == 1
+        except Exception:
+            return False
 
-    - When False (e.g., in production during remediation), templates can hide
-      social login buttons to avoid runtime errors from misconfigured providers.
-    - When True (default in base settings), templates render social login.
-    """
+    base_enabled = getattr(settings, "SOCIAL_LOGIN_ENABLED", True)
+    google_ok = _provider_available("google")
+    facebook_ok = _provider_available("facebook")
+    enabled = bool(base_enabled) and (google_ok or facebook_ok)
+
     return {
-        "SOCIAL_LOGIN_ENABLED": getattr(settings, "SOCIAL_LOGIN_ENABLED", True)
+        "SOCIAL_LOGIN_ENABLED": enabled,
+        "SOCIAL_GOOGLE_AVAILABLE": bool(base_enabled) and google_ok,
+        "SOCIAL_FACEBOOK_AVAILABLE": bool(base_enabled) and facebook_ok,
     }
-

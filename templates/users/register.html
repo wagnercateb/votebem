@@ -35,12 +35,12 @@
                 <div class="text-center mb-3">
                     <p class="mb-2">Ou cadastre-se com:</p>
                     <div class="d-grid gap-2">
-                        <a class="btn btn-outline-danger" href="{% provider_login_url 'google' process='signup' %}">
-                            Cadastrar com Google
-                        </a>
-                        <a class="btn btn-outline-primary" href="{% provider_login_url 'facebook' process='signup' %}">
-                            Cadastrar com Facebook
-                        </a>
+                        {% if SOCIAL_GOOGLE_AVAILABLE %}
+                        <a class="btn btn-outline-danger" href="{% provider_login_url 'google' process='signup' %}">Cadastrar com Google</a>
+                        {% endif %}
+                        {% if SOCIAL_FACEBOOK_AVAILABLE %}
+                        <a class="btn btn-outline-primary" href="{% provider_login_url 'facebook' process='signup' %}">Cadastrar com Facebook</a>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
