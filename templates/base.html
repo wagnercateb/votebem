@@ -16,6 +16,9 @@
       .table tbody tr:hover { background-color: #f1f3f5; }
       body { background-color: #f8f9fa; }
       .favicon-icon { display:inline-block; width:20px; height:20px; vertical-align:middle; margin-right:6px; background-image:url('{% url 'favicon_png' %}'); background-size:contain; background-repeat:no-repeat; }
+      .navbar-brand .ms-2 { font-size: 1rem; font-weight: 500; opacity: 0.9; }
+      .navbar-brand.brand-active .ms-2 { font-size: 1.25rem; font-weight: 600; color: #fff; opacity: 1; }
+      .nav-link.active { font-size: 1.1rem; font-weight: 600; color: #fff !important; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -23,7 +26,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-md navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="{% url 'home:index' %}">
+            <a class="navbar-brand d-flex align-items-center {% if request.resolver_match and request.resolver_match.app_name == 'home' and request.resolver_match.url_name == 'index' %}brand-active{% else %}brand-inactive{% endif %}" href="{% url 'home:index' %}">
                 <img src="/media/full_logo_branco.png" alt="VoteBem" style="height:32px; vertical-align:middle;" />
                 <span class="ms-2">VoteBem</span>
             </a>
@@ -35,12 +38,12 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'voting:votacoes_disponiveis' %}">
+                        <a class="nav-link {% if request.resolver_match and request.resolver_match.app_name == 'voting' and request.resolver_match.url_name == 'votacoes_disponiveis' %}active{% endif %}" href="{% url 'voting:votacoes_disponiveis' %}">
                             <i class="bi bi-vote-fill"></i> Votações
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'voting:ranking' %}">
+                        <a class="nav-link {% if request.resolver_match and request.resolver_match.app_name == 'voting' and request.resolver_match.url_name == 'ranking' %}active{% endif %}" href="{% url 'voting:ranking' %}">
                             <i class="bi bi-trophy"></i> Ranking
                         </a>
                     </li>
@@ -62,12 +65,12 @@
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'users:login' %}">
+                            <a class="nav-link {% if request.resolver_match and request.resolver_match.app_name == 'users' and request.resolver_match.url_name == 'login' %}active{% endif %}" href="{% url 'users:login' %}">
                                 <i class="bi bi-box-arrow-in-right"></i> Entrar
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'users:register' %}">
+                            <a class="nav-link {% if request.resolver_match and request.resolver_match.app_name == 'users' and request.resolver_match.url_name == 'register' %}active{% endif %}" href="{% url 'users:register' %}">
                                 <i class="bi bi-person-plus"></i> Cadastrar
                             </a>
                         </li>

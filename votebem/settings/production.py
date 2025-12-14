@@ -220,6 +220,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'allauth': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'votebem': {
             'handlers': ['console'],
             'level': 'INFO',

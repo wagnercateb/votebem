@@ -1,3 +1,4 @@
+# After changing docker-compose.yml , use docker compose up -d to recreate the container. docker compose restart web does not apply changed environment or volume configuration.
 services:
   # MariaDB database service
   db:
@@ -42,6 +43,10 @@ services:
     pull_policy: never
     container_name: votebem-web
     restart: unless-stopped
+    #The app chooses the env file path from DJANGO_ENV_PATH or falls back to /app/votebem/.env ( votebem/settings/production.py:9 )
+    # If the file lives on the host and is not already inside the container, you must bind‑mount it with volumes: - /dados/votebem/.env:/app/votebem/.env:ro (or mount it at /dados/votebem/.env ) so the app can read it
+    environment:
+      DJANGO_ENV_PATH: /dados/votebem/.env
     # Ensure the application receives all variables from .env.
     # Avoid hardcoding DB/Redis here; let .env drive values to prevent socket fallback.
     env_file: .env
@@ -52,6 +57,7 @@ services:
       - /dados/nginx/app/votebem/static:/app/staticfiles
       - /dados/votebem/votebem/media:/app/media
       - /dados/votebem/logs:/app/logs
+      - /dados/votebem/.env:/app/votebem/.env:ro      
     depends_on:
       db:
         condition: service_healthy
