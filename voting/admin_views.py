@@ -233,6 +233,10 @@ def rag_tool(request):
 
     # Submitted values
     doc_folder = request.POST.get('DOC_FOLDER', initial_doc_folder)
+    try:
+        doc_folder = doc_folder.replace('\\', '/')
+    except Exception:
+        pass
     # Resolve DOC_FOLDER relative to app root (BASE_DIR) when given as relative
     # This ensures users can set paths like "docs\\nao_versionados\\" and we will search
     # under <project_root>/docs/nao_versionados/ for content files.
@@ -245,22 +249,24 @@ def rag_tool(request):
         base_candidate = os.path.join(settings.BASE_DIR, doc_folder)
         project_root = os.path.dirname(settings.BASE_DIR)
         root_candidate = os.path.join(project_root, doc_folder)
+        env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
+        data_root = '/dados/votebem' if (env_mod.endswith('.production') or env_mod.endswith('.build')) else ''
+        data_candidate = os.path.join(data_root, doc_folder) if data_root else ''
         if os.path.isdir(base_candidate):
             doc_folder_abs = base_candidate
         elif os.path.isdir(root_candidate):
             doc_folder_abs = root_candidate
+        elif data_candidate and os.path.isdir(data_candidate):
+            doc_folder_abs = data_candidate
         else:
-            # Default to BASE_DIR join; glob will simply return empty if not found
             doc_folder_abs = base_candidate
     else:
         doc_folder_abs = ''
     # Count candidate files in the resolved DOC_FOLDER (md, pdf, txt)
     try:
-        _doc_candidates = (
-            glob.glob(os.path.join(doc_folder_abs, '*.md')) +
-            glob.glob(os.path.join(doc_folder_abs, '*.pdf')) +
-            glob.glob(os.path.join(doc_folder_abs, '*.txt'))
-        )
+        _doc_candidates = []
+        for pat in ('**/*.md', '**/*.pdf', '**/*.txt'):
+            _doc_candidates.extend(glob.glob(os.path.join(doc_folder_abs, pat), recursive=True))
         doc_files_count = len(_doc_candidates)
     except Exception:
         doc_files_count = 0
@@ -598,10 +604,16 @@ def rag_tool(request):
             import numpy as np  # opcional; usamos se disponível para .npy
 
             # Resolver HASH_FILE absoluto
-            hash_path = (
-                hash_file if (hash_file and os.path.isabs(hash_file))
-                else (os.path.join(settings.BASE_DIR, hash_file) if hash_file else '')
-            )
+            env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
+            if hash_file and os.path.isabs(hash_file):
+                hash_path = hash_file
+            elif hash_file:
+                if env_mod.endswith('.production') or env_mod.endswith('.build'):
+                    hash_path = os.path.join('/dados/embeddings/votebem', hash_file)
+                else:
+                    hash_path = os.path.join(settings.BASE_DIR, hash_file)
+            else:
+                hash_path = ''
 
             # Carregar hashes existentes (suporta .npy com allow_pickle e .json simples)
             existing_hashes = {}
@@ -942,8 +954,15 @@ def rag_tool(request):
     context_status = f"Contexto incluído: {_ctx_len} caracteres ({_ctx_source})" if (ran_query or context_fetched) else ''
 
     try:
+        env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
         if hash_file:
-            hash_file_abs = hash_file if os.path.isabs(hash_file) else os.path.join(settings.BASE_DIR, hash_file)
+            if os.path.isabs(hash_file):
+                hash_file_abs = hash_file
+            else:
+                if env_mod.endswith('.production') or env_mod.endswith('.build'):
+                    hash_file_abs = os.path.join('/dados/embeddings/votebem', hash_file)
+                else:
+                    hash_file_abs = os.path.join(settings.BASE_DIR, hash_file)
         else:
             hash_file_abs = ''
     except Exception:

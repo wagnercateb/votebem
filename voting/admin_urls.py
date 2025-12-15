@@ -18,6 +18,8 @@ Notes:
 """
 from django.urls import path
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import login_required
+from django.conf import settings
 from . import admin_views
 
 app_name = 'gerencial'
@@ -90,6 +92,6 @@ urlpatterns = [
     path('ajax/referencias/delete/', staff_member_required(admin_views.ajax_referencias_delete), name='ajax_referencias_delete'),
     # Background task status polling
     path('ajax/task-status/', staff_member_required(admin_views.ajax_task_status), name='ajax_task_status'),
-    # RAG tool page
+    # RAG tool page (staff only)
     path('rag-tool/', staff_member_required(admin_views.rag_tool), name='rag_tool'),
 ]

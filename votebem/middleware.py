@@ -60,7 +60,6 @@ class StaffOnlyGerencialMiddleware:
         if path.startswith("/gerencial/"):
             user = getattr(request, "user", None)
 
-            # Require authenticated staff; otherwise redirect to admin login.
             if not (user and user.is_authenticated and getattr(user, "is_staff", False)):
                 login_url = "/admin/login/"
                 return redirect(f"{login_url}?next={path}")

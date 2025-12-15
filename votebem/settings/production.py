@@ -186,8 +186,8 @@ if config('USE_HTTPS', default=False, cast=bool):
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-# Streamline social login UX: jump to provider on GET
 SOCIALACCOUNT_LOGIN_ON_GET = True
+
 
 # Logging
 import logging.handlers
