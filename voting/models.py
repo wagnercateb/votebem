@@ -307,7 +307,7 @@ class Referencia(models.Model):
         # Tipos de referência suportados
         WEB_PAGE = 'web_page', 'Página Web'
         SOUND = 'sound', 'Áudio'
-        SOCIAL_MEDIA = 'social_media', 'Rede Social'
+        SOCIAL_MEDIA = 'social_media', 'Vídeo no YouTube'
 
     # Vínculo obrigatório à votação oficial da proposição (1:N)
     proposicao_votacao = models.ForeignKey(

@@ -26,7 +26,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-md navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center {% if request.resolver_match and request.resolver_match.app_name == 'home' and request.resolver_match.url_name == 'index' %}brand-active{% else %}brand-inactive{% endif %}" href="{% url 'home:index' %}">
+            <a class="navbar-brand d-flex align-items-center {% if request.resolver_match and request.resolver_match.app_name == 'home' and request.resolver_match.url_name == 'index' %}brand-active{% else %}brand-inactive{% endif %}" href="{% url 'voting:votacoes_disponiveis' %}">
                 <img src="/media/full_logo_branco.png" alt="VoteBem" style="height:32px; vertical-align:middle;" />
                 <span class="ms-2">VoteBem</span>
             </a>

@@ -327,19 +327,53 @@
                                 {% if r.url|slice:':1' != '/' and r.url|slice:':6' == 'media/' %}
                                     {% with link_src='/'|add:r.url %}{% endwith %}
                                 {% endif %}
-                                <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" title="{{ r.title|default:r.kind }}">
                                 {% if r.kind == 'web_page' %}
+                                  <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" title="{{ r.title|default:r.kind }}">
                                     <i class="bi bi-book" aria-hidden="true"></i>
+                                  </a>
                                 {% elif r.kind == 'social_media' %}
-                                    <i class="bi bi-share" aria-hidden="true"></i>
+                                  <a class="entenda-item entenda-yt" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" rel="noopener" title="{{ r.title|default:r.kind }}" data-yt-url="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}">
+                                    <i class="bi bi-youtube" aria-hidden="true"></i>
+                                  </a>
                                 {% else %}
+                                  <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" title="{{ r.title|default:r.kind }}">
                                     <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                                  </a>
                                 {% endif %}
-                                </a>
                             {% endwith %}
                         {% endif %}
                     {% endfor %}
                 </div>
+                <style>
+                  .yt-overlay { position: fixed; inset: 0; z-index: 1050; }
+                  .yt-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.25); transition: background 0.2s ease; }
+                  .yt-pane { position: relative; max-width: 900px; width: 92%; margin: 6vh auto; background: #fff; border-radius: 10px; box-shadow: 0 12px 24px rgba(0,0,0,0.35); overflow: hidden; }
+                  .yt-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #e9ecef; }
+                  .yt-title { font-weight: 600; color: #212529; }
+                  .yt-body { padding: 10px 12px; }
+                  .yt-close { line-height: 1; }
+                  /* Floating mini-player variant */
+                  .yt-overlay.floating .yt-backdrop { background: transparent; }
+                  .yt-overlay.floating .yt-pane { position: fixed; bottom: 16px; right: 16px; width: 420px; max-width: 92%; margin: 0; border-radius: 10px; box-shadow: 0 8px 16px rgba(0,0,0,0.35); }
+                  .yt-overlay.floating .yt-body { padding: 6px 8px; }
+                  .yt-overlay.floating .yt-header { padding: 6px 8px; }
+                </style>
+                <div id="yt-overlay" class="yt-overlay" style="display:none;">
+                  <div class="yt-backdrop"></div>
+                  <div class="yt-pane">
+                    <div class="yt-header">
+                      <span class="yt-title">Vídeo no YouTube</span>
+                      <div class="d-flex align-items-center gap-2">
+                        <a id="yt-open" href="#" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">Assistir no YouTube</a>
+                        <button type="button" class="btn btn-sm btn-outline-secondary yt-close">Fechar</button>
+                      </div>
+                    </div>
+                    <div class="yt-body">
+                      <div class="ratio ratio-16x9"><div id="yt-iframe"></div></div>
+                    </div>
+                  </div>
+                </div>
+                <script src="https://www.youtube.com/iframe_api"></script>
                 <script>
                 document.addEventListener('DOMContentLoaded', function () {
                   document.querySelectorAll('.entenda-item[data-audio-id]').forEach(function (item) {
@@ -370,6 +404,115 @@
                     audio.addEventListener('ended', function () {
                       item.classList.remove('playing');
                       item.setAttribute('aria-pressed', 'false');
+                    });
+                  });
+                  function extractId(u) {
+                    try {
+                      var url = new URL(u);
+                      var host = url.hostname || '';
+                      if (host.indexOf('youtu.be') !== -1) {
+                        var id = url.pathname.replace('/', '');
+                        return id || '';
+                      }
+                      if (host.indexOf('youtube.com') !== -1) {
+                        var id = url.searchParams.get('v');
+                        if (id) return id;
+                        if (url.pathname.indexOf('/shorts/') !== -1) {
+                          var sid = url.pathname.split('/shorts/')[1];
+                          return sid || '';
+                        }
+                        if (url.pathname.indexOf('/embed/') !== -1) {
+                          var parts = url.pathname.split('/embed/');
+                          var pid = parts.length > 1 ? parts[1] : '';
+                          return pid || '';
+                        }
+                      }
+                    } catch (e) {}
+                    return '';
+                  }
+                  function toEmbed(u) {
+                    try {
+                      var url = new URL(u);
+                      var host = url.hostname || '';
+                      var id = extractId(u);
+                      if (id) return 'https://www.youtube.com/embed/' + id + '?enablejsapi=1&origin=' + encodeURIComponent(window.location.origin) + '&playsinline=1&rel=0&modestbranding=1';
+                    } catch (e) {}
+                    return '';
+                  }
+                  var ytOverlay = document.getElementById('yt-overlay');
+                  var ytIframeEl = document.getElementById('yt-iframe');
+                  var ytOpen = document.getElementById('yt-open');
+                  var ytPlayer = null;
+                  var currentVideoId = '';
+                  window.onYouTubeIframeAPIReady = window.onYouTubeIframeAPIReady || function(){};
+                  function ensurePlayer(id) {
+                    if (!ytIframeEl) return;
+                    if (ytPlayer) {
+                      try { ytPlayer.loadVideoById(id); } catch (_) {}
+                      return;
+                    }
+                    try {
+                      ytPlayer = new YT.Player('yt-iframe', {
+                        width: '100%',
+                        height: '100%',
+                        videoId: id,
+                        playerVars: {
+                          origin: window.location.origin,
+                          rel: 0,
+                          modestbranding: 1,
+                          playsinline: 1
+                        },
+                        events: {
+                          'onReady': function(){},
+                          'onError': function(e){
+                            try {
+                              var code = e && e.data ? String(e.data) : '';
+                              alert('Erro de configuração do player de vídeo (código ' + code + '). Abrindo no YouTube.');
+                              if (ytOpen && currentVideoId) {
+                                window.open('https://www.youtube.com/watch?v=' + currentVideoId, '_blank', 'noopener');
+                              }
+                            } catch (_) {}
+                          }
+                        }
+                      });
+                    } catch (_) {}
+                  }
+                  function openYt(u) {
+                    var embed = toEmbed(u);
+                    var id = extractId(u);
+                    if ((!embed && !id) || !ytOverlay || !ytIframeEl || !ytOpen) return false;
+                    ytOpen.href = u;
+                    ytOverlay.style.display = 'block';
+                    ytOverlay.classList.add('floating');
+                    currentVideoId = id || '';
+                    if (currentVideoId) ensurePlayer(currentVideoId);
+                    return true;
+                  }
+                  function closeYt() {
+                    if (!ytOverlay) return;
+                    ytOverlay.style.display = 'none';
+                    ytOverlay.classList.remove('floating');
+                    try { if (ytPlayer) ytPlayer.stopVideo(); } catch (_) {}
+                  }
+                  var ytClose = document.querySelector('.yt-close');
+                  if (ytClose) ytClose.addEventListener('click', function(){ closeYt(); });
+                  if (ytOverlay) {
+                    ytOverlay.addEventListener('click', function(ev){
+                      if (ev.target && ev.target.classList && ev.target.classList.contains('yt-backdrop')) {
+                        closeYt();
+                      }
+                    });
+                    document.addEventListener('keydown', function(ev){
+                      if (ev.key === 'Escape') closeYt();
+                    });
+                  }
+                  document.querySelectorAll('.entenda-item').forEach(function (a) {
+                    a.addEventListener('click', function (e) {
+                      var href = a.getAttribute('data-yt-url') || a.getAttribute('href') || '';
+                      if (href.indexOf('youtube.com') !== -1 || href.indexOf('youtu.be') !== -1) {
+                        e.preventDefault();
+                        openYt(href);
+                      }
                     });
                   });
                 });

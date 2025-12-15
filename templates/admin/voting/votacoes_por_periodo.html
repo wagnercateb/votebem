@@ -161,6 +161,19 @@
     logList.appendChild(li);
   }
 
+  function setLoading(btn, isLoading) {
+    if (!btn) return;
+    if (isLoading) {
+      if (!btn.dataset.originalText) btn.dataset.originalText = btn.textContent || 'Carregar votação oficial';
+      btn.textContent = 'Importando...';
+      btn.disabled = true;
+    } else {
+      const orig = btn.dataset.originalText || 'Carregar votação oficial';
+      btn.textContent = orig;
+      btn.disabled = false;
+    }
+  }
+
   // Executa a mesma consulta do botão "Carregar" (por proposição), usando somente X de X-Y
   async function consultarPorProposicao(propId) {
     if (!propId) return;
@@ -226,18 +239,20 @@
       const ct = (r.headers && r.headers.get && r.headers.get('Content-Type')) ? r.headers.get('Content-Type') : '';
       if (!ct || ct.indexOf('application/json') === -1) {
         log(`Falha ao importar ${fullId}: acesso negado ou sessão expirada. Faça login no admin.`);
-        return;
+        return { ok: false, error: 'acesso negado ou sessão expirada' };
       }
       const j = await r.json();
       if (!r.ok || !j.ok) {
         log(`Falha ao importar ${fullId}: ${j.error || 'erro'}${j.api_url ? ` (API: ${j.api_url})` : ''}`);
-        return;
+        return { ok: false, error: j.error || 'erro', api_url: j.api_url || '' };
       }
       log(`Importado ${j.votacao_id}: Criados ${j.created}, Atualizados ${j.updated}, Ignorados ${j.skipped}.`);
+      return { ok: true, ...j };
     } catch (e) {
       // Exibe detalhes técnicos do erro de importação (HTTP/Network), incluindo URL consultada
       const msg = (e && e.message) ? e.message : String(e);
       log(`Erro ao importar ${fullId}: ${msg}. URL: ${url}`);
+      return { ok: false, error: msg };
     }
   }
 
@@ -301,10 +316,24 @@
         const btn = tr.querySelector('.btn-import');
         if (btn) {
           btn.addEventListener('click', async () => {
-            // Primeiro, consulta por proposição (usa apenas X de X-Y)
-            await consultarPorProposicao(propId);
-            // Depois, importa votos oficiais
-            await importarVotos(fullId, propId, sufixo);
+            setLoading(btn, true);
+            status.textContent = 'Carregando votação oficial, aguarde...';
+            try {
+              await consultarPorProposicao(propId);
+              const res = await importarVotos(fullId, propId, sufixo);
+              if (res && res.ok) {
+                status.textContent = `Importação concluída. Criados: ${Number(res.created||0)}, Atualizados: ${Number(res.updated||0)}, Ignorados: ${Number(res.skipped||0)}.`;
+                alert(`Importação concluída para ${res.votacao_id || fullId}.`);
+              } else {
+                status.textContent = 'Falha ao importar votos oficiais. Veja o log abaixo.';
+                alert('Falha ao importar votação oficial.');
+              }
+            } catch (_) {
+              status.textContent = 'Erro ao importar votos oficiais.';
+              alert('Erro ao importar votação oficial.');
+            } finally {
+              setLoading(btn, false);
+            }
           });
         }
         // Se não existir no BD, permitir abrir página gerencial passando votacao_id
