@@ -426,196 +426,200 @@ def rag_tool(request):
     # Submissão de consulta: recupera contexto pelo ChromaDB (embeddings) com fallback para leitura de arquivos
     if request.method == 'POST' and request.POST.get('submit_query'):
         ran_query = True
-        try:
-            # 1) Tenta recuperar contexto via ChromaDB (similaridade por embeddings)
-            #    - Usa provider configurado (OpenAI ou local sentence-transformers)
-            #    - Usa persistência se CHROMA_PERSIST_PATH estiver configurado
-            #    - Fallback para leitura direta de arquivos do DOC_FOLDER se Chroma falhar ou não retornar resultados
-            chroma_used = False
-            try:
-                import chromadb
-                from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
-                provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'local')
-                provider = provider if provider in ('openai', 'local') else 'local'
-                local_model = getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2')
-                persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
-                effective_collection = f"{chroma_collection}__{provider}"
+        # Async execution to prevent timeouts
+        lock_key = f"vb:rag:query:{request.user.id}"
+        status_key = f"vb:rag:query:status:{request.user.id}"
 
-                # Definir função de embedding conforme provider
-                if provider == 'local':
-                    ef = SentenceTransformerEmbeddingFunction(model_name=local_model)
-                else:
-                    if not api_key:
-                        raise RuntimeError('OPENAI_API_KEY ausente para embeddings OpenAI')
-                    ef = OpenAIEmbeddingFunction(api_key=api_key, model_name=getattr(settings, 'OPENAI_EMBED_MODEL', 'text-embedding-3-small'))
-
-                # Cliente Chroma (persistente se caminho configurado)
+        if not _acquire_lock(lock_key, ttl_seconds=300):
+            messages.warning(request, "Já existe uma consulta em andamento.")
+            query_status_key = status_key
+        else:
+            # Capture variables for thread
+            _query_text = query_text
+            _system_prompt = system_prompt
+            _chroma_collection = chroma_collection
+            _doc_folder_abs = doc_folder_abs
+            _api_key = api_key
+            _embed_provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'local')
+            
+            def _process_query():
                 try:
-                    client = chromadb.PersistentClient(path=persist_path) if persist_path else chromadb.Client()
-                except Exception:
-                    client = chromadb.Client()
+                    _set_status(status_key, {'state': 'processing', 'message': 'Recuperando contexto...'})
+                    
+                    context_text = ''
+                    chroma_used = False
+                    warning_msg = ''
+                    
+                    # 1) Tenta recuperar contexto via ChromaDB
+                    try:
+                        import chromadb
+                        from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
+                        
+                        provider = _embed_provider if _embed_provider in ('openai', 'local') else 'local'
+                        local_model = getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2')
+                        persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
+                        effective_collection = f"{_chroma_collection}__{provider}"
 
-                # Obter/criar coleção
-                try:
-                    names = [c.name for c in client.list_collections()]
-                    if effective_collection in names:
-                        coll = client.get_collection(effective_collection)
-                    else:
-                        coll = client.create_collection(name=effective_collection, embedding_function=ef)
-                except Exception:
-                    coll = client.get_or_create_collection(name=effective_collection)
+                        if provider == 'local':
+                            ef = SentenceTransformerEmbeddingFunction(model_name=local_model)
+                        else:
+                            if not _api_key:
+                                raise RuntimeError('OPENAI_API_KEY ausente para embeddings OpenAI')
+                            ef = OpenAIEmbeddingFunction(api_key=_api_key, model_name=getattr(settings, 'OPENAI_EMBED_MODEL', 'text-embedding-3-small'))
 
-                # Consulta por similaridade
-                qr = coll.query(query_texts=[query_text], n_results=5)
-                docs = (qr.get('documents') or [[]])[0]
-                metas = (qr.get('metadatas') or [[]])[0]
-                if docs:
-                    parts = []
-                    for i, d in enumerate(docs):
-                        src = ''
                         try:
-                            src = metas[i].get('source') if isinstance(metas[i], dict) else ''
+                            client = chromadb.PersistentClient(path=persist_path) if persist_path else chromadb.Client()
                         except Exception:
-                            src = ''
-                        header = f"[Fonte: {src}]" if src else "[Fonte: desconhecida]"
-                        parts.append(header)
-                        parts.append(d or '')
-                        parts.append("\n---\n")
-                    context_text = "\n".join(parts)
-                    chroma_used = True
+                            client = chromadb.Client()
+
+                        try:
+                            names = [c.name for c in client.list_collections()]
+                            if effective_collection in names:
+                                coll = client.get_collection(effective_collection)
+                            else:
+                                coll = client.create_collection(name=effective_collection, embedding_function=ef)
+                        except Exception:
+                            coll = client.get_or_create_collection(name=effective_collection)
+
+                        qr = coll.query(query_texts=[_query_text], n_results=5)
+                        docs = (qr.get('documents') or [[]])[0]
+                        metas = (qr.get('metadatas') or [[]])[0]
+                        
+                        if docs:
+                            parts = []
+                            for i, d in enumerate(docs):
+                                src = ''
+                                try:
+                                    src = metas[i].get('source') if isinstance(metas[i], dict) else ''
+                                except Exception:
+                                    src = ''
+                                header = f"[Fonte: {src}]" if src else "[Fonte: desconhecida]"
+                                parts.append(header)
+                                parts.append(d or '')
+                                parts.append("\n---\n")
+                            context_text = "\n".join(parts)
+                            chroma_used = True
+                        else:
+                            raise RuntimeError('Nenhum resultado na consulta da coleção Chroma.')
+                    except Exception:
+                        # Fallback
+                        ctx = _retrieve_context(_doc_folder_abs, _query_text)
+                        context_text = ctx
+                        chroma_used = False
+                        warning_msg = "ChromaDB indisponível ou vazio; usando contexto por leitura de arquivos."
+
+                    _set_status(status_key, {'state': 'processing', 'message': 'Consultando LLM...', 'context_text': context_text})
+
+                    # Build prompt
                     try:
-                        from django.contrib import messages as dj_messages
-                        dj_messages.info(request, f"Contexto recuperado via ChromaDB (top-5). Persistência: {persist_path or 'memória'}")
+                        has_placeholders = bool(_system_prompt and ('{context_text}' in _system_prompt or '{query}' in _system_prompt))
+                        if has_placeholders:
+                            final_prompt = _system_prompt.format(context_text=context_text, query=_query_text)
+                        else:
+                            final_prompt = _system_prompt
+                    except Exception:
+                        final_prompt = _system_prompt
+
+                    # 3) Generation
+                    answer = ''
+                    try:
+                        if _api_key:
+                            from openai import OpenAI
+                            client = OpenAI(api_key=_api_key)
+                            system_content = (final_prompt or '')
+                            try:
+                                if not has_placeholders and (context_text or '').strip():
+                                    ctx = (context_text or '').strip()
+                                    if len(ctx) > 4000:
+                                        ctx = ctx[:4000]
+                                    system_content = f"{system_content}\n\nContexto:\n{ctx}"
+                            except Exception:
+                                pass
+                            
+                            resp = client.chat.completions.create(
+                                model=getattr(settings, 'OPENAI_LLM_MODEL', 'gpt-4o-mini'),
+                                messages=[
+                                    {"role": "system", "content": system_content},
+                                    {"role": "user", "content": _query_text or ""},
+                                ],
+                                temperature=0.2,
+                            )
+                            answer = (resp.choices[0].message.content if getattr(resp, 'choices', None) else '')
+                        else:
+                            raise RuntimeError('OPENAI_API_KEY missing')
+                    except Exception:
+                        base = (context_text or '').strip()
+                        if base:
+                            answer = base[:800]
+                        else:
+                            answer = 'Nenhuma resposta disponível (contexto vazio e API indisponível).'
+
+                    # Save to file
+                    saved_path = ''
+                    try:
+                        from django.utils import timezone
+                        now_date = timezone.localtime().date().isoformat()
+                        prod_dir = '/dados/votebem/docs/respostas_ia'
+                        local_dir = os.path.join(os.path.dirname(settings.BASE_DIR), 'docs', 'nao_versionados', 'respostas_ia')
+                        
+                        env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
+                        is_dev = env_mod.endswith('.development')
+                        is_prodlike = env_mod.endswith('.production') or env_mod.endswith('.build')
+                        preferred_dir = local_dir if is_dev else (prod_dir if is_prodlike else local_dir)
+                        
+                        save_dir = preferred_dir
+                        try:
+                            os.makedirs(save_dir, exist_ok=True)
+                        except Exception:
+                            try:
+                                save_dir = local_dir
+                                os.makedirs(save_dir, exist_ok=True)
+                            except Exception:
+                                save_dir = prod_dir
+                                os.makedirs(save_dir, exist_ok=True)
+
+                        q = (_query_text or '').strip()
+                        safe_q = re.sub(r"[^\w\-]+", "_", q)
+                        if len(safe_q) > 80:
+                            safe_q = safe_q[:80]
+                        if not safe_q:
+                            safe_q = 'consulta'
+                        fname = f"{now_date}_{safe_q}.txt"
+                        fpath = os.path.join(save_dir, fname)
+
+                        sep = ["", "-" * 80, ""]
+                        content_lines = [
+                            (q or ''),
+                            *sep,
+                            (answer or ''),
+                            *sep,
+                            (context_text or ''),
+                            *sep,
+                            (_system_prompt or ''),
+                        ]
+                        with open(fpath, 'w', encoding='utf-8') as f:
+                            f.write("\n".join(content_lines))
+                        saved_path = fpath
                     except Exception:
                         pass
-                else:
-                    raise RuntimeError('Nenhum resultado na consulta da coleção Chroma.')
-            except Exception:
-                # 2) Fallback: recuperar contexto diretamente dos arquivos locais
-                ctx = _retrieve_context(doc_folder_abs, query_text)
-                context_text = ctx
-                chroma_used = False
-                try:
-                    from django.contrib import messages as dj_messages
-                    dj_messages.warning(request, "ChromaDB indisponível ou vazio; usando contexto por leitura de arquivos.")
-                except Exception:
-                    pass
-            # Build final prompt and ensure context is injected even when placeholders are absent
-            try:
-                has_placeholders = bool(system_prompt and ('{context_text}' in system_prompt or '{query}' in system_prompt))
-                if has_placeholders:
-                    final_prompt = system_prompt.format(context_text=context_text, query=query_text)
-                else:
-                    final_prompt = system_prompt
-            except Exception:
-                final_prompt = system_prompt
 
-            # 3) Geração de resposta (se OPENAI_API_KEY disponível)
-            try:
-                if api_key:
-                    from openai import OpenAI
-                    client = OpenAI(api_key=api_key)
-                    # Use a small, cost-effective model if unspecified; model name omitted in UI
-                    # Enforce OpenAI LLM model from settings (fixed to gpt-4o-mini)
-                    # Guarantee context inclusion when system_prompt lacks placeholders by appending it.
-                    system_content = (final_prompt or '')
-                    try:
-                        if not has_placeholders and (context_text or '').strip():
-                            # Append contextual passage to the system content so the model has grounding.
-                            # Keep size reasonable to avoid excessive token usage.
-                            ctx = (context_text or '').strip()
-                            # Soft cap context to ~4000 characters for chat safety
-                            if len(ctx) > 4000:
-                                ctx = ctx[:4000]
-                            system_content = f"{system_content}\n\nContexto:\n{ctx}"
-                    except Exception:
-                        pass
-                    resp = client.chat.completions.create(
-                        model=getattr(settings, 'OPENAI_LLM_MODEL', 'gpt-4o-mini'),
-                        messages=[
-                            {"role": "system", "content": system_content},
-                            {"role": "user", "content": query_text or ""},
-                        ],
-                        temperature=0.2,
-                    )
-                    answer = (resp.choices[0].message.content if getattr(resp, 'choices', None) else '')
-                else:
-                    raise RuntimeError('OPENAI_API_KEY missing')
-            except Exception:
-                # Fallback: return a trimmed excerpt of context as pseudo-answer
-                base = (context_text or '').strip()
-                if base:
-                    answer = base[:800]
-                else:
-                    answer = 'Nenhuma resposta disponível (contexto vazio e API indisponível).'
-        except Exception as e:
-            error_msg = f'Erro ao processar consulta: {e}'
+                    _set_status(status_key, {
+                        'state': 'completed',
+                        'answer': answer,
+                        'context_text': context_text,
+                        'warning_msg': warning_msg,
+                        'saved_path': saved_path,
+                        'message': 'Consulta concluída.'
+                    })
 
-        # Após obter a resposta, salvar registro em arquivo conforme ambiente
-        try:
-            from django.utils import timezone
-            now_date = timezone.localtime().date().isoformat()  # yyyy-mm-dd
-            # Diretórios de destino: produção e desenvolvimento
-            # Observação: não dependemos apenas de DEBUG, pois em desenvolvimento
-            # o usuário pode definir DEBUG=False para testar comportamentos.
-            # Em vez disso, usamos o módulo de settings ativo para decidir.
-            prod_dir = '/dados/votebem/docs/respostas_ia'
-            # Em desenvolvimento, salvar em <project_root>/docs/nao_versionados/respostas_ia/
-            # BASE_DIR aponta para '<project_root>/votebem', então subimos um nível para o root do projeto.
-            local_dir = os.path.join(os.path.dirname(settings.BASE_DIR), 'docs', 'nao_versionados', 'respostas_ia')
+                except Exception as e:
+                    _set_status(status_key, {'state': 'error', 'message': f'Erro: {str(e)}'})
+                finally:
+                    _release_lock(lock_key)
 
-            # Detecta o módulo de settings ativo (ex.: 'votebem.settings.production')
-            env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
-            is_dev = env_mod.endswith('.development')
-            is_prodlike = env_mod.endswith('.production') or env_mod.endswith('.build')
-
-            # Escolha preferencial baseada no módulo de settings
-            preferred_dir = local_dir if is_dev else (prod_dir if is_prodlike else local_dir)
-
-            # Fallbacks robustos:
-            # - Se o diretório preferencial não existir, criamos; se falhar, alternamos.
-            # - Se 'local_dir' existir/for criável, preferimos em ambiente não-prod.
-            save_dir = preferred_dir
-            try:
-                os.makedirs(save_dir, exist_ok=True)
-            except Exception:
-                # Se falhou ao criar preferred_dir, tenta local_dir; caso contrário, prod_dir.
-                try:
-                    save_dir = local_dir
-                    os.makedirs(save_dir, exist_ok=True)
-                except Exception:
-                    save_dir = prod_dir
-                    os.makedirs(save_dir, exist_ok=True)
-
-            # Sanitização do nome de arquivo derivado da query
-            q = (query_text or '').strip()
-            safe_q = re.sub(r"[^\w\-]+", "_", q)  # substituir espaços e símbolos por '_'
-            if len(safe_q) > 80:
-                safe_q = safe_q[:80]
-            if not safe_q:
-                safe_q = 'consulta'
-            fname = f"{now_date}_{safe_q}.txt"
-            fpath = os.path.join(save_dir, fname)
-
-            sep = ["", "-" * 80, ""]
-            content_lines = [
-                (q or ''),
-                *sep,
-                (answer or ''),
-                *sep,
-                (context_text or ''),
-                *sep,
-                (system_prompt or ''),
-            ]
-            with open(fpath, 'w', encoding='utf-8') as f:
-                f.write("\n".join(content_lines))
-            try:
-                messages.success(request, f"Resposta registrada em: {fpath}")
-            except Exception:
-                pass
-        except Exception:
-            # Não bloquear a resposta por falha ao salvar arquivo
-            pass
+            threading.Thread(target=_process_query, daemon=True).start()
+            query_status_key = status_key
+            messages.info(request, "Consulta iniciada em segundo plano.")
 
     # Comando de embed: varre DOC_FOLDER por novos/atualizados arquivos e envia para Chroma
     if request.method == 'POST' and request.POST.get('embed_docs'):
@@ -957,6 +961,7 @@ def rag_tool(request):
         'active_tab': active_tab,
         'submitted_action': submitted_action,
         'embed_status_key': locals().get('embed_status_key', ''),
+        'query_status_key': locals().get('query_status_key', ''),
     }
     return render(request, 'admin/voting/rag_tool.html', context)
 

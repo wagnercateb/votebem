@@ -225,6 +225,15 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
 
       
       {# Exibição da resposta da API/fallback somente após submissão de consulta #}
+      {% if query_status_key %}
+        <div id="query-progress-container" class="alert alert-info mt-3">
+          <div class="d-flex align-items-center gap-2">
+             <div class="spinner-border spinner-border-sm" role="status"></div>
+             <span id="query-status-msg">Processando consulta...</span>
+          </div>
+        </div>
+      {% endif %}
+
       {% if ran_query or context_fetched %}
         <div>
           <label class="form-label">Resposta da API</label>
@@ -451,6 +460,84 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
       // Inicializa no carregamento do DOM e faz uma chamada imediata por segurança
       document.addEventListener('DOMContentLoaded', updateEffectiveCollection);
       updateEffectiveCollection();
+    })();
+  </script>
+  
+  <script>
+    (function(){
+      const qKey = "{{ query_status_key }}";
+      if(!qKey) return;
+      
+      const url = "{% url 'gerencial:ajax_task_status' %}" + "?key=" + encodeURIComponent(qKey);
+      let done = false;
+      
+      function pollQuery(){
+        if(done) return;
+        fetch(url, {method:'GET', headers:{'Accept':'application/json'}})
+          .then(r => r.json())
+          .then(data => {
+            const msgEl = document.getElementById('query-status-msg');
+            const container = document.getElementById('query-progress-container');
+            
+            if(!data || !data.ok){
+               if(data && data.error) {
+                   if(msgEl) msgEl.textContent = 'Erro: ' + data.error;
+                   done = true;
+               }
+               return;
+            }
+            
+            const st = data.status || {};
+            if(msgEl) msgEl.textContent = st.message || 'Processando...';
+            
+            if(st.context_text){
+                const ctxEl = document.getElementById('context_text');
+                if(ctxEl && ctxEl.value !== st.context_text) ctxEl.value = st.context_text;
+            }
+
+            if(st.state === 'completed' || st.state === 'error'){
+              done = true;
+              if(container) container.style.display = 'none';
+              
+              if(st.state === 'completed'){
+                  // Try to find answer-box, if not exists, create it
+                  let ansBox = document.querySelector('.answer-box');
+                  if(!ansBox){
+                      const wrapper = document.createElement('div');
+                      wrapper.innerHTML = `<label class="form-label">Resposta da API</label><div class="answer-box"></div>`;
+                      // Insert before save button container (d-flex justify-content-end)
+                      const form = document.getElementById('rag-form');
+                      const btnContainer = form.querySelector('.d-flex.justify-content-end');
+                      if(btnContainer) form.insertBefore(wrapper, btnContainer);
+                      else form.appendChild(wrapper);
+                      ansBox = wrapper.querySelector('.answer-box');
+                  }
+                  
+                  if(ansBox) ansBox.textContent = st.answer || '(Sem resposta)';
+                  
+                  if(st.warning_msg && ansBox){
+                      const alertDiv = document.createElement('div');
+                      alertDiv.className = 'alert alert-warning mt-2';
+                      alertDiv.textContent = st.warning_msg;
+                      ansBox.parentNode.appendChild(alertDiv);
+                  }
+                  if(st.saved_path && ansBox){
+                       const infoDiv = document.createElement('div');
+                       infoDiv.className = 'small-muted mt-1';
+                       infoDiv.textContent = 'Salvo em: ' + st.saved_path;
+                       ansBox.parentNode.appendChild(infoDiv);
+                  }
+              }
+            }
+          })
+          .catch(() => {});
+      }
+      
+      pollQuery();
+      const iv = setInterval(() => {
+        if(done) clearInterval(iv);
+        else pollQuery();
+      }, 1000);
     })();
   </script>
 </div>
