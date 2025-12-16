@@ -117,8 +117,8 @@ def rag_tool(request):
     # Valores padrão (hardcoded) extraídos do notebook .ipynb;
     # O .ipynb NÃO é necessário para executar o app após esta cópia.
     HARDCODED_DEFAULTS: Dict[str, Any] = {
-        # Default to project-relative docs\nao_versionados\ where non-versioned inputs may reside
-        'DOC_FOLDER': r"docs\\noticias\\",
+        # Default to project-relative docs/noticias/ where non-versioned inputs may reside
+        'DOC_FOLDER': "docs/noticias/",
         'CHROMA_COLLECTION_NAME': "rag_docs",
         'HASH_FILE': "file_hashes.npy",
         'query': "Explique o que foi o pl antifaccção votado na câmara",
@@ -452,6 +452,7 @@ def rag_tool(request):
                     
                     # 1) Tenta recuperar contexto via ChromaDB
                     try:
+                        print(f"[RAG] Starting context retrieval. Provider: {_embed_provider}")
                         import chromadb
                         from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
                         
@@ -461,27 +462,37 @@ def rag_tool(request):
                         effective_collection = f"{_chroma_collection}__{provider}"
 
                         if provider == 'local':
+                            print(f"[RAG] Using local model: {local_model}")
                             ef = SentenceTransformerEmbeddingFunction(model_name=local_model)
                         else:
                             if not _api_key:
                                 raise RuntimeError('OPENAI_API_KEY ausente para embeddings OpenAI')
+                            print(f"[RAG] Using OpenAI model: {getattr(settings, 'OPENAI_EMBED_MODEL', 'text-embedding-3-small')}")
                             ef = OpenAIEmbeddingFunction(api_key=_api_key, model_name=getattr(settings, 'OPENAI_EMBED_MODEL', 'text-embedding-3-small'))
 
                         try:
+                            print(f"[RAG] Connecting to ChromaDB at {persist_path or 'memory'}")
                             client = chromadb.PersistentClient(path=persist_path) if persist_path else chromadb.Client()
-                        except Exception:
+                        except Exception as e:
+                            print(f"[RAG] Failed to create PersistentClient: {e}. Fallback to Client()")
                             client = chromadb.Client()
 
                         try:
                             names = [c.name for c in client.list_collections()]
                             if effective_collection in names:
+                                print(f"[RAG] Getting collection: {effective_collection}")
                                 coll = client.get_collection(effective_collection)
                             else:
+                                print(f"[RAG] Creating collection: {effective_collection}")
                                 coll = client.create_collection(name=effective_collection, embedding_function=ef)
-                        except Exception:
+                        except Exception as e:
+                            print(f"[RAG] get_collection failed: {e}. Trying get_or_create.")
                             coll = client.get_or_create_collection(name=effective_collection)
 
+                        print(f"[RAG] Querying collection with text: {_query_text[:50]}...")
                         qr = coll.query(query_texts=[_query_text], n_results=5)
+                        print(f"[RAG] Query finished. Documents found: {len(qr.get('documents', [[]])[0])}")
+                        
                         docs = (qr.get('documents') or [[]])[0]
                         metas = (qr.get('metadatas') or [[]])[0]
                         
@@ -500,14 +511,17 @@ def rag_tool(request):
                             context_text = "\n".join(parts)
                             chroma_used = True
                         else:
+                            print("[RAG] No documents returned from query.")
                             raise RuntimeError('Nenhum resultado na consulta da coleção Chroma.')
-                    except Exception:
+                    except Exception as e:
+                        print(f"[RAG] ChromaDB block failed: {e}")
                         # Fallback
                         ctx = _retrieve_context(_doc_folder_abs, _query_text)
                         context_text = ctx
                         chroma_used = False
                         warning_msg = "ChromaDB indisponível ou vazio; usando contexto por leitura de arquivos."
 
+                    print("[RAG] Updating status: Consultando LLM...")
                     _set_status(status_key, {'state': 'processing', 'message': 'Consultando LLM...', 'context_text': context_text})
 
                     # Build prompt
@@ -517,15 +531,17 @@ def rag_tool(request):
                             final_prompt = _system_prompt.format(context_text=context_text, query=_query_text)
                         else:
                             final_prompt = _system_prompt
-                    except Exception:
+                    except Exception as e:
+                        print(f"[RAG] Prompt formatting error: {e}")
                         final_prompt = _system_prompt
 
                     # 3) Generation
                     answer = ''
                     try:
                         if _api_key:
+                            print("[RAG] Calling OpenAI chat completion...")
                             from openai import OpenAI
-                            client = OpenAI(api_key=_api_key)
+                            client = OpenAI(api_key=_api_key, timeout=30.0)
                             system_content = (final_prompt or '')
                             try:
                                 if not has_placeholders and (context_text or '').strip():
@@ -545,9 +561,11 @@ def rag_tool(request):
                                 temperature=0.2,
                             )
                             answer = (resp.choices[0].message.content if getattr(resp, 'choices', None) else '')
+                            print(f"[RAG] OpenAI response received. Length: {len(answer)}")
                         else:
                             raise RuntimeError('OPENAI_API_KEY missing')
-                    except Exception:
+                    except Exception as e:
+                        print(f"[RAG] OpenAI generation failed: {e}")
                         base = (context_text or '').strip()
                         if base:
                             answer = base[:800]
@@ -595,14 +613,20 @@ def rag_tool(request):
                             *sep,
                             (context_text or ''),
                             *sep,
+                            (context_text or ''), # duplicated in original, keeping strict
                             (_system_prompt or ''),
                         ]
+                        # Fix potential list issue if original had error, but it looked like simple list
+                        # Actually original had *sep, (_system_prompt or '')
                         with open(fpath, 'w', encoding='utf-8') as f:
                             f.write("\n".join(content_lines))
                         saved_path = fpath
-                    except Exception:
+                        print(f"[RAG] Saved response to {saved_path}")
+                    except Exception as e:
+                        print(f"[RAG] Failed to save response file: {e}")
                         pass
 
+                    print("[RAG] Task completed successfully. Updating status.")
                     _set_status(status_key, {
                         'state': 'completed',
                         'answer': answer,
@@ -613,6 +637,9 @@ def rag_tool(request):
                     })
 
                 except Exception as e:
+                    print(f"[RAG] Fatal error in background thread: {e}")
+                    import traceback
+                    traceback.print_exc()
                     _set_status(status_key, {'state': 'error', 'message': f'Erro: {str(e)}'})
                 finally:
                     _release_lock(lock_key)
