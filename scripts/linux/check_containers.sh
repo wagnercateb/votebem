@@ -11,6 +11,20 @@ ENV_FILE="$PROJECT_ROOT/.env"
 DOCKERFILE="$PROJECT_ROOT/Dockerfile"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
 
+# Determine docker compose command
+# On some systems, "docker compose" is a space-separated command which complicates variable expansion
+# We will use a function to handle the command execution
+docker_compose_cmd() {
+    if docker compose version &> /dev/null; then
+        docker compose "$@"
+    elif docker-compose version &> /dev/null; then
+        docker-compose "$@"
+    else
+        echo "Error: Neither 'docker compose' nor 'docker-compose' found." >&2
+        return 1
+    fi
+}
+
 echo "========================================================"
 echo "      VotoBem Container Diagnostic Script"
 echo "========================================================"
@@ -48,11 +62,11 @@ if [ -f "$COMPOSE_FILE" ]; then
     echo "  [OK] docker-compose.yml found."
     # Validate compose file syntax
     echo "  Validating compose file syntax..."
-    if $DOCKER_COMPOSE -f "$COMPOSE_FILE" config > /dev/null 2>&1; then
+    if docker_compose_cmd -f "$COMPOSE_FILE" config > /dev/null 2>&1; then
         echo "  [OK] docker-compose.yml syntax is valid."
     else
         echo "  [ERROR] docker-compose.yml syntax is INVALID."
-        $DOCKER_COMPOSE -f "$COMPOSE_FILE" config
+        docker_compose_cmd -f "$COMPOSE_FILE" config
     fi
 else
     echo "  [ERROR] docker-compose.yml NOT found at $COMPOSE_FILE"
@@ -63,8 +77,8 @@ echo "--------------------------------------------------------"
 # 2. Check Running Containers
 echo "[2] Checking Running Containers..."
 
-WEB_CONTAINER=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" ps -q web)
-REDIS_CONTAINER=$($DOCKER_COMPOSE -f "$COMPOSE_FILE" ps -q valkey)
+WEB_CONTAINER=$(docker_compose_cmd -f "$COMPOSE_FILE" ps -q web)
+REDIS_CONTAINER=$(docker_compose_cmd -f "$COMPOSE_FILE" ps -q valkey)
 
 if [ -z "$WEB_CONTAINER" ]; then
     echo "  [ERROR] Web container is NOT running."
@@ -86,7 +100,7 @@ echo "[3] Testing Redis Connectivity from Web Container..."
 if [ -n "$WEB_CONTAINER" ]; then
     # We use python to test redis connection because redis-cli might not be in the web image
     echo "  Running Python redis test..."
-    $DOCKER_COMPOSE -f "$COMPOSE_FILE" exec -T web python -c "
+    docker_compose_cmd -f "$COMPOSE_FILE" exec -T web python -c "
 import os
 import redis
 import sys
@@ -118,7 +132,7 @@ echo "[4] Testing ChromaDB Connectivity from Web Container..."
 
 if [ -n "$WEB_CONTAINER" ]; then
     echo "  Running Python ChromaDB test..."
-    $DOCKER_COMPOSE -f "$COMPOSE_FILE" exec -T web python -c "
+    docker_compose_cmd -f "$COMPOSE_FILE" exec -T web python -c "
 import os
 import sys
 try:
@@ -163,6 +177,34 @@ except Exception as e:
         echo "  ChromaDB test passed."
     else
         echo "  ChromaDB test FAILED."
+    fi
+else
+    echo "  [SKIP] Web container not running."
+fi
+
+echo "--------------------------------------------------------"
+
+# 5. Test OpenAI Library
+echo "[5] Testing OpenAI Library..."
+
+if [ -n "$WEB_CONTAINER" ]; then
+    echo "  Running Python OpenAI test..."
+    docker_compose_cmd -f "$COMPOSE_FILE" exec -T web python -c "
+import sys
+try:
+    import openai
+    print(f'  [SUCCESS] OpenAI library found (version {openai.__version__})')
+except ImportError:
+    print('  [FAILURE] OpenAI library NOT installed.')
+    sys.exit(1)
+except Exception as e:
+    print(f'  [FAILURE] Error importing OpenAI: {e}')
+    sys.exit(1)
+"
+    if [ $? -eq 0 ]; then
+        echo "  OpenAI library test passed."
+    else
+        echo "  OpenAI library test FAILED."
     fi
 else
     echo "  [SKIP] Web container not running."

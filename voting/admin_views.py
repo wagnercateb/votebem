@@ -56,8 +56,8 @@ def _set_status(status_key: str, payload: dict, ttl_seconds: int = 3600):
     """Store a status snapshot under `status_key` with a TTL, for polling by UI."""
     try:
         cache.set(status_key, payload, ttl_seconds)
-    except Exception:
-        pass
+    except Exception as e:
+        dev_log(f"ERROR in _set_status for {status_key}: {e}")
 
 def _get_status(status_key: str) -> dict:
     """Retrieve the latest status payload. Returns empty dict if missing."""
