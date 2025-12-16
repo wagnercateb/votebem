@@ -252,12 +252,12 @@ def rag_tool(request):
         env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
         data_root = '/dados/votebem' if (env_mod.endswith('.production') or env_mod.endswith('.build')) else ''
         data_candidate = os.path.join(data_root, doc_folder) if data_root else ''
-        if os.path.isdir(base_candidate):
+        if data_candidate and os.path.isdir(data_candidate):
+            doc_folder_abs = data_candidate
+        elif os.path.isdir(base_candidate):
             doc_folder_abs = base_candidate
         elif os.path.isdir(root_candidate):
             doc_folder_abs = root_candidate
-        elif data_candidate and os.path.isdir(data_candidate):
-            doc_folder_abs = data_candidate
         else:
             doc_folder_abs = base_candidate
     else:
@@ -968,6 +968,14 @@ def rag_tool(request):
     except Exception:
         hash_file_abs = ''
 
+    try:
+        env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
+        if env_mod.endswith('.production') or env_mod.endswith('.build'):
+            config_path_display = '/dados/votebem/voting/rag_config.json'
+        else:
+            config_path_display = config_path
+    except Exception:
+        config_path_display = config_path
     submitted_action = None
     if request.method == 'POST':
         if request.POST.get('embed_docs'):
@@ -1000,6 +1008,7 @@ def rag_tool(request):
         'ran_query': ran_query,
         'error_msg': error_msg,
         'config_path': config_path,
+        'CONFIG_PATH_DISPLAY': config_path_display,
         'OPENAI_API_KEY_set': bool(api_key),
         # Masked preview of the key to confirm it reached the template without exposing secrets
         'OPENAI_API_KEY': (f"{api_key[:8]}…" if api_key else ''),

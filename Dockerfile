@@ -1,3 +1,4 @@
+# After changing docker-compose.yml , use docker compose up -d to recreate the container. docker compose restart web does not apply changed environment or volume configuration.
 # Use Python 3.11 slim image as base
 FROM python:3.11-slim
 
