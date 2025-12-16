@@ -266,7 +266,7 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
         let done = false;
         function poll(){
           if(done) return;
-          fetch(url, {method:'GET', headers:{'Accept':'application/json'}})
+          fetch(url, {method:'GET', headers:{'Accept':'application/json'}, credentials: 'include'})
             .then(r => r.json())
             .then(data => {
               const el = document.getElementById('embed-status');
@@ -472,9 +472,9 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
       let done = false;
       
       function pollQuery(){
-        if(done) return;
-        fetch(url, {method:'GET', headers:{'Accept':'application/json'}})
-          .then(r => r.json())
+            if(done) return;
+            fetch(url, {method:'GET', headers:{'Accept':'application/json'}, credentials: 'include'})
+              .then(r => r.json())
           .then(data => {
             const msgEl = document.getElementById('query-status-msg');
             const container = document.getElementById('query-progress-container');
