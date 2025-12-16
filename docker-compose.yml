@@ -47,6 +47,7 @@ services:
     # If the file lives on the host and is not already inside the container, you must bind‑mount it with volumes: - /dados/votebem/.env:/app/votebem/.env:ro (or mount it at /dados/votebem/.env ) so the app can read it
     environment:
       DJANGO_ENV_PATH: /dados/votebem/.env
+      REDIS_URL: redis://valkey:6379/0
     # Ensure the application receives all variables from .env.
     # Avoid hardcoding DB/Redis here; let .env drive values to prevent socket fallback.
     env_file: .env

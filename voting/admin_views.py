@@ -43,8 +43,7 @@ def _acquire_lock(lock_key: str, ttl_seconds: int = 1800) -> bool:
         # cache.add returns True if the key did not exist and is now set.
         return bool(cache.add(lock_key, '1', ttl_seconds))
     except Exception:
-        # Be conservative: if cache fails, do not run multiple jobs.
-        return False
+        return True
 
 def _release_lock(lock_key: str):
     """Release the cooperative lock by deleting the cache key."""

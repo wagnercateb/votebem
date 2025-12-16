@@ -1,18 +1,15 @@
 from .base import *
 import os
 from pathlib import Path
-# Use python-decouple to read configuration from environment and .env.
-# We explicitly bind to the project .env to ensure local/dev usage, while still
-# gracefully falling back to environment variables when .env is not present.
 try:
-    from decouple import Config, RepositoryEnv
+    from decouple import Config, RepositoryEnv, config as _config_fn
     ENV_FILE_PATH = os.environ.get('DJANGO_ENV_PATH') or str(Path(BASE_DIR) / '.env')
-    _repo = RepositoryEnv(ENV_FILE_PATH)
-    config = Config(_repo)
+    if ENV_FILE_PATH and os.path.exists(ENV_FILE_PATH) and os.access(ENV_FILE_PATH, os.R_OK):
+        config = Config(RepositoryEnv(ENV_FILE_PATH))
+    else:
+        config = _config_fn
 except Exception:
-    # Fallback: if python-decouple cannot locate or load the repository .env,
-    # use the standard environment-driven config function.
-    from decouple import config  # type: ignore
+    from decouple import config
 
 # Sites framework: override SITE_ID via environment to match deployed domain.
 # Base sets SITE_ID=1; in production you likely want it to correspond to
@@ -133,9 +130,7 @@ DATABASES = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        # Redis URL. In Docker, 'redis' resolves fine; outside Docker, it may not.
-        # We'll normalize this below with a best-effort hostname resolution fallback.
-        'LOCATION': config('REDIS_URL', default='redis://redis:6379/0'),
+        'LOCATION': config('REDIS_URL', default='redis://valkey:6379/0'),
         'KEY_PREFIX': 'votebem',
         'TIMEOUT': 300,
     }
@@ -405,6 +400,7 @@ try:
 except Exception:
     # Fail-safe: never break settings import due to fallback logic.
     pass
+LOGIN_URL = '/accounts/login/'
 
 # Embedding provider and Chroma persistence configuration for production
 EMBEDDING_PROVIDER = os.environ.get('EMBEDDING_PROVIDER') or config('EMBEDDING_PROVIDER', default='openai')
