@@ -244,6 +244,56 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
     </div>
   </form>
 
+  {% if embed_status_key %}
+    <hr />
+    <section aria-label="Status do Embedding">
+      <h5>Status do Embedding</h5>
+      <div id="embed-status" class="small-muted">Iniciando...</div>
+    </section>
+    <script>
+      (function(){
+        const key = "{{ embed_status_key }}";
+        const url = "{% url 'gerencial:ajax_task_status' %}" + "?key=" + encodeURIComponent(key);
+        let done = false;
+        function poll(){
+          if(done) return;
+          fetch(url, {method:'GET', headers:{'Accept':'application/json'}})
+            .then(r => r.json())
+            .then(data => {
+              if(!data || !data.ok){ return; }
+              const st = data.status || {};
+              const el = document.getElementById('embed-status');
+              if(!el) return;
+              const p = (st.progress != null) ? (st.progress + '%') : '';
+              const t = st.total != null ? st.total : '';
+              const pr = st.processed != null ? st.processed : '';
+              const ch = st.chunks != null ? st.chunks : '';
+              const msg = st.message || '';
+              let line = msg;
+              if(t || pr){
+                line = (line ? (line + ' · ') : '') + pr + '/' + t + ' (' + p + ')';
+              }
+              if(ch){
+                line = (line ? (line + ' · ') : '') + ch + ' chunks';
+              }
+              if(!line){ line = 'Aguardando...'; }
+              el.textContent = line;
+              if(st.state === 'completed' || st.completed){
+                done = true;
+                el.textContent = line;
+              }
+            })
+            .catch(() => {});
+        }
+        poll();
+        const iv = setInterval(() => {
+          if(done){ clearInterval(iv); return; }
+          poll();
+        }, 2000);
+      })();
+    </script>
+  {% endif %}
+
   {# Registro detalhado de embedding: aparece após execução do botão "Varrer e embutir" #}
   {% if embed_log_items and embed_log_items|length > 0 %}
     <hr />

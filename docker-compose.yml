@@ -57,15 +57,21 @@ services:
       - /dados/nginx/app/votebem/static:/app/staticfiles
       - /dados/votebem/votebem/media:/app/media
       - /dados/votebem/logs:/app/logs
-      - /dados/votebem/.env:/app/votebem/.env:ro      
+      - /dados/votebem/.env:/app/votebem/.env:ro
+      - /dados/votebem:/dados/votebem
+      # Mount embeddings root so the app can write file_hashes.npy to /dados/embeddings/votebem
+      - /dados/embeddings:/dados/embeddings
+      - /dados/chroma:/dados/chroma
     depends_on:
       db:
         condition: service_healthy
       valkey:
         condition: service_started
     command: >
-      sh -c "python manage.py migrate --settings=votebem.settings.production &&
-             python manage.py collectstatic --noinput --settings=votebem.settings.production &&
+      sh -c "set -e;
+             mkdir -p /dados/votebem/docs/noticias;
+             python manage.py migrate --settings=votebem.settings.production;
+             python manage.py collectstatic --noinput --settings=votebem.settings.production;
              gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 60 votebem.wsgi:application"
     networks:
       - vps_network

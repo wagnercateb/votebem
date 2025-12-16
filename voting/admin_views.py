@@ -244,7 +244,23 @@ def rag_tool(request):
     # Django package root (e.g., <project>/votebem), while content folders like
     # "docs" live at the project root (parent of BASE_DIR). We try both.
     if doc_folder and os.path.isabs(doc_folder):
-        doc_folder_abs = doc_folder
+        if os.path.isdir(doc_folder):
+            doc_folder_abs = doc_folder
+        else:
+            env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
+            candidates = []
+            if env_mod.endswith('.production') or env_mod.endswith('.build'):
+                candidates.append('/dados/votebem/docs/noticias')
+                candidates.append('/app/votebem/docs/noticias')
+            base_candidate = os.path.join(settings.BASE_DIR, 'docs', 'noticias')
+            root_candidate = os.path.join(os.path.dirname(settings.BASE_DIR), 'docs', 'noticias')
+            candidates.extend([base_candidate, root_candidate])
+            found = ''
+            for c in candidates:
+                if os.path.isdir(c):
+                    found = c
+                    break
+            doc_folder_abs = found or doc_folder
     elif doc_folder:
         base_candidate = os.path.join(settings.BASE_DIR, doc_folder)
         project_root = os.path.dirname(settings.BASE_DIR)
@@ -270,6 +286,12 @@ def rag_tool(request):
         doc_files_count = len(_doc_candidates)
     except Exception:
         doc_files_count = 0
+    if doc_files_count == 0:
+        try:
+            from django.contrib import messages as dj_messages
+            dj_messages.warning(request, f"Nenhum arquivo encontrado em {doc_folder_abs}.")
+        except Exception:
+            pass
     chroma_collection = request.POST.get('CHROMA_COLLECTION_NAME', initial_collection)
     hash_file = request.POST.get('HASH_FILE', initial_hash_file)
     system_prompt = request.POST.get('system_prompt', initial_system_prompt)
@@ -599,11 +621,7 @@ def rag_tool(request):
     # Comando de embed: varre DOC_FOLDER por novos/atualizados arquivos e envia para Chroma
     if request.method == 'POST' and request.POST.get('embed_docs'):
         try:
-            # Preparação de caminhos e persistência de hash
-            import hashlib
-            import numpy as np  # opcional; usamos se disponível para .npy
-
-            # Resolver HASH_FILE absoluto
+            import numpy as np
             env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
             if hash_file and os.path.isabs(hash_file):
                 hash_path = hash_file
@@ -614,258 +632,176 @@ def rag_tool(request):
                     hash_path = os.path.join(settings.BASE_DIR, hash_file)
             else:
                 hash_path = ''
-
-            # Carregar hashes existentes (suporta .npy com allow_pickle e .json simples)
-            existing_hashes = {}
-            try:
-                if hash_path.endswith('.npy'):
-                    try:
-                        arr = np.load(hash_path, allow_pickle=True)
-                        if isinstance(arr, np.ndarray) and arr.size == 1:
-                            existing_hashes = arr.item() if isinstance(arr.item(), dict) else {}
-                        elif isinstance(arr, dict):
-                            existing_hashes = arr
-                    except Exception:
-                        existing_hashes = {}
-                else:
-                    try:
-                        if os.path.exists(hash_path):
-                            with open(hash_path, 'r', encoding='utf-8') as f:
-                                existing_hashes = json.load(f)
-                    except Exception:
-                        existing_hashes = {}
-            except Exception:
-                existing_hashes = {}
-
-            # Função de hash de arquivo robusta (SHA256)
-            def compute_hash(fp: str) -> str:
-                h = hashlib.sha256()
-                try:
-                    with open(fp, 'rb') as f:
-                        for chunk in iter(lambda: f.read(8192), b''):
-                            h.update(chunk)
-                    return h.hexdigest()
-                except Exception:
-                    return ''
-
-            # Listar candidatos em DOC_FOLDER (md/pdf/txt), agora recursivo em subpastas
-            # Observações:
-            # - Muitos cenários colocam arquivos em subdiretórios de 'noticias'; com busca recursiva evitamos perder candidatos.
-            # - Mantemos tipos simples (.md, .pdf, .txt) para evitar ruído.
-            try:
-                files = []
-                for pat in ('**/*.md', '**/*.pdf', '**/*.txt'):
-                    files.extend(glob.glob(os.path.join(doc_folder_abs, pat), recursive=True))
-            except Exception:
-                files = []
-
-            embed_log_items: List[Dict[str, Any]] = []
-            new_or_updated = []  # (path, hash)
             force_flag = bool(request.POST.get('force_reembed'))
-            # Definir provider e coleção efetiva antes de comparar hashes, para prefixar corretamente
             provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'local')
             provider = provider if provider in ('openai', 'local') else 'openai'
             effective_collection = f"{chroma_collection}__{provider}"
-            for fp in files:
-                h = compute_hash(fp)
-                if not h:
-                    embed_log_items.append({
-                        'file': fp,
-                        'status': 'erro',
-                        'detail': 'Falha ao calcular hash',
-                        'chars': 0,
-                        'chunks': 0,
-                    })
-                    continue
-                prev = existing_hashes.get(fp)
-                # Prefixar o hash com o provider atual para distinguir embeddings por engine
-                prefixed_hash = f"{provider}:{h}"
-                if force_flag or prev != prefixed_hash:
-                    new_or_updated.append((fp, prefixed_hash))
-                else:
-                    embed_log_items.append({
-                        'file': fp,
-                        'status': 'inalterado',
-                        'detail': 'Hash idêntico; ignorado',
-                        'chars': 0,
-                        'chunks': 0,
-                    })
-
-            # Inicializar Chroma e função de embedding conforme provider configurado
-            try:
-                import chromadb
-                from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
-            except Exception as e:
-                raise RuntimeError(f"chromadb não instalado: {e}")
-
-            # Permitir seleção do provider via formulário (embed_provider) com fallback para settings
-            provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'local')
-            provider = provider if provider in ('openai', 'local') else 'openai'
-            persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
-            local_model = getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2')
-            effective_collection = f"{chroma_collection}__{provider}"
-
-            if provider == 'local':
-                # Embeddings locais via sentence-transformers (CPU ou GPU)
-                ef = SentenceTransformerEmbeddingFunction(model_name=local_model)
+            lock_key = f"vb:lock:rag_embed:{effective_collection}"
+            status_key = f"vb:status:rag_embed:{effective_collection}"
+            if not _acquire_lock(lock_key, ttl_seconds=3600):
+                messages.warning(request, 'Uma tarefa de embedding já está em andamento.')
             else:
-                # Provider 'openai' (padrão) requer chave de API
-                if not api_key:
-                    raise RuntimeError('OPENAI_API_KEY ausente para embeddings OpenAI')
-                ef = OpenAIEmbeddingFunction(
-                    api_key=api_key,
-                    model_name=getattr(settings, 'OPENAI_EMBED_MODEL', 'text-embedding-3-small')
-                )
-
-            # Cliente Chroma: persistente se CHROMA_PERSIST_PATH estiver definido
-            try:
-                client = chromadb.PersistentClient(path=persist_path) if persist_path else chromadb.Client()
-            except Exception as e:
-                # Se falhar criar persistente, cair para cliente em memória
-                client = chromadb.Client()
-            # Obter ou criar coleção
-            try:
-                names = [c.name for c in client.list_collections()]
-                if effective_collection in names:
-                    collection = client.get_collection(effective_collection)
-                else:
-                    collection = client.create_collection(name=effective_collection, embedding_function=ef)
-            except Exception:
-                # fallback get_or_create
-                try:
-                    collection = client.get_or_create_collection(name=effective_collection)
-                except Exception as e:
-                    raise RuntimeError(f"Falha ao inicializar coleção Chroma: {e}")
-
-            # Funções auxiliares de leitura e split
-            def extract_text(fp: str) -> str:
-                lowfp = fp.lower()
-                if lowfp.endswith('.md'):
-                    return _read_md_file(fp)
-                if lowfp.endswith('.pdf'):
-                    return _read_pdf_file(fp)
-                return _read_txt_file(fp)
-
-            def split_text(text: str, chunk_size: int = 1500) -> list[str]:
-                # quebra por tamanho fixo mantendo simples; evita dependências
-                t = text or ''
-                chunks = []
-                i = 0
-                while i < len(t):
-                    chunks.append(t[i:i+chunk_size])
-                    i += chunk_size
-                return chunks
-
-            total_chunks = 0
-            processed_files = 0
-            for fpath, file_hash in new_or_updated:
-                text = extract_text(fpath)
-                if not text:
-                    embed_log_items.append({
-                        'file': fpath,
-                        'status': 'vazio',
-                        'detail': 'Sem conteúdo legível',
-                        'chars': 0,
-                        'chunks': 0,
-                    })
-                    continue
-                chunks = split_text(text)
-                if not chunks:
-                    embed_log_items.append({
-                        'file': fpath,
-                        'status': 'vazio',
-                        'detail': 'Sem chunks gerados',
-                        'chars': len(text or ''),
-                        'chunks': 0,
-                    })
-                    continue
-                basename = os.path.basename(fpath)
-                ids = [f"{basename}_chunk_{i}" for i in range(len(chunks))]
-                metadatas = [{"source": basename, "chunk": i} for i in range(len(chunks))]
-                try:
-                    # Se forçar re-embed, remover itens existentes dessa fonte para evitar ids duplicados
-                    if force_flag:
+                def _run_embed():
+                    try:
+                        _set_status(status_key, {'state': 'starting', 'progress': 0, 'message': 'Preparando embedding...', 'collection': effective_collection})
                         try:
-                            collection.delete(where={"source": basename})
+                            import chromadb
+                            from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
+                        except Exception as e:
+                            _set_status(status_key, {'state': 'error', 'message': str(e)})
+                            return
+                        persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
+                        local_model = getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2')
+                        if provider == 'local':
+                            ef = SentenceTransformerEmbeddingFunction(model_name=local_model)
+                        else:
+                            if not api_key:
+                                _set_status(status_key, {'state': 'error', 'message': 'OPENAI_API_KEY ausente'})
+                                return
+                            ef = OpenAIEmbeddingFunction(api_key=api_key, model_name=getattr(settings, 'OPENAI_EMBED_MODEL', 'text-embedding-3-small'))
+                        try:
+                            client = chromadb.PersistentClient(path=persist_path) if persist_path else chromadb.Client()
+                        except Exception:
+                            client = chromadb.Client()
+                        try:
+                            names = [c.name for c in client.list_collections()]
+                            if effective_collection in names:
+                                collection = client.get_collection(effective_collection)
+                            else:
+                                collection = client.create_collection(name=effective_collection, embedding_function=ef)
+                        except Exception:
+                            collection = client.get_or_create_collection(name=effective_collection)
+                        existing_hashes = {}
+                        try:
+                            if hash_path.endswith('.npy'):
+                                try:
+                                    arr = np.load(hash_path, allow_pickle=True)
+                                    if isinstance(arr, np.ndarray) and arr.size == 1:
+                                        existing_hashes = arr.item() if isinstance(arr.item(), dict) else {}
+                                    elif isinstance(arr, dict):
+                                        existing_hashes = arr
+                                except Exception:
+                                    existing_hashes = {}
+                            else:
+                                try:
+                                    if os.path.exists(hash_path):
+                                        with open(hash_path, 'r', encoding='utf-8') as f:
+                                            existing_hashes = json.load(f)
+                                except Exception:
+                                    existing_hashes = {}
+                        except Exception:
+                            existing_hashes = {}
+                        try:
+                            files = []
+                            for pat in ('**/*.md', '**/*.pdf', '**/*.txt'):
+                                files.extend(glob.glob(os.path.join(doc_folder_abs, pat), recursive=True))
+                        except Exception:
+                            files = []
+                        def compute_hash(fp: str) -> str:
+                            h = hashlib.sha256()
+                            try:
+                                with open(fp, 'rb') as f:
+                                    for chunk in iter(lambda: f.read(8192), b''):
+                                        h.update(chunk)
+                                return h.hexdigest()
+                            except Exception:
+                                return ''
+                        new_or_updated = []
+                        for fp in files:
+                            h = compute_hash(fp)
+                            if not h:
+                                continue
+                            prev = existing_hashes.get(fp)
+                            prefixed_hash = f"{provider}:{h}"
+                            if force_flag or prev != prefixed_hash:
+                                new_or_updated.append((fp, prefixed_hash))
+                        total = len(new_or_updated)
+                        _set_status(status_key, {'state': 'running', 'progress': 0, 'total': total, 'message': 'Iniciando processamento...', 'collection': effective_collection})
+                        def extract_text(fp: str) -> str:
+                            lowfp = fp.lower()
+                            if lowfp.endswith('.md'):
+                                return _read_md_file(fp)
+                            if lowfp.endswith('.pdf'):
+                                return _read_pdf_file(fp)
+                            return _read_txt_file(fp)
+                        def split_text(text: str, chunk_size: int = 1500) -> list[str]:
+                            t = text or ''
+                            chunks = []
+                            i = 0
+                            while i < len(t):
+                                chunks.append(t[i:i+chunk_size])
+                                i += chunk_size
+                            return chunks
+                        processed_files = 0
+                        total_chunks = 0
+                        for fpath, file_hash in new_or_updated:
+                            text = extract_text(fpath)
+                            if not text:
+                                processed_files += 1
+                                _set_status(status_key, {'state': 'running', 'progress': int((processed_files / max(total, 1)) * 100), 'processed': processed_files, 'total': total, 'message': f'Ignorado: {os.path.basename(fpath)}'})
+                                continue
+                            chunks = split_text(text)
+                            basename = os.path.basename(fpath)
+                            ids = [f"{basename}_chunk_{i}" for i in range(len(chunks))]
+                            metadatas = [{"source": basename, "chunk": i} for i in range(len(chunks))]
+                            try:
+                                if force_flag:
+                                    try:
+                                        collection.delete(where={"source": basename})
+                                    except Exception:
+                                        pass
+                                collection.add(documents=chunks, metadatas=metadatas, ids=ids)
+                                existing_hashes[fpath] = file_hash
+                                total_chunks += len(chunks)
+                                processed_files += 1
+                                try:
+                                    import shutil
+                                    project_root = os.path.dirname(settings.BASE_DIR)
+                                    is_dev = env_mod.endswith('.development')
+                                    is_prodlike = env_mod.endswith('.production') or env_mod.endswith('.build')
+                                    dev_embedded_dir = os.path.join(project_root, 'docs', 'nao_versionados', 'embeddings', 'noticias_ja_embedded')
+                                    prod_embedded_dir = '/dados/embeddings/votebem/noticias_ja_embedded'
+                                    archive_dir = dev_embedded_dir if is_dev else (prod_embedded_dir if is_prodlike else dev_embedded_dir)
+                                    os.makedirs(archive_dir, exist_ok=True)
+                                    dest_path = os.path.join(archive_dir, os.path.basename(fpath))
+                                    shutil.move(fpath, dest_path)
+                                except Exception:
+                                    pass
+                                _set_status(status_key, {'state': 'running', 'progress': int((processed_files / max(total, 1)) * 100), 'processed': processed_files, 'total': total, 'chunks': total_chunks, 'message': f'Processado: {basename}'})
+                            except Exception as e:
+                                processed_files += 1
+                                _set_status(status_key, {'state': 'running', 'progress': int((processed_files / max(total, 1)) * 100), 'processed': processed_files, 'total': total, 'message': f'Falha em {basename}: {str(e)}'})
+                                continue
+                        try:
+                            if hash_path.endswith('.npy'):
+                                try:
+                                    np.save(hash_path, existing_hashes)
+                                except Exception:
+                                    try:
+                                        alt = os.path.splitext(hash_path)[0] + '.json'
+                                        with open(alt, 'w', encoding='utf-8') as f:
+                                            json.dump(existing_hashes, f, ensure_ascii=False, indent=2)
+                                    except Exception:
+                                        pass
+                            else:
+                                with open(hash_path, 'w', encoding='utf-8') as f:
+                                    json.dump(existing_hashes, f, ensure_ascii=False, indent=2)
                         except Exception:
                             pass
-                    collection.add(documents=chunks, metadatas=metadatas, ids=ids)
-                    existing_hashes[fpath] = file_hash
-                    total_chunks += len(chunks)
-                    processed_files += 1
-                    # Após embutir com sucesso, mover arquivo processado para a pasta 'noticias_ja_embedded'
-                    # Ambiente: desenvolvimento -> <project_root>/docs/nao_versionados/embeddings/noticias_ja_embedded/
-                    #            produção      -> /dados/embeddings/votebem/noticias_ja_embedded/
-                    try:
-                        import shutil
-                        # Calcular o root do projeto de forma robusta
-                        project_root = os.path.dirname(settings.BASE_DIR)
-                        # Detectar ambiente atual de forma independente deste bloco
-                        env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
-                        is_dev = env_mod.endswith('.development')
-                        is_prodlike = env_mod.endswith('.production') or env_mod.endswith('.build')
-                        dev_embedded_dir = os.path.join(project_root, 'docs', 'nao_versionados', 'embeddings', 'noticias_ja_embedded')
-                        prod_embedded_dir = '/dados/embeddings/votebem/noticias_ja_embedded'
-                        archive_dir = dev_embedded_dir if is_dev else (prod_embedded_dir if is_prodlike else dev_embedded_dir)
-                        os.makedirs(archive_dir, exist_ok=True)
-                        dest_path = os.path.join(archive_dir, os.path.basename(fpath))
-                        shutil.move(fpath, dest_path)
-                        move_detail = f"Arquivo movido para: {dest_path}"
-                    except Exception as e:
-                        move_detail = f"Falha ao mover arquivo para pasta de embutidos: {e}"
-                    embed_log_items.append({
-                        'file': fpath,
-                        'status': 'embutido',
-                        'detail': 'Embeddings adicionados/atualizados. ' + move_detail,
-                        'chars': len(text or ''),
-                        'chunks': len(chunks),
-                    })
-                except Exception as e:
-                    # prossegue nos demais
-                    embed_log_items.append({
-                        'file': fpath,
-                        'status': 'falha',
-                        'detail': f'Erro ao adicionar à coleção: {e}',
-                        'chars': len(text or ''),
-                        'chunks': len(chunks),
-                    })
-                    continue
-
-            # Persistir hashes atualizados
-            try:
-                if hash_path.endswith('.npy'):
-                    try:
-                        np.save(hash_path, existing_hashes)
-                    except Exception:
-                        # se falhar, gravar .json ao lado
-                        try:
-                            alt = os.path.splitext(hash_path)[0] + '.json'
-                            with open(alt, 'w', encoding='utf-8') as f:
-                                json.dump(existing_hashes, f, ensure_ascii=False, indent=2)
-                        except Exception:
-                            pass
-                else:
-                    with open(hash_path, 'w', encoding='utf-8') as f:
-                        json.dump(existing_hashes, f, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
-
-            embed_result = f"Embedded {total_chunks} chunks from {processed_files} {'forced ' if force_flag else ''}new/updated files."
-            embed_summary = {
-                'candidatos': len(files),
-                'novos_ou_atualizados': len(new_or_updated),
-                'processados': processed_files,
-                'total_chunks': total_chunks,
-            }
-            try:
-                messages.success(request, embed_result)
-            except Exception:
-                # manter também no contexto em caso de templates sem mensagens
-                pass
+                        _set_status(status_key, {
+                            'state': 'completed',
+                            'processed': processed_files,
+                            'total': total,
+                            'chunks': total_chunks,
+                            'message': f'Concluído: {processed_files}/{total} arquivos, {total_chunks} chunks.'
+                        })
+                    finally:
+                        _release_lock(lock_key)
+                threading.Thread(target=_run_embed, daemon=True).start()
+                messages.info(request, f"Tarefa de embedding iniciada. Status: {status_key}")
+                embed_status_key = status_key
         except Exception as e:
-            error_msg = f'Erro ao embutir documentos: {e}'
-            embed_log_items = []
-            embed_summary = None
+            error_msg = f'Erro ao iniciar tarefa de embedding: {e}'
 
     # Botão "Estatísticas" da coleção Chroma: mostra contagem e persistência
     if request.method == 'POST' and request.POST.get('chroma_stats'):
@@ -1021,6 +957,7 @@ def rag_tool(request):
         'chroma_sources_html': locals().get('chroma_sources_html'),
         'active_tab': active_tab,
         'submitted_action': submitted_action,
+        'embed_status_key': locals().get('embed_status_key', ''),
     }
     return render(request, 'admin/voting/rag_tool.html', context)
 
