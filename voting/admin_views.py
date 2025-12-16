@@ -3729,11 +3729,13 @@ def ajax_referencias_delete(request):
     return JsonResponse({'ok': True, 'deleted': True, 'ref_id': int(ref_id)})
 
 
-@login_required
 def ajax_task_status(request):
     """Lightweight JSON endpoint to poll status of background tasks started from camara_admin.
     Expects GET with `key` (the status_key used by the task). Returns whatever payload was stored.
     """
+    if not request.user.is_authenticated:
+        return JsonResponse({'ok': False, 'error': 'unauthorized'}, status=401)
+        
     if not (request.user.is_staff or request.user.is_superuser):
         # Return 403-like JSON to keep UX clean for non-staff users
         return JsonResponse({'ok': False, 'error': 'forbidden'}, status=403)

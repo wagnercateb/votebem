@@ -130,7 +130,8 @@ DATABASES = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': config('REDIS_URL', default='redis://valkey:6379/0'),
+        # Prefer os.environ for Docker overrides, then config from file, then default
+        'LOCATION': os.environ.get('REDIS_URL') or config('REDIS_URL', default='redis://valkey:6379/0'),
         'KEY_PREFIX': 'votebem',
         'TIMEOUT': 300,
     }

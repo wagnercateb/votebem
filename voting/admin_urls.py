@@ -91,7 +91,7 @@ urlpatterns = [
     path('ajax/referencias/update/', staff_member_required(admin_views.ajax_referencias_update), name='ajax_referencias_update'),
     path('ajax/referencias/delete/', staff_member_required(admin_views.ajax_referencias_delete), name='ajax_referencias_delete'),
     # Background task status polling
-    path('ajax/task-status/', staff_member_required(admin_views.ajax_task_status), name='ajax_task_status'),
+    path('ajax/task-status/', admin_views.ajax_task_status, name='ajax_task_status'),
     # RAG tool page (staff only)
     path('rag-tool/', staff_member_required(admin_views.rag_tool), name='rag_tool'),
 ]

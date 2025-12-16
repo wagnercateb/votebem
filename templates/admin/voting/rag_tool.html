@@ -260,10 +260,17 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
           fetch(url, {method:'GET', headers:{'Accept':'application/json'}})
             .then(r => r.json())
             .then(data => {
-              if(!data || !data.ok){ return; }
-              const st = data.status || {};
               const el = document.getElementById('embed-status');
               if(!el) return;
+
+              if(!data || !data.ok){ 
+                 if(data && data.error) {
+                     el.textContent = 'Erro: ' + data.error;
+                     if(data.error === 'forbidden' || data.error === 'unauthorized') done = true;
+                 }
+                 return; 
+              }
+              const st = data.status || {};
               const p = (st.progress != null) ? (st.progress + '%') : '';
               const t = st.total != null ? st.total : '';
               const pr = st.processed != null ? st.processed : '';
