@@ -172,11 +172,16 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
 # HTTPS settings (enable when using SSL)
+# We unconditionally enable SECURE_PROXY_SSL_HEADER because we are always behind Nginx in production.
+# This ensures Django correctly detects HTTPS requests via the X-Forwarded-Proto header.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 if config('USE_HTTPS', default=False, cast=bool):
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # Force allauth to use HTTPS for callback URLs
+    ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='').split(',')
