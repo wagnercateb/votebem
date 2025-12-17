@@ -94,4 +94,5 @@ urlpatterns = [
     path('ajax/task-status/', admin_views.ajax_task_status, name='ajax_task_status'),
     # RAG tool page (staff only)
     path('rag-tool/', staff_member_required(admin_views.rag_tool), name='rag_tool'),
+    path('rag-tool/upload/', staff_member_required(admin_views.rag_upload_files), name='rag_upload_files'),
 ]

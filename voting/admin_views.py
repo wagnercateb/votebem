@@ -97,6 +97,95 @@ def admin_dashboard(request):
 
 
 @staff_member_required
+def rag_upload_files(request):
+    """
+    Handle file uploads to the RAG DOC_FOLDER.
+    """
+    if request.method != 'POST':
+        return HttpResponseForbidden()
+    
+    doc_folder = request.POST.get('DOC_FOLDER', '')
+    
+    # Logic to resolve DOC_FOLDER to absolute path (same as in rag_tool)
+    try:
+        doc_folder = doc_folder.replace('\\', '/')
+    except Exception:
+        pass
+        
+    if doc_folder and os.path.isabs(doc_folder):
+        if os.path.isdir(doc_folder):
+            doc_folder_abs = doc_folder
+        else:
+            env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
+            candidates = []
+            if env_mod.endswith('.production') or env_mod.endswith('.build'):
+                candidates.append('/dados/votebem/docs/noticias')
+                candidates.append('/app/votebem/docs/noticias')
+            base_candidate = os.path.join(settings.BASE_DIR, 'docs', 'noticias')
+            root_candidate = os.path.join(os.path.dirname(settings.BASE_DIR), 'docs', 'noticias')
+            candidates.extend([base_candidate, root_candidate])
+            found = ''
+            for c in candidates:
+                if os.path.isdir(c):
+                    found = c
+                    break
+            doc_folder_abs = found or doc_folder
+    elif doc_folder:
+        base_candidate = os.path.join(settings.BASE_DIR, doc_folder)
+        project_root = os.path.dirname(settings.BASE_DIR)
+        root_candidate = os.path.join(project_root, doc_folder)
+        env_mod = os.environ.get('DJANGO_SETTINGS_MODULE', '') or getattr(settings, 'SETTINGS_MODULE', '')
+        data_root = '/dados/votebem' if (env_mod.endswith('.production') or env_mod.endswith('.build')) else ''
+        data_candidate = os.path.join(data_root, doc_folder) if data_root else ''
+        if data_candidate and os.path.isdir(data_candidate):
+            doc_folder_abs = data_candidate
+        elif os.path.isdir(base_candidate):
+            doc_folder_abs = base_candidate
+        elif os.path.isdir(root_candidate):
+            doc_folder_abs = root_candidate
+        else:
+            doc_folder_abs = base_candidate
+    else:
+        doc_folder_abs = ''
+
+    if not doc_folder_abs:
+        messages.error(request, 'Pasta de documentos inválida ou não encontrada.')
+        return redirect('gerencial:rag_tool')
+
+    files = request.FILES.getlist('files')
+    if not files:
+        messages.warning(request, 'Nenhum arquivo selecionado.')
+        return redirect('gerencial:rag_tool')
+
+    # Ensure directory exists
+    try:
+        os.makedirs(doc_folder_abs, exist_ok=True)
+    except Exception as e:
+        messages.error(request, f'Erro ao criar pasta {doc_folder_abs}: {e}')
+        return redirect('gerencial:rag_tool')
+            
+    count = 0
+    errors = []
+    for f in files:
+        try:
+            path = os.path.join(doc_folder_abs, f.name)
+            with open(path, 'wb+') as destination:
+                for chunk in f.chunks():
+                    destination.write(chunk)
+            count += 1
+        except Exception as e:
+            errors.append(f"{f.name}: {str(e)}")
+            
+    if count > 0:
+        messages.success(request, f'{count} arquivo(s) enviado(s) com sucesso para {doc_folder_abs}.')
+    
+    if errors:
+        messages.error(request, f'Erros no upload: {"; ".join(errors)}')
+        
+    return redirect('gerencial:rag_tool')
+
+
+@staff_member_required
 def rag_tool(request):
     """
     Página administrativa simples para executar a lógica do notebook RAG (sem LangChain).
@@ -2498,8 +2587,12 @@ def votacoes_management(request):
             v.is_active_now = v.is_active()
     except Exception:
         for v in votacoes:
-            v.is_active_now = bool(v.ativo)
-    proposicoes_sem_votacao = Proposicao.objects.none()
+        v.is_active_now = bool(v.ativo)
+    
+    # Find propositions that don't have any VotacaoVoteBem linked to their official votations
+    proposicoes_sem_votacao = Proposicao.objects.exclude(
+        votacoes_oficiais__votacaovotebem__isnull=False
+    ).distinct().order_by('-created_at')[:20]
     
     context = {
         'votacoes': votacoes,
