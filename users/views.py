@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from .models import UserProfile
-from .forms import UserProfileForm
+from .forms import UserProfileForm, UserUpdateForm
 
 class RegisterView(CreateView):
     """User registration view"""
@@ -26,14 +26,45 @@ class RegisterView(CreateView):
         return response
 
 class ProfileView(LoginRequiredMixin, TemplateView):
-    """User profile view"""
+    """User profile view with editing capabilities"""
     template_name = 'users/profile.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        profile, created = UserProfile.objects.get_or_create(user=self.request.user)
+        user = self.request.user
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        
+        # Forms
+        if 'user_form' not in context:
+            context['user_form'] = UserUpdateForm(instance=user)
+        if 'profile_form' not in context:
+            context['profile_form'] = UserProfileForm(instance=profile)
+            
         context['profile'] = profile
+        
+        # Statistics
+        context['user_stats'] = {
+            'total_votos': user.voto_set.count() if hasattr(user, 'voto_set') else 0,
+            'total_enquetes': user.enquete_set.count() if hasattr(user, 'enquete_set') else 0,
+            'respostas_enquetes': user.respostaenquete_set.count() if hasattr(user, 'respostaenquete_set') else 0,
+            'pontos_ranking': profile.pontos_ranking
+        }
+        
         return context
+
+    def post(self, request, *args, **kwargs):
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+        user_form = UserUpdateForm(request.POST, instance=request.user)
+        profile_form = UserProfileForm(request.POST, request.FILES, instance=profile)
+
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, 'Seu perfil foi atualizado com sucesso!')
+            return redirect('users:profile')
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+            return self.render_to_response(self.get_context_data(user_form=user_form, profile_form=profile_form))
 
 class ProfileEditView(LoginRequiredMixin, UpdateView):
     """Edit user profile view"""

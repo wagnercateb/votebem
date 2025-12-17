@@ -46,17 +46,6 @@
                         <small class="text-muted">Votos</small>
                     </div>
                     <div class="col-6">
-                        <h4 class="text-success">{{ user_stats.total_enquetes }}</h4>
-                        <small class="text-muted">Enquetes</small>
-                    </div>
-                </div>
-                <hr>
-                <div class="row text-center">
-                    <div class="col-6">
-                        <h4 class="text-info">{{ user_stats.respostas_enquetes }}</h4>
-                        <small class="text-muted">Respostas</small>
-                    </div>
-                    <div class="col-6">
                         <h4 class="text-warning">{{ user_stats.pontos_ranking }}</h4>
                         <small class="text-muted">Pontos</small>
                     </div>
@@ -73,12 +62,6 @@
                 <div class="d-grid gap-2">
                     <a href="{% url 'voting:votacoes_disponiveis' %}" class="btn btn-outline-primary">
                         <i class="bi bi-vote-fill"></i> Ver Votações
-                    </a>
-                    <a href="{% url 'polls:minhas_enquetes' %}" class="btn btn-outline-success">
-                        <i class="bi bi-question-circle"></i> Minhas Enquetes
-                    </a>
-                    <a href="{% url 'polls:enquete_create' %}" class="btn btn-outline-info">
-                        <i class="bi bi-plus-circle"></i> Nova Enquete
                     </a>
                     <a href="{% url 'users:ranking' %}" class="btn btn-outline-warning">
                         <i class="bi bi-trophy"></i> Ranking
