@@ -19,16 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
-from django.http import FileResponse
-from pathlib import Path
 from .health import health_check
-def favicon_view(request):
-    icon_path = Path(settings.BASE_DIR) / 'favicon.ico'
-    return FileResponse(open(icon_path, 'rb'), content_type='image/x-icon')
-
-def favicon_png_view(request):
-    icon_path = Path(settings.BASE_DIR) / 'favicon.png'
-    return FileResponse(open(icon_path, 'rb'), content_type='image/png')
 
 urlpatterns = [
     # Administrative interface with namespace
@@ -41,8 +32,8 @@ urlpatterns = [
     path('polls/', include('polls.urls')),
     path('home/', include('home.urls')),
     path('health/', health_check, name='health_check'),
-    path('favicon.ico', favicon_view, name='favicon'),
-    path('favicon.png', favicon_png_view, name='favicon_png'),
+    path('favicon.ico', RedirectView.as_view(url=settings.STATIC_URL + 'favicon.ico', permanent=True)),
+    path('favicon.png', RedirectView.as_view(url=settings.STATIC_URL + 'favicon.png', permanent=True)),
     path('', RedirectView.as_view(url='/home/', permanent=False)),
 ]
 

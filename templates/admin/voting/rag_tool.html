@@ -91,12 +91,7 @@
         </div>
       </div>
       
-      <!-- Hidden upload form -->
-      <form id="upload-form" action="{% url 'gerencial:rag_upload_files' %}" method="post" enctype="multipart/form-data" style="display:none;">
-          {% csrf_token %}
-          <input type="hidden" name="DOC_FOLDER" id="upload_doc_folder">
-          <input type="file" name="files" multiple id="file-upload-input">
-      </form>
+
       <br />
 
       {% comment %} 
@@ -265,6 +260,13 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
     <div class="d-flex justify-content-end">
       <button type="submit" class="btn btn-outline-secondary" title="Salvar os campos sem executar embedding ou consulta">Salvar alterações na configuração</button>
     </div>
+  </form>
+
+  <!-- Hidden upload form (moved outside main form) -->
+  <form id="upload-form" action="{% url 'gerencial:rag_upload_files' %}" method="post" enctype="multipart/form-data" style="display:none;">
+      {% csrf_token %}
+      <input type="hidden" name="DOC_FOLDER" id="upload_doc_folder">
+      <input type="file" name="files" multiple id="file-upload-input">
   </form>
 
   {% if embed_status_key %}

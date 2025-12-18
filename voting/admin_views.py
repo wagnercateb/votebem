@@ -439,6 +439,9 @@ def rag_tool(request):
     # Ação "Buscar contexto": apenas popula o textarea de contexto sem chamar a API
     if request.method == 'POST' and request.POST.get('fetch_context'):
         try:
+            # DEBUG: Log folder resolution
+            # messages.info(request, f"DEBUG: Resolvendo DOC_FOLDER: {doc_folder} -> {doc_folder_abs}")
+
             # Tenta recuperar via Chroma com o provider selecionado; fallback para leitura de arquivos
             try:
                 import chromadb
@@ -467,11 +470,11 @@ def rag_tool(request):
                 try:
                     names = [c.name for c in client.list_collections()]
                     if effective_collection in names:
-                        coll = client.get_collection(effective_collection)
+                        coll = client.get_collection(name=effective_collection, embedding_function=ef)
                     else:
                         coll = client.create_collection(name=effective_collection, embedding_function=ef)
                 except Exception:
-                    coll = client.get_or_create_collection(name=effective_collection)
+                    coll = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
 
                 # Consulta por similaridade
                 qr = coll.query(query_texts=[query_text], n_results=5)
@@ -498,14 +501,18 @@ def rag_tool(request):
                         pass
                 else:
                     raise RuntimeError('Nenhum resultado na consulta da coleção Chroma.')
-            except Exception:
+            except Exception as e_chroma:
                 # Fallback: recuperar contexto diretamente dos arquivos locais
+                # messages.warning(request, f"DEBUG: Chroma falhou ({e_chroma}), tentando arquivos locais em {doc_folder_abs}")
                 ctx = _retrieve_context(doc_folder_abs, query_text)
                 context_text = ctx
                 chroma_used = False
                 try:
                     from django.contrib import messages as dj_messages
-                    dj_messages.warning(request, "ChromaDB indisponível ou vazio; usando contexto por leitura de arquivos.")
+                    if not context_text:
+                         dj_messages.warning(request, f"ChromaDB falhou e busca local em '{doc_folder_abs}' não retornou nada.")
+                    else:
+                         dj_messages.warning(request, "ChromaDB indisponível ou vazio; usando contexto por leitura de arquivos.")
                 except Exception:
                     pass
             context_fetched = True
@@ -3870,3 +3877,5 @@ def ajax_task_status(request):
         return JsonResponse({'ok': False, 'error': 'Parâmetro key é obrigatório.'}, status=400)
     payload = _get_status(status_key)
     return JsonResponse({'ok': True, 'status': payload, 'key': status_key})
+
+
