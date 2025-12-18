@@ -446,7 +446,7 @@ def rag_tool(request):
             try:
                 import chromadb
                 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
-                provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'local')
+                provider = request.POST.get('embed_provider_query') or 'local'
                 provider = provider if provider in ('openai', 'local') else 'local'
                 local_model = getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2')
                 persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
@@ -503,7 +503,8 @@ def rag_tool(request):
                     raise RuntimeError('Nenhum resultado na consulta da coleção Chroma.')
             except Exception as e_chroma:
                 # Fallback: recuperar contexto diretamente dos arquivos locais
-                # messages.warning(request, f"DEBUG: Chroma falhou ({e_chroma}), tentando arquivos locais em {doc_folder_abs}")
+                from django.contrib import messages as dj_messages
+                dj_messages.error(request, f"DEBUG: Chroma falhou ({str(e_chroma)}), tentando arquivos locais em {doc_folder_abs}")
                 ctx = _retrieve_context(doc_folder_abs, query_text)
                 context_text = ctx
                 chroma_used = False
@@ -536,7 +537,7 @@ def rag_tool(request):
             _chroma_collection = chroma_collection
             _doc_folder_abs = doc_folder_abs
             _api_key = api_key
-            _embed_provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'local')
+            _embed_provider = request.POST.get('embed_provider_query') or 'local'
             
             def _process_query():
                 try:
@@ -577,13 +578,13 @@ def rag_tool(request):
                             names = [c.name for c in client.list_collections()]
                             if effective_collection in names:
                                 print(f"[RAG] Getting collection: {effective_collection}")
-                                coll = client.get_collection(effective_collection)
+                                coll = client.get_collection(name=effective_collection, embedding_function=ef)
                             else:
                                 print(f"[RAG] Creating collection: {effective_collection}")
                                 coll = client.create_collection(name=effective_collection, embedding_function=ef)
                         except Exception as e:
                             print(f"[RAG] get_collection failed: {e}. Trying get_or_create.")
-                            coll = client.get_or_create_collection(name=effective_collection)
+                            coll = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
 
                         print(f"[RAG] Querying collection with text: {_query_text[:50]}...")
                         qr = coll.query(query_texts=[_query_text], n_results=5)
@@ -759,7 +760,7 @@ def rag_tool(request):
             else:
                 hash_path = ''
             force_flag = bool(request.POST.get('force_reembed'))
-            provider = request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'local')
+            provider = request.POST.get('embed_provider_embed') or 'local'
             provider = provider if provider in ('openai', 'local') else 'openai'
             effective_collection = f"{chroma_collection}__{provider}"
             lock_key = f"vb:lock:rag_embed:{effective_collection}"
@@ -1075,10 +1076,10 @@ def rag_tool(request):
         # Masked preview of the key to confirm it reached the template without exposing secrets
         'OPENAI_API_KEY': (f"{api_key[:8]}…" if api_key else ''),
         # Informações de provider e persistência do Chroma
-        'EMBEDDING_PROVIDER': (request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'local')),
+        'EMBEDDING_PROVIDER': (request.POST.get('embed_provider_query') or request.POST.get('embed_provider_embed') or 'local'),
         'LOCAL_EMBED_MODEL': getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2'),
         'CHROMA_PERSIST_PATH_EFFECTIVE': getattr(settings, 'CHROMA_PERSIST_PATH', ''),
-        'CHROMA_COLLECTION_NAME_EFFECTIVE': f"{chroma_collection}__" + (request.POST.get('embed_provider') or getattr(settings, 'EMBEDDING_PROVIDER', 'local')),
+        'CHROMA_COLLECTION_NAME_EFFECTIVE': f"{chroma_collection}__" + (request.POST.get('embed_provider_query') or request.POST.get('embed_provider_embed') or 'local'),
         'chroma_stats': locals().get('chroma_stats'),
         'chroma_sources_html': locals().get('chroma_sources_html'),
         'active_tab': active_tab,

@@ -146,11 +146,11 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
 {% endcomment %}
 <div class="mb-2" style="display:flex; align-items:center; gap:12px;">
   <div class="form-check form-check-inline" title="Usa API OpenAI para gerar embeddings (requer OPENAI_API_KEY)">
-    <input class="form-check-input" type="radio" name="embed_provider" id="embed_provider_openai" value="openai" {% if EMBEDDING_PROVIDER == 'openai' %}checked{% endif %}>
+    <input class="form-check-input" type="radio" name="embed_provider_embed" id="embed_provider_openai" value="openai">
     <label class="form-check-label" for="embed_provider_openai">OpenAI (embeddings)</label>
   </div>
   <div class="form-check form-check-inline" title="Usa modelo local via sentence-transformers (ex.: {{ LOCAL_EMBED_MODEL }})">
-    <input class="form-check-input" type="radio" name="embed_provider" id="embed_provider_local" value="local" {% if EMBEDDING_PROVIDER == 'local' %}checked{% endif %}>
+    <input class="form-check-input" type="radio" name="embed_provider_embed" id="embed_provider_local" value="local" checked>
     <label class="form-check-label" for="embed_provider_local">Local (sentence-transformers)</label>
   </div>
   <small class="text-muted">Provider atual: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}</small>
@@ -187,11 +187,11 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
             {# Provider sempre visível ao lado dos botões, pois afeta recuperação de contexto #}
             <div class="d-flex align-items-center gap-3 flex-wrap" title="Provider de embeddings utilizado na consulta ao ChromaDB">
               <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="embed_provider" id="embed_provider_openai_query" value="openai" {% if EMBEDDING_PROVIDER == 'openai' %}checked{% endif %}>
+                <input class="form-check-input" type="radio" name="embed_provider_query" id="embed_provider_openai_query" value="openai">
                 <label class="form-check-label" for="embed_provider_openai_query">OpenAI</label>
               </div>
               <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="embed_provider" id="embed_provider_local_query" value="local" {% if EMBEDDING_PROVIDER == 'local' %}checked{% endif %}>
+                <input class="form-check-input" type="radio" name="embed_provider_query" id="embed_provider_local_query" value="local" checked>
                 <label class="form-check-label" for="embed_provider_local_query">Local</label>
               </div>
               <small class="text-muted">Provider atual: {{ EMBEDDING_PROVIDER }}{% if EMBEDDING_PROVIDER == 'local' %} (modelo: {{ LOCAL_EMBED_MODEL }}){% endif %}</small>
