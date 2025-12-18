@@ -2587,7 +2587,7 @@ def votacoes_management(request):
             v.is_active_now = v.is_active()
     except Exception:
         for v in votacoes:
-        v.is_active_now = bool(v.ativo)
+            v.is_active_now = bool(v.ativo)
     
     # Find propositions that don't have any VotacaoVoteBem linked to their official votations
     proposicoes_sem_votacao = Proposicao.objects.exclude(
