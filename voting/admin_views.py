@@ -447,6 +447,10 @@ def rag_tool(request):
                 import chromadb
                 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
                 provider = request.POST.get('embed_provider_query') or 'local'
+                # DEBUG: confirmar provider
+                from django.contrib import messages as dj_messages
+                dj_messages.info(request, f"DEBUG: fetch_context provider={provider}")
+                
                 provider = provider if provider in ('openai', 'local') else 'local'
                 local_model = getattr(settings, 'LOCAL_EMBED_MODEL', 'all-MiniLM-L6-v2')
                 persist_path = getattr(settings, 'CHROMA_PERSIST_PATH', '')
@@ -469,17 +473,29 @@ def rag_tool(request):
                 # Obter/criar coleção
                 try:
                     names = [c.name for c in client.list_collections()]
+                    # DEBUG: listar coleções disponíveis
+                    from django.contrib import messages as dj_messages
+                    dj_messages.info(request, f"DEBUG: Coleções Chroma disponíveis: {names}")
+                    
                     if effective_collection in names:
                         coll = client.get_collection(name=effective_collection, embedding_function=ef)
                     else:
                         coll = client.create_collection(name=effective_collection, embedding_function=ef)
-                except Exception:
+                except Exception as e:
+                    from django.contrib import messages as dj_messages
+                    dj_messages.warning(request, f"DEBUG: Erro ao obter/criar coleção {effective_collection}: {e}. Tentando get_or_create.")
                     coll = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
 
                 # Consulta por similaridade
+                from django.contrib import messages as dj_messages
+                dj_messages.info(request, f"DEBUG: Consultando coleção '{effective_collection}' (path: {persist_path}) com query: '{query_text[:30]}...'")
+                
                 qr = coll.query(query_texts=[query_text], n_results=5)
                 docs = (qr.get('documents') or [[]])[0]
                 metas = (qr.get('metadatas') or [[]])[0]
+                
+                dj_messages.info(request, f"DEBUG: Resultado Chroma: {len(docs)} documentos encontrados.")
+                
                 if docs:
                     parts = []
                     for i, d in enumerate(docs):

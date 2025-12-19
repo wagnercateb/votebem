@@ -5,7 +5,4 @@ mkdir -p /dados/embeddings/votebem || true
 mkdir -p /dados/chroma || true
 mkdir -p /dados/votebem/docs/noticias || true
 
-chmod -R 755 /dados/embeddings || true
-chmod -R 755 /dados/chroma || true
-
 exec "$@"
