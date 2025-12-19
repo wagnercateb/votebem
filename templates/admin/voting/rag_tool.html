@@ -43,12 +43,13 @@
 
 
 
-<div class="rag-card">
-  <div class="tab-nav d-flex" role="tablist" aria-label="RAG tabs">
-    <button type="button" class="tab-btn" data-tab="tab-embed" title="Gerencia embeddings e armazenamento no ChromaDB; persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}">Embeddings & Chroma</button>
-    <button type="button" class="tab-btn active" data-tab="tab-query">Consulta com OpenAI</button>
-  </div>
-  <br />
+  <div class="rag-card">
+    <div class="tab-nav d-flex" role="tablist" aria-label="RAG tabs">
+      <button type="button" class="tab-btn" data-tab="tab-embed" title="Gerencia embeddings e armazenamento no ChromaDB; persistência: {% if CHROMA_PERSIST_PATH_EFFECTIVE %}{{ CHROMA_PERSIST_PATH_EFFECTIVE }}{% else %}memória (não persiste em disco){% endif %}">Embeddings & Chroma</button>
+      <button type="button" class="tab-btn active" data-tab="tab-query">Consulta com OpenAI</button>
+      <button type="button" class="tab-btn" data-tab="tab-search">Pesquisar arquivos</button>
+    </div>
+    <br />
 
   <h2>RAG sem LangChain – Embeddings e Consulta</h2>
 
@@ -257,6 +258,39 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
       {% endif %}
     </section>
 
+    <section id="tab-search" class="tab-panel" aria-labelledby="btn-tab-search" style="display:none;">
+      <div>
+        <label class="form-label">Pesquisar arquivos</label>
+        <div class="d-flex align-items-center gap-2">
+          <button type="submit" name="search_files" value="1" class="btn btn-outline-secondary">Procurar palavras da query</button>
+        </div>
+        {% if search_matches and search_matches|length > 0 %}
+          <div class="mt-2">
+            <label for="search-file-select" class="form-label">Arquivos encontrados</label>
+            <select id="search-file-select" name="selected_file" class="form-select" style="max-width: 100%;">
+              {% for it in search_matches %}
+                <option value="{{ it.path }}" {% if selected_file == it.path %}selected{% endif %}>{{ it.name }}</option>
+              {% endfor %}
+            </select>
+            <input type="hidden" id="search_select_input" name="search_select" value="">
+          </div>
+          <div id="block-search_file_text" class="mt-3">
+            <div class="d-flex align-items-center justify-content-between">
+              <label for="search_file_textarea" class="form-label">Conteúdo do arquivo</label>
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsEnter('block-search_file_text')">Tela cheia</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsExit('block-search_file_text')">Voltar</button>
+              </div>
+            </div>
+            <textarea id="search_file_textarea" class="form-control" title="Conteúdo do arquivo selecionado">{{ selected_file_content }}</textarea>
+            <div class="d-flex gap-2 mt-2">
+              <button type="button" class="btn btn-outline-primary" id="btn-colar-contexto">Colar no contexto</button>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
     <div class="d-flex justify-content-end">
       <button type="submit" class="btn btn-outline-secondary" title="Salvar os campos sem executar embedding ou consulta">Salvar alterações na configuração</button>
     </div>
@@ -370,7 +404,8 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
       const btns = document.querySelectorAll('.tab-btn');
       const panels = {
         'tab-embed': document.getElementById('tab-embed'),
-        'tab-query': document.getElementById('tab-query')
+        'tab-query': document.getElementById('tab-query'),
+        'tab-search': document.getElementById('tab-search')
       };
 
       // Função para ativar uma aba e esconder a outra
@@ -396,6 +431,33 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
 
       const initialTab = "{{ active_tab|default:'tab-query' }}";
       activate(initialTab);
+    })();
+  </script>
+  <script>
+    (function(){
+      const sel = document.getElementById('search-file-select');
+      const form = document.getElementById('rag-form');
+      const hidden = document.getElementById('search_select_input');
+      if (sel && form && hidden) {
+        sel.addEventListener('change', function(){
+          hidden.value = '1';
+          form.submit();
+        });
+      }
+      const btn = document.getElementById('btn-colar-contexto');
+      const src = document.getElementById('search_file_textarea');
+      const dest = document.getElementById('context_text');
+      if (btn && src && dest) {
+        btn.addEventListener('click', function(){
+          const start = src.selectionStart || 0;
+          const end = src.selectionEnd || 0;
+          const text = src.value.substring(start, end);
+          if (text) {
+            const sep = dest.value ? '\n' : '';
+            dest.value = dest.value + sep + text;
+          }
+        });
+      }
     })();
   </script>
   <script>

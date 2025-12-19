@@ -536,6 +536,44 @@ def rag_tool(request):
         except Exception as e:
             error_msg = f'Erro ao buscar contexto: {e}'
 
+    search_matches = []
+    selected_file = ''
+    selected_file_content = ''
+    if request.method == 'POST' and (request.POST.get('search_files') or request.POST.get('search_select')):
+        try:
+            tokens = [t for t in re.split(r"\W+", (query_text or '').strip().lower()) if t]
+            files = []
+            try:
+                for pat in ('**/*.md', '**/*.pdf', '**/*.txt'):
+                    files.extend(glob.glob(os.path.join(doc_folder_abs, pat), recursive=True))
+            except Exception:
+                files = []
+            matches = []
+            for fp in files:
+                lowfp = fp.lower()
+                if lowfp.endswith('.md'):
+                    content = _read_md_file(fp)
+                elif lowfp.endswith('.pdf'):
+                    content = _read_pdf_file(fp)
+                else:
+                    content = _read_txt_file(fp)
+                low = (content or '').lower()
+                ok = bool(tokens) and all(re.search(r'\b' + re.escape(tok) + r'\b', low) for tok in tokens)
+                if ok:
+                    matches.append(fp)
+            search_matches = [{'name': os.path.basename(fp), 'path': fp} for fp in matches]
+            selected_file = request.POST.get('selected_file') or (matches[0] if matches else '')
+            if selected_file:
+                lowfp = selected_file.lower()
+                if lowfp.endswith('.md'):
+                    selected_file_content = _read_md_file(selected_file)
+                elif lowfp.endswith('.pdf'):
+                    selected_file_content = _read_pdf_file(selected_file)
+                else:
+                    selected_file_content = _read_txt_file(selected_file)
+        except Exception as e:
+            error_msg = f'Erro na busca de arquivos: {e}'
+
     # Submissão de consulta: recupera contexto pelo ChromaDB (embeddings) com fallback para leitura de arquivos
     if request.method == 'POST' and request.POST.get('submit_query'):
         ran_query = True
@@ -1065,7 +1103,9 @@ def rag_tool(request):
             submitted_action = 'fetch_context'
         elif request.POST.get('submit_query'):
             submitted_action = 'submit_query'
-    active_tab = 'tab-embed' if submitted_action in ('embed_docs', 'chroma_stats') else 'tab-query'
+        elif request.POST.get('search_files') or request.POST.get('search_select'):
+            submitted_action = 'search_files'
+    active_tab = 'tab-embed' if submitted_action in ('embed_docs', 'chroma_stats') else ('tab-search' if submitted_action == 'search_files' else 'tab-query')
 
     context = {
         'DOC_FOLDER': doc_folder,  # original value as shown in UI (can be relative)
@@ -1102,6 +1142,9 @@ def rag_tool(request):
         'submitted_action': submitted_action,
         'embed_status_key': locals().get('embed_status_key', ''),
         'query_status_key': locals().get('query_status_key', ''),
+        'search_matches': search_matches,
+        'selected_file': selected_file,
+        'selected_file_content': selected_file_content,
     }
     return render(request, 'admin/voting/rag_tool.html', context)
 
@@ -3894,5 +3937,4 @@ def ajax_task_status(request):
         return JsonResponse({'ok': False, 'error': 'Parâmetro key é obrigatório.'}, status=400)
     payload = _get_status(status_key)
     return JsonResponse({'ok': True, 'status': payload, 'key': status_key})
-
 
