@@ -260,10 +260,7 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
 
     <section id="tab-search" class="tab-panel" aria-labelledby="btn-tab-search" style="display:none;">
       <div>
-        <label class="form-label">Pesquisar arquivos</label>
-        <div class="d-flex align-items-center gap-2">
-          <button type="submit" name="search_files" value="1" class="btn btn-outline-secondary">Procurar palavras da query</button>
-        </div>
+        <label class="form-label">Pesquisar arquivos (Resultados)</label>
         {% if search_matches and search_matches|length > 0 %}
           <div class="mt-2">
             <label for="search-file-select" class="form-label">Arquivos encontrados</label>

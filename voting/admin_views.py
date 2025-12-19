@@ -536,44 +536,6 @@ def rag_tool(request):
         except Exception as e:
             error_msg = f'Erro ao buscar contexto: {e}'
 
-    search_matches = []
-    selected_file = ''
-    selected_file_content = ''
-    if request.method == 'POST' and (request.POST.get('search_files') or request.POST.get('search_select')):
-        try:
-            tokens = [t for t in re.split(r"\W+", (query_text or '').strip().lower()) if t]
-            files = []
-            try:
-                for pat in ('**/*.md', '**/*.pdf', '**/*.txt'):
-                    files.extend(glob.glob(os.path.join(doc_folder_abs, pat), recursive=True))
-            except Exception:
-                files = []
-            matches = []
-            for fp in files:
-                lowfp = fp.lower()
-                if lowfp.endswith('.md'):
-                    content = _read_md_file(fp)
-                elif lowfp.endswith('.pdf'):
-                    content = _read_pdf_file(fp)
-                else:
-                    content = _read_txt_file(fp)
-                low = (content or '').lower()
-                ok = bool(tokens) and all(re.search(r'\b' + re.escape(tok) + r'\b', low) for tok in tokens)
-                if ok:
-                    matches.append(fp)
-            search_matches = [{'name': os.path.basename(fp), 'path': fp} for fp in matches]
-            selected_file = request.POST.get('selected_file') or (matches[0] if matches else '')
-            if selected_file:
-                lowfp = selected_file.lower()
-                if lowfp.endswith('.md'):
-                    selected_file_content = _read_md_file(selected_file)
-                elif lowfp.endswith('.pdf'):
-                    selected_file_content = _read_pdf_file(selected_file)
-                else:
-                    selected_file_content = _read_txt_file(selected_file)
-        except Exception as e:
-            error_msg = f'Erro na busca de arquivos: {e}'
-
     # Submissão de consulta: recupera contexto pelo ChromaDB (embeddings) com fallback para leitura de arquivos
     if request.method == 'POST' and request.POST.get('submit_query'):
         ran_query = True
@@ -592,18 +554,25 @@ def rag_tool(request):
             _doc_folder_abs = doc_folder_abs
             _api_key = api_key
             _embed_provider = request.POST.get('embed_provider_query') or 'local'
-            
+            _user_context_text = context_text
+
             def _process_query():
                 try:
-                    _set_status(status_key, {'state': 'processing', 'message': 'Recuperando contexto...'})
+                    _set_status(status_key, {'state': 'processing', 'message': 'Preparando contexto...'})
                     
                     context_text = ''
                     chroma_used = False
                     warning_msg = ''
                     
-                    # 1) Tenta recuperar contexto via ChromaDB
-                    try:
-                        print(f"[RAG] Starting context retrieval. Provider: {_embed_provider}")
+                    # If user provided context (e.g. edited in textarea), use it directly
+                    if _user_context_text and _user_context_text.strip():
+                        context_text = _user_context_text
+                        chroma_used = False
+                        print(f"[RAG] Using user-provided context (length {len(context_text)})")
+                    else:
+                        # 1) Tenta recuperar contexto via ChromaDB
+                        try:
+                            print(f"[RAG] Starting context retrieval. Provider: {_embed_provider}")
                         import chromadb
                         from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction, SentenceTransformerEmbeddingFunction
                         
@@ -1093,6 +1062,65 @@ def rag_tool(request):
             config_path_display = config_path
     except Exception:
         config_path_display = config_path
+    # Search Files Logic
+    search_matches = []
+    selected_file = request.POST.get('selected_file', '')
+    selected_file_content = ''
+    
+    if request.method == 'POST' and request.POST.get('search_files'):
+        if doc_folder_abs:
+            try:
+                files = (
+                    glob.glob(os.path.join(doc_folder_abs, '*.md')) +
+                    glob.glob(os.path.join(doc_folder_abs, '*.pdf')) +
+                    glob.glob(os.path.join(doc_folder_abs, '*.txt'))
+                )
+                q_tokens = [t.lower() for t in re.split(r"\W+", (query_text or '')) if t]
+                scored_files = []
+                for fp in files:
+                    try:
+                        low_fp = fp.lower()
+                        if low_fp.endswith('.pdf'):
+                            content = _read_pdf_file(fp)
+                        else:
+                            content = _read_txt_file(fp) # _read_txt_file handles md too in practice or simple read
+                            if not content and low_fp.endswith('.md'):
+                                content = _read_md_file(fp)
+                        
+                        low_content = content.lower()
+                        score = 0
+                        for t in q_tokens:
+                            score += low_content.count(t)
+                        if score > 0:
+                            scored_files.append((fp, score))
+                    except Exception:
+                        pass
+                
+                scored_files.sort(key=lambda x: x[1], reverse=True)
+                search_matches = [{'path': p, 'name': os.path.basename(p)} for p, s in scored_files]
+                if search_matches:
+                    messages.info(request, f"Encontrados {len(search_matches)} arquivos com termos da query.")
+                else:
+                    messages.warning(request, "Nenhum arquivo encontrado com os termos da query.")
+            except Exception as e:
+                messages.error(request, f"Erro na busca de arquivos: {e}")
+    
+    # Load selected file content if any
+    if request.method == 'POST' and (request.POST.get('search_files') or request.POST.get('selected_file')):
+        # If we just searched and found matches, select the first one if none selected
+        if not selected_file and search_matches:
+            selected_file = search_matches[0]['path']
+        
+        if selected_file and os.path.exists(selected_file):
+            try:
+                if selected_file.lower().endswith('.pdf'):
+                    selected_file_content = _read_pdf_file(selected_file)
+                else:
+                    with open(selected_file, 'r', encoding='utf-8', errors='ignore') as f:
+                        selected_file_content = f.read()
+            except Exception as e:
+                selected_file_content = f"Erro ao ler arquivo: {e}"
+
     submitted_action = None
     if request.method == 'POST':
         if request.POST.get('embed_docs'):
@@ -1103,9 +1131,14 @@ def rag_tool(request):
             submitted_action = 'fetch_context'
         elif request.POST.get('submit_query'):
             submitted_action = 'submit_query'
-        elif request.POST.get('search_files') or request.POST.get('search_select'):
+        elif request.POST.get('search_files'):
             submitted_action = 'search_files'
-    active_tab = 'tab-embed' if submitted_action in ('embed_docs', 'chroma_stats') else ('tab-search' if submitted_action == 'search_files' else 'tab-query')
+    
+    # If search was performed, switch to search tab to show results
+    if submitted_action == 'search_files':
+        active_tab = 'tab-search'
+    else:
+        active_tab = 'tab-embed' if submitted_action in ('embed_docs', 'chroma_stats') else 'tab-query'
 
     context = {
         'DOC_FOLDER': doc_folder,  # original value as shown in UI (can be relative)
@@ -3937,4 +3970,5 @@ def ajax_task_status(request):
         return JsonResponse({'ok': False, 'error': 'Parâmetro key é obrigatório.'}, status=400)
     payload = _get_status(status_key)
     return JsonResponse({'ok': True, 'status': payload, 'key': status_key})
+
 
