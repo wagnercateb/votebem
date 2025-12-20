@@ -6,7 +6,7 @@ class Proposicao(models.Model):
     """Model for political propositions from Camara dos Deputados"""
     # Make id_proposicao the primary key for the table
     id_proposicao = models.IntegerField(primary_key=True, verbose_name="ID da Proposição")
-    titulo = models.CharField(max_length=500, verbose_name="Título")
+    titulo = models.TextField(verbose_name="Título")
     ementa = models.TextField(verbose_name="Ementa")
     keywords = models.TextField(blank=True, null=True, verbose_name="Palavras-chave")
     tipo = models.CharField(max_length=50, verbose_name="Tipo")
@@ -79,7 +79,7 @@ class VotacaoVoteBem(models.Model):
         related_name='votacaovotebem',
         verbose_name="Votação da Proposição"
     )
-    titulo = models.CharField(max_length=500, verbose_name="Título da Votação")
+    titulo = models.TextField(verbose_name="Título da Votação")
     resumo = models.TextField(verbose_name="Resumo")
     explicacao = models.TextField(blank=True, null=True, verbose_name="Explicação")
     data_hora_votacao = models.DateTimeField(verbose_name="Data/Hora da Votação Original")

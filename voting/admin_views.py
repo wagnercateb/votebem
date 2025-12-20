@@ -1424,6 +1424,19 @@ def votos_oficiais_app(request):
     if not prop_id_for_header and prefill_prop:
         prop_id_for_header = prefill_prop
 
+    # If header prop ID is still missing but we have a composite votacao_id (e.g. 2454704-53),
+    # try to extract the first part as the proposition ID.
+    if not prop_id_for_header and votacao_id and '-' in str(votacao_id):
+        try:
+            parts = str(votacao_id).split('-')
+            if parts[0].isdigit():
+                prop_id_for_header = parts[0]
+                # Also set prefill_proposicao_id to ensure consistent UI state
+                if not prefill_prop:
+                    prefill_prop = parts[0]
+        except Exception:
+            pass
+
     context = {
         'votacao': votacao,
         'votos_json': json.dumps(votos_data, ensure_ascii=False),

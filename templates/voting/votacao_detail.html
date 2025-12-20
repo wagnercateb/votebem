@@ -56,10 +56,11 @@
                             <i class="bi bi-share"></i> Compartilhar
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#" onclick="shareTo('x'); return false;">X (Twitter)</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="shareTo('facebook'); return false;">Facebook</a></li>
+                          <li><a class="dropdown-item" href="#" onclick="shareTo('whatsapp'); return false;">WhatsApp</a></li>
+                          <li><a class="dropdown-item" href="#" onclick="shareTo('facebook'); return false;">Facebook</a></li>
+                          <li><a class="dropdown-item" href="#" onclick="shareTo('instagram'); return false;">Instagram</a></li>
+                          <li><a class="dropdown-item" href="#" onclick="shareTo('x'); return false;">X</a></li>
                             <li><a class="dropdown-item" href="#" onclick="shareTo('linkedin'); return false;">LinkedIn</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="shareTo('instagram'); return false;">Instagram</a></li>
                         </ul>
                     </div>
                 </div>
@@ -69,7 +70,7 @@
                 <h4 class="card-title">
                     <!-- Botão de informação: posicionado no início da linha -->
                     <button id="toggleExplicacaoBtn" type="button" class="btn btn-outline-secondary btn-sm me-2" aria-expanded="false" title="Mostrar/ocultar explicação">
-                        <i class="bi bi-info-circle" aria-hidden="true"></i>
+                        <i class="bi bi-info-circle" aria-hidden="true"></i> Explicação
                     </button>
                     {% if votacao.proposicao.id_proposicao %}
                         <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
@@ -79,23 +80,35 @@
                         {{ votacao.titulo }}
                     {% endif %}
                 </h4>
-                <p class="card-text mb-0"><i><b>{{ votacao.resumo }}</b></i></p>
+                <p class="card-text mb-2"><i><b>{{ votacao.resumo }}</b></i></p>
                 
                 <!-- Ajuste solicitado: remover labels <strong> e exibir apenas uma data
                      A data deve vir de ProposicaoVotacao.data_votacao -->
                 <div class="row mb-3">
                     <!-- Ajuste: usar largura total para o conteúdo -->
                     <div class="col-12">
-                        <!-- Texto de explicação: inicialmente oculto, alternado pelo botão de informação acima -->
+                        <!-- Texto de explicação: inicialmente visível (removido d-none), alternado pelo botão de informação acima -->
                         {% if votacao.explicacao %}
-                        <div class="explicacao-text d-none mb-1">
+                        <div class="explicacao-text d-none mb-1" style="white-space: pre-wrap;">
                             {{ votacao.explicacao }}
                         </div>
                         {% endif %}
                         <hr />
                         <!-- Data da votação (ProposicaoVotacao.data_votacao) -->
                         {% if votacao.proposicao_votacao and votacao.proposicao_votacao.data_votacao %}
-                        <span class="text-muted">Votada, pelos deputados, em: {{ votacao.proposicao_votacao.data_votacao|date:"d/m/Y H:i" }}</span><br>
+                        <span class="text-muted">Votada, pelos deputados, em: {{ votacao.proposicao_votacao.data_votacao|date:"d/m/Y H:i" }}</span>
+
+                        <!-- Botão Ementa -->
+                        <button class="btn btn-outline-secondary btn-sm ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#ementaDetails" aria-expanded="false" aria-controls="ementaDetails">
+                            Ver ementa
+                        </button>
+                        {% endif %}
+
+                        <!-- Botão para ver proposição original na Câmara -->
+                        {% if votacao.proposicao_votacao.proposicao.id_proposicao %}
+                          <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm ms-2">
+                              Ver proposição original
+                          </a>
                         {% endif %}
                         <!-- Linha adicional com a descrição da ProposicaoVotacao
                              Suporta duas chaves de contexto: voting_proposicaovotacao e votacao.proposicao_votacao -->
@@ -117,26 +130,16 @@
                   var textos = document.querySelectorAll('.explicacao-text');
                   btn.addEventListener('click', function () {
                     textos.forEach(function (el) { el.classList.toggle('d-none'); });
-                    // Alterna estado e estilos: quando ativo, usar fundo cinza claro (btn-light)
+                    // Alterna estado: atualiza aria-expanded
                     var expanded = btn.getAttribute('aria-expanded') === 'true';
                     var expandedAfter = !expanded;
                     btn.setAttribute('aria-expanded', String(expandedAfter));
-                    // Limpa estilos anteriores para evitar acumular classes
-                    btn.classList.remove('btn-info', 'btn-secondary', 'btn-light', 'btn-outline-info', 'btn-outline-secondary');
-                    // Aplica estilo conforme novo estado
-                    if (expandedAfter) {
-                      // Ativo: fundo cinza claro
-                      btn.classList.add('btn-light');
-                    } else {
-                      // Inativo: volta para contorno cinza (layout do botão de palavras‑chave)
-                      btn.classList.add('btn-outline-secondary');
-                    }
                   });
                 });
                 </script>
                 
                 <!-- Proposition Details -->
-                <div class="border-top pt-3">
+                <div class="collapse border-top pt-3" id="ementaDetails">
                     <!-- Atualizado título conforme solicitação -->
                     <h6>Detalhes da proposição na Câmara</h6>
                     <!-- Ementa da proposição: sem negrito e usando voting_proposicao.ementa -->
@@ -146,17 +149,12 @@
                             <i><p>Palavras-chave: {{ kw }}</p></i>
                         {% endif %}
                     {% endwith %}
-                    <!-- Botão para ver proposição original na Câmara -->
-{% if votacao.proposicao_votacao.proposicao.id_proposicao %}
-<a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm mt-2">
-                            Ver proposição original
-                        </a>
+
                         {# Botão adicional: link para autores, solicitado apenas para a página de votação 8 #}
-                        {% if votacao.id == 8 %}
+                        {% if votacao.id == 8 and votacao.proposicao_votacao.proposicao.id_proposicao %}
                         {# Use same dynamic proposicao_id as the original link #}
                         <a href="https://www.camara.leg.br/proposicoesWeb/prop_autores?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm mt-2">Autor</a>
                         {% endif %}
-                    {% endif %}
 {% if votacao.proposicao_votacao.proposicao.autor %}
 <p><strong>Autor:</strong> {{ votacao.proposicao_votacao.proposicao.autor }}</p>
                     {% endif %}
@@ -619,6 +617,9 @@
       try { navigator.clipboard.writeText(url); } catch (e) {}
       alert('Link copiado. Abra o Instagram e cole no seu post ou story.');
       return;
+    } else if (platform === 'whatsapp') {
+      // Use api.whatsapp.com which is more robust for link sharing
+      target = 'https://api.whatsapp.com/send?text=' + u;
     }
     if (target) { window.open(target, '_blank', 'noopener'); }
   }

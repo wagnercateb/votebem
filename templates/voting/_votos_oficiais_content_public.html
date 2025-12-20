@@ -28,12 +28,24 @@
         {% if votacao.proposicao_votacao.proposicao.conhecida_por %}<br /><i>Conhecida por: {{ votacao.proposicao_votacao.proposicao.conhecida_por }}</i>{% endif %}
       {% endif %}
     </h2>
-    {% if votacao %}
-      <!-- Atualiza rótulo para deixar claro que volta à página VoteBem -->
-      <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Voltar para votação Votebem
-      </a>
-    {% endif %}
+    <div class="d-flex gap-2">
+      {% if pv and pv.proposicao and pv.proposicao.id_proposicao %}
+        <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ pv.proposicao.id_proposicao }}" target="_blank" class="btn btn-sm btn-outline-primary">
+          Ver na Câmara
+        </a>
+      {% elif votacao and votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao and votacao.proposicao_votacao.proposicao.id_proposicao %}
+        <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="_blank" class="btn btn-sm btn-outline-primary">
+          Ver na Câmara
+        </a>
+      {% endif %}
+
+      {% if votacao %}
+        <!-- Atualiza rótulo para deixar claro que volta à página VoteBem -->
+        <a href="{% url 'voting:votacao_detail' votacao.id %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i> Voltar para votação Votebem
+        </a>
+      {% endif %}
+    </div>
   </div>
   <div class="card-body">
 
