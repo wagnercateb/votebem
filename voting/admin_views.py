@@ -1088,10 +1088,18 @@ def rag_tool(request):
                                 content = _read_md_file(fp)
                         
                         low_content = content.lower()
+                        
+                        # Check if ALL tokens are present
+                        all_tokens_present = True
                         score = 0
                         for t in q_tokens:
-                            score += low_content.count(t)
-                        if score > 0:
+                            count = low_content.count(t)
+                            if count == 0:
+                                all_tokens_present = False
+                                break
+                            score += count
+                            
+                        if all_tokens_present and score > 0:
                             scored_files.append((fp, score))
                     except Exception:
                         pass

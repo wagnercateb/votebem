@@ -184,6 +184,7 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
             <div class="d-flex align-items-center gap-2 flex-wrap">
               <button type="submit" name="fetch_context" value="1" class="btn btn-outline-secondary" title="Busca contexto via ChromaDB (usando provider selecionado) com fallback para leitura de arquivos.">Buscar contexto</button>
               <button type="submit" name="submit_query" value="1" class="btn btn-primary" title="Envia a pergunta para a API, incluindo o contexto.">Enviar consulta</button>
+              <button type="submit" name="search_files" value="1" class="btn btn-outline-secondary" title="Pesquisa arquivos na pasta DOC_FOLDER que contenham termos da query.">Arquivos com palavras da query</button>
             </div>
             {# Provider sempre visível ao lado dos botões, pois afeta recuperação de contexto #}
             <div class="d-flex align-items-center gap-3 flex-wrap" title="Provider de embeddings utilizado na consulta ao ChromaDB">
@@ -275,14 +276,12 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
             <div class="d-flex align-items-center justify-content-between">
               <label for="search_file_textarea" class="form-label">Conteúdo do arquivo</label>
               <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary" id="btn-colar-contexto">Colar no contexto</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsEnter('block-search_file_text')">Tela cheia</button>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsExit('block-search_file_text')">Voltar</button>
               </div>
             </div>
             <textarea id="search_file_textarea" class="form-control" title="Conteúdo do arquivo selecionado">{{ selected_file_content }}</textarea>
-            <div class="d-flex gap-2 mt-2">
-              <button type="button" class="btn btn-outline-primary" id="btn-colar-contexto">Colar no contexto</button>
-            </div>
           </div>
         {% endif %}
       </div>
@@ -438,6 +437,34 @@ O padrão vem de EMBEDDING_PROVIDER nas settings.
       if (sel && form && hidden) {
         sel.addEventListener('change', function(){
           hidden.value = '1';
+          // Ensure tab persistence
+          let tabInput = form.querySelector('input[name="active_tab"]');
+          if (!tabInput) {
+            tabInput = document.createElement('input');
+            tabInput.type = 'hidden';
+            tabInput.name = 'active_tab';
+            form.appendChild(tabInput);
+          }
+          tabInput.value = 'tab-search';
+          
+          // Also preserve search_files=1 so the backend knows we are in search mode
+          // But we don't want to re-trigger a new search, just load the file.
+          // Actually, the view logic: if search_files=1 is present, it does search.
+          // If search_select=1, it also does search but loads the file content.
+          // Let's ensure the backend sees search_files=1 as well if needed by view logic,
+          // but the current view implementation checks 'search_select' separately or
+          // re-runs search if 'search_files' is in POST.
+          // To keep the list populated, we probably need to re-run the search in the backend.
+          // So we append a hidden input for search_files if not present as button click.
+          let searchInput = form.querySelector('input[name="search_files"]');
+          if (!searchInput) {
+             searchInput = document.createElement('input');
+             searchInput.type = 'hidden';
+             searchInput.name = 'search_files';
+             searchInput.value = '1';
+             form.appendChild(searchInput);
+          }
+
           form.submit();
         });
       }

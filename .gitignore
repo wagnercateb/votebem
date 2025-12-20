@@ -328,3 +328,4 @@ file_hashes.npy
 # → Un-ignore all directories so Git can track the folder structure.
 # !versionaFolderVazio/**/  (não funcionou, git ignora folders vazios)
 
+docs/noticias/
