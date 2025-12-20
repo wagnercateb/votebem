@@ -1349,62 +1349,85 @@ def votacoes_oficiais_list(request):
 @staff_member_required
 def proposicoes_atualizar_temas(request):
     """Atualiza vínculos de temas para proposições que não possuem nenhum tema vinculado.
-
-    1) Buscar IDs de `voting_proposicao` sem correspondência na `voting_proposicao_tema`.
-    2) Para cada ID, chamar API: https://dadosabertos.camara.leg.br/api/v2/proposicoes/<id>/temas
-    3) Extrair `codTema` e inserir em `voting_proposicao_tema` (tema_id = codTema; proposicao_id = id).
+    Executa em background para evitar timeout.
     """
     from django.db.models import Exists, OuterRef
     from .models import Proposicao, ProposicaoTema, Tema
 
-    proposicoes_sem_tema = Proposicao.objects.annotate(
-        has_tema=Exists(
-            ProposicaoTema.objects.filter(proposicao_id=OuterRef('id_proposicao'))
-        )
-    ).filter(has_tema=False)
+    lock_key = "vb:gerencial:atualizar_temas_lock"
+    
+    if not _acquire_lock(lock_key, ttl_seconds=3600):
+        messages.warning(request, "A atualização de temas já está em execução em segundo plano.")
+        return redirect('gerencial:dashboard')
 
-    updated_props = 0
-    created_links = 0
-    for prop in proposicoes_sem_tema:
-        prop_id = prop.id_proposicao
+    def _runner():
         try:
-            url = f"https://dadosabertos.camara.leg.br/api/v2/proposicoes/{prop_id}/temas"
-            resp = requests.get(url, timeout=10)
-            resp.raise_for_status()
-            data = resp.json()
-            temas = data.get('dados', [])
-        except Exception:
-            # Falha ao obter temas para esta proposição, continuar
-            continue
+            proposicoes_sem_tema = Proposicao.objects.annotate(
+                has_tema=Exists(
+                    ProposicaoTema.objects.filter(proposicao_id=OuterRef('id_proposicao'))
+                )
+            ).filter(has_tema=False)
 
-        for item in temas:
-            cod = item.get('codTema') or item.get('cod') or item.get('cod_tema')
-            if cod is None:
-                continue
-            try:
-                codigo_int = int(cod)
-            except Exception:
-                continue
+            updated_props = 0
+            created_links = 0
+            
+            # Convert queryset to list to avoid database timeouts during long iteration if connection drops
+            # Limit to 500 to prevent infinite running if database is huge
+            props_list = list(proposicoes_sem_tema[:500]) 
 
-            # Verifica existência do Tema por codigo
-            try:
-                tema_obj = Tema.objects.get(codigo=codigo_int)
-            except Tema.DoesNotExist:
-                # Se o tema não existe na referência, não cria vínculo
-                continue
+            for prop in props_list:
+                prop_id = prop.id_proposicao
+                try:
+                    url = f"https://dadosabertos.camara.leg.br/api/v2/proposicoes/{prop_id}/temas"
+                    resp = requests.get(url, timeout=10)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    temas = data.get('dados', [])
+                except Exception:
+                    # Falha ao obter temas para esta proposição, continuar
+                    continue
 
-            _, created = ProposicaoTema.objects.get_or_create(
-                proposicao_id=prop_id,
-                tema_id=tema_obj.codigo,
-            )
-            if created:
-                created_links += 1
+                for item in temas:
+                    cod = item.get('codTema') or item.get('cod') or item.get('cod_tema')
+                    if cod is None:
+                        continue
+                    try:
+                        codigo_int = int(cod)
+                    except Exception:
+                        continue
 
-        updated_props += 1
+                    # Obtém nome do tema da resposta da API (campo 'tema') ou usa fallback
+                    tema_nome = item.get('tema') or f"Tema {codigo_int}"
+
+                    # Garante que o tema existe na base; se não, cria
+                    tema_obj, _ = Tema.objects.get_or_create(
+                        codigo=codigo_int,
+                        defaults={'nome': tema_nome}
+                    )
+
+                    _, created = ProposicaoTema.objects.get_or_create(
+                        proposicao_id=prop_id,
+                        tema_id=tema_obj.codigo,
+                    )
+                    if created:
+                        created_links += 1
+
+                updated_props += 1
+                # Small sleep to be nice to the external API
+                time.sleep(0.2)
+                
+            dev_log(f"Atualização de temas background finalizada: {updated_props} props, {created_links} links.")
+        
+        except Exception as e:
+            dev_log(f"Erro na thread de atualização de temas: {e}")
+        finally:
+            _release_lock(lock_key)
+
+    threading.Thread(target=_runner, daemon=True).start()
 
     messages.success(
         request,
-        f"Atualização concluída: {updated_props} proposições processadas, {created_links} vínculos criados."
+        "A atualização de temas foi iniciada em segundo plano. O processo pode levar alguns minutos."
     )
     return redirect('gerencial:dashboard')
 
