@@ -65,6 +65,9 @@
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
                                     {{ votacao.titulo }}
+                                    {% if votacao.proposicao_votacao.data_votacao %}
+                                        <small class="text-muted ms-2">({{ votacao.proposicao_votacao.data_votacao|date:"m/Y" }})</small>
+                                    {% endif %}
                                 </h6>
                                 {% if votacao.is_active %}
                                     {# Active badge intentionally removed on list page per request #}
@@ -90,20 +93,7 @@
                                 {% endif %}
                                 <!-- Bottom: stats and temas grouped to remain a single column item -->
                                 <div class="mt-2">
-                                    <div class="row text-center mb-3">
-                                        <div class="col-6">
-                                            <div class="text-success">
-                                                <strong>{{ votacao.get_votos_sim_populares }}</strong>
-                                                <br><small>SIM</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="text-danger">
-                                                <strong>{{ votacao.get_votos_nao_populares }}</strong>
-                                                <br><small>NÃO</small>
-                                            </div>
-                                        </div>
-                                    </div>
+
                                     <div class="text-center">
                                         {% with temas=votacao.proposicao_votacao.proposicao.proposicaotema_set.all %}
                                             {% if temas %}
@@ -146,6 +136,9 @@
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
                                     {{ votacao.titulo }}
+                                    {% if votacao.proposicao_votacao.data_votacao %}
+                                        <small class="text-muted ms-2">({{ votacao.proposicao_votacao.data_votacao|date:"m/Y" }})</small>
+                                    {% endif %}
                                 </h6>
                                 <span class="badge text-success border border-success bg-transparent">
                                     <i class="bi bi-check-circle"></i> Já votei
@@ -164,20 +157,7 @@
 
                                 <!-- Bottom: stats and temas grouped to remain a single column item -->
                                 <div class="mt-2">
-                                    <div class="row text-center mb-3">
-                                        <div class="col-6">
-                                            <div class="text-success">
-                                                <strong>{{ votacao.get_votos_sim_populares }}</strong>
-                                                <br><small>SIM</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="text-danger">
-                                                <strong>{{ votacao.get_votos_nao_populares }}</strong>
-                                                <br><small>NÃO</small>
-                                            </div>
-                                        </div>
-                                    </div>
+
                                     <div class="text-center">
                                         {% with temas=votacao.proposicao_votacao.proposicao.proposicaotema_set.all %}
                                             {% if temas %}

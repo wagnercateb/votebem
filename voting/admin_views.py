@@ -483,8 +483,17 @@ def rag_tool(request):
                         coll = client.create_collection(name=effective_collection, embedding_function=ef)
                 except Exception as e:
                     from django.contrib import messages as dj_messages
-                    dj_messages.warning(request, f"DEBUG: Erro ao obter/criar coleção {effective_collection}: {e}. Tentando get_or_create.")
-                    coll = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
+                    err_str = str(e)
+                    if "embedding function" in err_str.lower() and "conflict" in err_str.lower():
+                        dj_messages.warning(request, f"DEBUG: Conflito de função de embedding detectado em {effective_collection}. Recriando coleção para corrigir.")
+                        try:
+                            client.delete_collection(name=effective_collection)
+                        except Exception:
+                            pass
+                        coll = client.create_collection(name=effective_collection, embedding_function=ef)
+                    else:
+                        dj_messages.warning(request, f"DEBUG: Erro ao obter/criar coleção {effective_collection}: {e}. Tentando get_or_create.")
+                        coll = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
 
                 # Consulta por similaridade
                 from django.contrib import messages as dj_messages
@@ -606,8 +615,17 @@ def rag_tool(request):
                                     print(f"[RAG] Creating collection: {effective_collection}")
                                     coll = client.create_collection(name=effective_collection, embedding_function=ef)
                             except Exception as e:
-                                print(f"[RAG] get_collection failed: {e}. Trying get_or_create.")
-                                coll = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
+                                err_str = str(e)
+                                if "embedding function" in err_str.lower() and "conflict" in err_str.lower():
+                                    print(f"[RAG] Conflict in embedding function for {effective_collection}. Recreating collection.")
+                                    try:
+                                        client.delete_collection(name=effective_collection)
+                                    except Exception:
+                                        pass
+                                    coll = client.create_collection(name=effective_collection, embedding_function=ef)
+                                else:
+                                    print(f"[RAG] get_collection failed: {e}. Trying get_or_create.")
+                                    coll = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
 
                             print(f"[RAG] Querying collection with text: {_query_text[:50]}...")
                             qr = coll.query(query_texts=[_query_text], n_results=5)
@@ -816,11 +834,19 @@ def rag_tool(request):
                         try:
                             names = [c.name for c in client.list_collections()]
                             if effective_collection in names:
-                                collection = client.get_collection(effective_collection)
+                                collection = client.get_collection(name=effective_collection, embedding_function=ef)
                             else:
                                 collection = client.create_collection(name=effective_collection, embedding_function=ef)
-                        except Exception:
-                            collection = client.get_or_create_collection(name=effective_collection)
+                        except Exception as e:
+                            err_str = str(e)
+                            if "embedding function" in err_str.lower() and "conflict" in err_str.lower():
+                                try:
+                                    client.delete_collection(name=effective_collection)
+                                except Exception:
+                                    pass
+                                collection = client.create_collection(name=effective_collection, embedding_function=ef)
+                            else:
+                                collection = client.get_or_create_collection(name=effective_collection, embedding_function=ef)
                         existing_hashes = {}
                         try:
                             if hash_path.endswith('.npy'):

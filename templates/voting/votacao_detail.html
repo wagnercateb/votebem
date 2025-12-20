@@ -69,7 +69,7 @@
             <div class="card-body">
                 <h4 class="card-title">
                     <!-- Botão de informação: posicionado no início da linha -->
-                    <button id="toggleExplicacaoBtn" type="button" class="btn btn-outline-secondary btn-sm me-2" aria-expanded="false" title="Mostrar/ocultar explicação">
+                    <button id="toggleExplicacaoBtn" type="button" class="btn btn-outline-secondary btn-sm me-2" aria-expanded="true" title="Mostrar/ocultar explicação">
                         <i class="bi bi-info-circle" aria-hidden="true"></i> Explicação
                     </button>
                     {% if votacao.proposicao.id_proposicao %}
@@ -89,7 +89,7 @@
                     <div class="col-12">
                         <!-- Texto de explicação: inicialmente visível (removido d-none), alternado pelo botão de informação acima -->
                         {% if votacao.explicacao %}
-                        <div class="explicacao-text d-none mb-1" style="white-space: pre-wrap;">
+                        <div class="explicacao-text mb-1" style="white-space: pre-wrap;">
                             {{ votacao.explicacao }}
                         </div>
                         {% endif %}
@@ -173,116 +173,20 @@
             </div>
         </div>
         
-        <!-- Voting Form -->
-        {% if can_vote %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-vote-fill"></i> Registre seu Voto</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" action="{% url 'voting:votar' votacao.id %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="peso" id="voto-peso" value="1">
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <div class="d-grid">
-                                    <button type="submit" name="voto" value="1" class="btn btn-success btn-lg">
-                                        <i class="bi bi-hand-thumbs-up"></i><br>
-                                        <strong>SIM</strong>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="d-grid">
-                                    <button type="submit" name="voto" value="-1" class="btn btn-danger btn-lg">
-                                        <i class="bi bi-hand-thumbs-down"></i><br>
-                                        <strong>NÃO</strong>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="d-grid">
-                                    <button type="submit" name="voto" value="0" class="btn btn-secondary btn-lg">
-                                        <i class="bi bi-dash-circle"></i><br>
-                                        <strong>ABSTENÇÃO</strong>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Peso/Importância do voto -->
-                        <div class="mt-2">
-                            <label class="form-label fw-semibold">Para você, que importância tem essa votação?</label>
-                            <div class="d-flex align-items-center voto-peso-selector w-100" aria-label="Selecione a importância do seu voto">
-                                <a href="#" class="peso-option selected" data-peso="1" title="normal (1 ponto)">
-                                    <i class="bi bi-circle"></i>
-                                    <small class="ms-1">normal (1 ponto)</small>
-                                </a>
-                                <a href="#" class="peso-option" data-peso="3" title="muito (3 pontos)">
-                                    <i class="bi bi-exclamation-circle"></i>
-                                    <small class="ms-1">muito (3 pontos)</small>
-                                </a>
-                                <a href="#" class="peso-option" data-peso="8" title="crucial (8 pontos)">
-                                    <i class="bi bi-star-fill"></i>
-                                    <small class="ms-1">crucial (8 pontos)</small>
-                                </a>
-                            </div>
-                            <style>
-                                .voto-peso-selector { display: flex; justify-content: space-between; gap: 12px; }
-                                .peso-option { color: #212529; text-decoration: none; padding: 10px 12px; border-radius: 6px; text-align: center; flex: 1 1 0; }
-                                .peso-option i { font-size: 1.25rem; vertical-align: middle; }
-                                .peso-option.selected { background-color: #e9f7ef; color: #198754; }
-                                .peso-option.selected i { color: #198754; }
-                                .peso-option:hover { background-color: #f1f3f5; }
-                            </style>
-                            <script>
-                                document.addEventListener('DOMContentLoaded', function () {
-                                  var pesoInput = document.getElementById('voto-peso');
-                                  document.querySelectorAll('.peso-option').forEach(function (opt) {
-                                    opt.addEventListener('click', function (e) {
-                                      e.preventDefault();
-                                      var val = parseInt(opt.dataset.peso || '1', 10);
-                                      if (![1,3,8].includes(val)) { val = 1; }
-                                      pesoInput.value = String(val);
-                                      document.querySelectorAll('.peso-option').forEach(function (o) { o.classList.remove('selected'); });
-                                      opt.classList.add('selected');
-                                    });
-                                  });
-                                });
-                            </script>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        {% elif not user.is_authenticated %}
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i>
-                <strong>Faça login para votar!</strong>
-                <a href="{% url 'users:login' %}?next={% url 'voting:votacao_detail' pk=votacao.id %}" class="btn btn-primary btn-sm ms-2">Entrar</a>
-            </div>
-        {% elif user_vote %}
-            <div class="alert alert-success d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="bi bi-check-circle"></i>
-                    <strong>Você já votou nesta proposição!</strong>
-                    Seu voto: <strong>{{ user_vote.get_voto_display }}</strong>
-                </div>
-                <form method="post" action="{% url 'voting:voto_delete' votacao.id %}" onsubmit="return confirm('Tem certeza que deseja excluir seu voto?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger btn-sm">
-                        <i class="bi bi-trash"></i> Excluir meu voto
-                    </button>
-                </form>
-            </div>
-        {% else %}
-            <div class="alert alert-warning">
-                <i class="bi bi-exclamation-triangle"></i>
-                <strong>Esta votação não está mais ativa.</strong>
-            </div>
-        {% endif %}
     </div>
     
     <div class="col-lg-4">
+        <!-- Navigation Buttons -->
+        <div class="d-flex gap-2 mb-3">
+            <a href="{% url 'voting:votacoes_disponiveis' %}" class="btn btn-outline-secondary flex-fill d-flex align-items-center justify-content-center">
+                <i class="bi bi-arrow-left me-2"></i> Voltar
+            </a>
+            <a href="{% url 'voting:meus_votos' %}" class="btn btn-outline-primary flex-fill d-flex align-items-center justify-content-center">
+                <i class="bi bi-list-check me-2"></i> Meus Votos
+            </a>
+        </div>
+
         {# Painel "Entenda" com links de Referências da proposição desta votação #}
         {% if referencias_count %}
         <div class="card mb-4">
@@ -558,7 +462,7 @@
          {% endcomment %}
 
         <!-- Official Results -->
-        <div class="card">
+        <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-building"></i> Resultado Oficial</h5>
                 {% if votacao %}
@@ -584,22 +488,118 @@
                 </div>
             </div>
         </div>
+
+        <!-- Voting Form -->
+        {% if can_vote %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-vote-fill"></i> Registre seu Voto</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'voting:votar' votacao.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="peso" id="voto-peso" value="1">
+                        <div class="row g-1">
+                            <div class="col-4">
+                                <div class="d-grid h-100">
+                                    <button type="submit" name="voto" value="1" class="btn btn-success btn-sm py-2 d-flex flex-column align-items-center justify-content-center" title="Votar SIM">
+                                        <i class="bi bi-hand-thumbs-up fs-5"></i>
+                                        <span class="small fw-bold mt-1">SIM</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="d-grid h-100">
+                                    <button type="submit" name="voto" value="-1" class="btn btn-danger btn-sm py-2 d-flex flex-column align-items-center justify-content-center" title="Votar NÃO">
+                                        <i class="bi bi-hand-thumbs-down fs-5"></i>
+                                        <span class="small fw-bold mt-1">NÃO</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="d-grid h-100">
+                                    <button type="submit" name="voto" value="0" class="btn btn-secondary btn-sm py-2 d-flex flex-column align-items-center justify-content-center" title="Votar ABSTENÇÃO">
+                                        <i class="bi bi-dash-circle fs-5"></i>
+                                        <span class="small fw-bold mt-1" style="font-size: 0.7rem;">ABST.</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                            <!-- Peso/Importância do voto -->
+                            <div class="mt-2">
+                                <label class="form-label fw-semibold">Para você, que importância tem essa votação?</label>
+                                <div class="d-flex align-items-center voto-peso-selector w-100" aria-label="Selecione a importância do seu voto">
+                                    <a href="#" class="peso-option selected" data-peso="1" title="normal (1 ponto)">
+                                        <i class="bi bi-circle"></i>
+                                        <small class="ms-1">normal (1 ponto)</small>
+                                    </a>
+                                    <a href="#" class="peso-option" data-peso="3" title="muito (3 pontos)">
+                                        <i class="bi bi-exclamation-circle"></i>
+                                        <small class="ms-1">muito (3 pontos)</small>
+                                    </a>
+                                    <a href="#" class="peso-option" data-peso="8" title="crucial (8 pontos)">
+                                        <i class="bi bi-star-fill"></i>
+                                        <small class="ms-1">crucial (8 pontos)</small>
+                                    </a>
+                                </div>
+                                <style>
+                                    .voto-peso-selector { display: flex; justify-content: space-between; gap: 12px; }
+                                    .peso-option { color: #212529; text-decoration: none; padding: 10px 12px; border-radius: 6px; text-align: center; flex: 1 1 0; }
+                                    .peso-option i { font-size: 1.25rem; vertical-align: middle; }
+                                    .peso-option.selected { background-color: #e9f7ef; color: #198754; }
+                                    .peso-option.selected i { color: #198754; }
+                                    .peso-option:hover { background-color: #f1f3f5; }
+                                </style>
+                                <script>
+                                    document.addEventListener('DOMContentLoaded', function () {
+                                      var pesoInput = document.getElementById('voto-peso');
+                                      document.querySelectorAll('.peso-option').forEach(function (opt) {
+                                        opt.addEventListener('click', function (e) {
+                                          e.preventDefault();
+                                          var val = parseInt(opt.dataset.peso || '1', 10);
+                                          if (![1,3,8].includes(val)) { val = 1; }
+                                          pesoInput.value = String(val);
+                                          document.querySelectorAll('.peso-option').forEach(function (o) { o.classList.remove('selected'); });
+                                          opt.classList.add('selected');
+                                        });
+                                      });
+                                    });
+                                </script>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% elif not user.is_authenticated %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Faça login para votar!</strong>
+                    <a href="{% url 'users:login' %}?next={% url 'voting:votacao_detail' pk=votacao.id %}" class="btn btn-primary btn-sm ms-2">Entrar</a>
+                </div>
+            {% elif user_vote %}
+                <div class="alert alert-success d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-check-circle"></i>
+                        <strong>Você já votou nesta proposição!</strong>
+                        Seu voto: <strong>{{ user_vote.get_voto_display }}</strong>
+                    </div>
+                    <form method="post" action="{% url 'voting:voto_delete' votacao.id %}" onsubmit="return confirm('Tem certeza que deseja excluir seu voto?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-trash"></i> Excluir meu voto
+                        </button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Esta votação não está mais ativa.</strong>
+                </div>
+            {% endif %}
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="d-flex justify-content-end align-items-center">
-            <a href="{% url 'voting:votacoes_disponiveis' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Voltar às Votações
-            </a>
-            <!-- Botão adicional: mesmo estilo do botão "Meus Votos" da página de listagem -->
-            <a href="{% url 'voting:meus_votos' %}" class="btn btn-outline-primary ms-2">
-                <i class="bi bi-list-check"></i> Meus Votos
-            </a>
-</div>
-</div>
-</div>
+
 <script>
   function shareTo(platform) {
     var url = window.location.href;

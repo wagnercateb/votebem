@@ -136,6 +136,9 @@
         .form-grid { grid-template-columns: 1fr; }
         .btn-group { flex-direction: column; }
     }
+
+    .fs-active { position: fixed; inset: 0; z-index: 1060; background: #fff; padding: 12px; display: flex; flex-direction: column; }
+    .fs-active textarea { flex: 1; height: auto !important; min-height: 0 !important; }
 </style>
 {% endblock %}
 
@@ -204,13 +207,25 @@
                             <input type="text" id="titulo_{{ votacao.pk }}" name="titulo" class="form-control" value="{{ votacao.titulo }}" required maxlength="500">
                         </div>
 
-                        <div class="form-group">
-                            <label for="resumo_{{ votacao.pk }}">Resumo *</label>
+                        <div class="form-group" id="block-resumo-{{ votacao.pk }}">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label for="resumo_{{ votacao.pk }}" class="mb-0">Resumo *</label>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsEnter('block-resumo-{{ votacao.pk }}')">Tela cheia</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsExit('block-resumo-{{ votacao.pk }}')">Voltar</button>
+                                </div>
+                            </div>
                             <textarea id="resumo_{{ votacao.pk }}" name="resumo" class="form-control" required>{{ votacao.resumo }}</textarea>
                         </div>
 
-                        <div class="form-group">
-                            <label for="explicacao_{{ votacao.pk }}">Explicação (opcional)</label>
+                        <div class="form-group" id="block-explicacao-{{ votacao.pk }}">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label for="explicacao_{{ votacao.pk }}" class="mb-0">Explicação (opcional)</label>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsEnter('block-explicacao-{{ votacao.pk }}')">Tela cheia</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="fsExit('block-explicacao-{{ votacao.pk }}')">Voltar</button>
+                                </div>
+                            </div>
                             <textarea id="explicacao_{{ votacao.pk }}" name="explicacao" class="form-control" placeholder="Explique os impactos fiscais, vínculos orçamentários, contexto e fontes relevantes." rows="6">{{ votacao.explicacao }}</textarea>
                             <small class="text-muted">Use este campo para esclarecer tópicos como impacto fiscal, fonte de recursos e contexto adicional.</small>
                         </div>
@@ -273,4 +288,20 @@
         </div>
     </div>
 </div>
+<script>
+    function fsEnter(blockId){
+        var el = document.getElementById(blockId);
+        if(!el) return;
+        el.classList.add('fs-active');
+        document.body.style.overflow = 'hidden';
+    }
+    function fsExit(blockId){
+        var el = document.getElementById(blockId);
+        if(!el) return;
+        el.classList.remove('fs-active');
+        if(document.querySelectorAll('.fs-active').length === 0){
+            document.body.style.overflow = '';
+        }
+    }
+</script>
 {% endblock %}

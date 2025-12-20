@@ -329,3 +329,4 @@ file_hashes.npy
 # !versionaFolderVazio/**/  (não funcionou, git ignora folders vazios)
 
 docs/noticias/
+voting/rag_config.json
