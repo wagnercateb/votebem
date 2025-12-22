@@ -65,13 +65,8 @@ urlpatterns = [
     path('congressistas/update/', staff_member_required(admin_views.congressistas_update), name='congressistas_update'),
     
     # Dados
-    path('data/import-export/', staff_member_required(admin_views.data_import_export), name='data_import_export'),
-    path('votos/populares/', staff_member_required(admin_views.data_import_export), name='votos_populares'),  # Placeholder
     
     # Enquetes
-    path('enquetes/list/', staff_member_required(admin_views.data_import_export), name='enquetes_list'),  # Placeholder
-    path('enquetes/respostas/', staff_member_required(admin_views.data_import_export), name='enquetes_respostas'),  # Placeholder
-    path('enquete/create/', staff_member_required(admin_views.data_import_export), name='enquete_create'),  # Placeholder
     
     # AJAX endpoints
     path('camara-admin/', staff_member_required(admin_views.camara_admin), name='camara_admin'),
