@@ -54,7 +54,7 @@
                     {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle"></i> {{ user.username|default:user.first_name }}
+                                <i class="bi bi-person-circle"></i> {{ user.first_name|default:user.username }}
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{% url 'users:profile' %}">Meu Perfil</a></li>
