@@ -17,9 +17,10 @@
                 <!-- Botão para mostrar/ocultar palavras-chave das proposições -->
                 <button id="toggleKeywordsBtn"
                         type="button"
-                        class="btn btn-outline-secondary btn-sm ms-3"
+                        class="btn btn-secondary btn-sm ms-3"
                         title="Mostrar/ocultar palavras-chave"
-                        aria-label="Mostrar ou ocultar palavras-chave">
+                        aria-label="Mostrar ou ocultar palavras-chave"
+                        data-visible="true">
                   <i class="bi bi-key"></i>
                 </button>
             </div>
@@ -63,7 +64,7 @@
                     <div class="col-md-6 col-lg-4 mb-4" data-active="{{ votacao.is_active }}">
                         <div class="card h-100">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">
+                                <h6 class="mb-0 fs-5">
                                     {{ votacao.titulo }}
                                     {% if votacao.proposicao_votacao.data_votacao %}
                                         <small class="text-muted ms-2">({{ votacao.proposicao_votacao.data_votacao|date:"m/Y" }})</small>
@@ -99,7 +100,7 @@
                                             {% if temas %}
                                                 <div class="mt-1">
                                                     {% for pt in temas %}
-                                                        <span class="badge rounded-pill bg-light text-secondary border me-1">{{ pt.tema.nome }}</span>
+                                                        <span class="badge rounded-pill bg-light border me-1" style="color: darkgreen;">{{ pt.tema.nome }}</span>
                                                     {% endfor %}
                                                 </div>
                                             {% endif %}
@@ -107,10 +108,10 @@
                                         {# Palavras-chave da proposição: inicialmente ocultas, visíveis via botão com ícone de chave #}
                                         {% with kw=votacao.proposicao_votacao.proposicao.keywords %}
                                           {% if kw %}
-                                            <div class="mt-2 keywords-text d-none">
+                                            <div class="mt-2 keywords-text">
                                                 <i><small class="text-muted">
                                                     Palavras-chave:
-                                                    <span class="text-muted">{{ kw }}</span>
+                                                    <span style="color: #a04000;">{{ kw }}</span>
                                                 </small></i>
                                             </div>
                                           {% endif %}
@@ -134,7 +135,7 @@
                     <div class="col-md-6 col-lg-4 mb-4" data-active="{{ votacao.is_active }}">
                         <div class="card h-100 border-success">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">
+                                <h6 class="mb-0 fs-5">
                                     {{ votacao.titulo }}
                                     {% if votacao.proposicao_votacao.data_votacao %}
                                         <small class="text-muted ms-2">({{ votacao.proposicao_votacao.data_votacao|date:"m/Y" }})</small>
@@ -163,7 +164,7 @@
                                             {% if temas %}
                                                 <div class="mt-1">
                                                     {% for pt in temas %}
-                                                        <span class="badge rounded-pill bg-light text-secondary border me-1">{{ pt.tema.nome }}</span>
+                                                        <span class="badge rounded-pill bg-light border me-1" style="color: darkgreen;">{{ pt.tema.nome }}</span>
                                                     {% endfor %}
                                                 </div>
                                             {% endif %}
@@ -171,10 +172,10 @@
                                         {# Palavras-chave da proposição: inicialmente ocultas, visíveis via botão com ícone de chave #}
                                         {% with kw=votacao.proposicao_votacao.proposicao.keywords %}
                                           {% if kw %}
-                                            <div class="mt-2 keywords-text d-none">
+                                            <div class="mt-2 keywords-text">
                                                 <i><small class="text-muted">
                                                     Palavras-chave:
-                                                    <span class="text-muted">{{ kw }}</span>
+                                                    <span style="color: #a04000;">{{ kw }}</span>
                                                 </small></i>
                                             </div>
                                           {% endif %}
@@ -243,6 +244,62 @@
 <script>
   (function () {
     'use strict';
+
+    /**
+     * Mapa de caracteres para regex insensível a acentos
+     */
+    var accentMap = {
+      'a': '[aàáâãäå]',
+      'e': '[eèéêë]',
+      'i': '[iìíîï]',
+      'o': '[oòóôõö]',
+      'u': '[uùúûü]',
+      'c': '[cç]',
+      'n': '[nñ]'
+    };
+
+    /**
+     * Escapa caracteres especiais de Regex
+     */
+    function escapeRegExp(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    /**
+     * Cria regex combinando todos os termos, considerando acentos
+     */
+    function createHighlightRegex(terms) {
+      if (!terms || !terms.length) return null;
+      // Ordena por tamanho decrescente para priorizar palavras maiores
+      var sorted = terms.slice().sort(function(a, b) { return b.length - a.length; });
+      
+      var patterns = sorted.map(function(term) {
+        var pattern = '';
+        for (var i = 0; i < term.length; i++) {
+          var char = term[i];
+          if (accentMap[char]) {
+            pattern += accentMap[char];
+          } else {
+            pattern += escapeRegExp(char);
+          }
+        }
+        return pattern;
+      });
+      
+      return new RegExp('(' + patterns.join('|') + ')', 'gi');
+    }
+
+    /**
+     * Escapa HTML para inserção segura via innerHTML
+     */
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
 
     /**
      * Remove diacríticos (acentos) do texto usando Unicode Normalization Form D (NFD)
@@ -314,6 +371,53 @@
     }
 
     /**
+     * Percorre os nós de texto e aplica highlight
+     */
+    function highlightMatches(root, regex) {
+      // TreeWalker para encontrar nós de texto
+      var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+      var textNodes = [];
+      while (walker.nextNode()) {
+        textNodes.push(walker.currentNode);
+      }
+
+      textNodes.forEach(function(node) {
+        // Ignora nós vazios ou apenas com espaços
+        if (!node.nodeValue || !node.nodeValue.trim()) return;
+        
+        // Verifica se há match
+        if (!regex.test(node.nodeValue)) return;
+        
+        // Reset lastIndex porque test() avança o ponteiro com flag global
+        regex.lastIndex = 0;
+
+        // Split preserva os grupos de captura (os matches)
+        var parts = node.nodeValue.split(regex);
+        
+        // Se split gerou partes, reconstruímos o HTML
+        if (parts.length > 1) {
+          var span = document.createElement('span');
+          var html = '';
+          
+          for (var i = 0; i < parts.length; i++) {
+            var part = parts[i];
+            // Se o índice é ímpar, é um match (pelo comportamento do split com regex group)
+            // Mas precisamos validar se realmente bate com o regex para garantir
+            if (regex.test(part)) {
+               regex.lastIndex = 0; // Reset para próximo teste
+               html += '<mark class="bg-warning text-dark p-0">' + escapeHtml(part) + '</mark>';
+            } else {
+               html += escapeHtml(part);
+            }
+          }
+          
+          span.innerHTML = html;
+          node.parentNode.replaceChild(span, node);
+        }
+      });
+    }
+
+    /**
      * Conta o total de cartões marcados como ATIVOS via atributo data-active.
      * Não depende do filtro; representa o total ativo na página.
      * @returns {number}
@@ -342,16 +446,52 @@
 
       var raw = normalizeText(inputEl.value);
       var words = raw.length ? raw.split(' ') : [];
+      var highlightRegex = createHighlightRegex(words);
+      
+      // Verifica estado do toggle de palavras-chave para manter consistência
+      var toggleBtn = document.getElementById('toggleKeywordsBtn');
+      var keywordsVisible = true; // Default
+      if (toggleBtn) {
+        keywordsVisible = toggleBtn.getAttribute('data-visible') === 'true';
+      }
 
       var cols = getCardColumns();
       var visibleCount = 0;
       for (var i = 0; i < cols.length; i++) {
         var col = cols[i];
+        var card = col.querySelector('.card');
+        
+        // 1. Restaura HTML original para limpar highlights antigos
+        if (card && card._originalHTML) {
+          card.innerHTML = card._originalHTML;
+        }
+
+        // 2. Verifica filtro
         var text = getCardText(col);
         var show = matchesAllWords(text, words);
-        // Exibe/oculta o wrapper da coluna
+        
+        // 3. Exibe/oculta
         col.style.display = show ? '' : 'none';
-        if (show) visibleCount++;
+        
+        if (show) {
+          visibleCount++;
+          // 4. Aplica highlight se houver termos
+          if (highlightRegex && card) {
+             highlightMatches(card, highlightRegex);
+          }
+          
+          // 5. Sincroniza visibilidade das palavras-chave
+          if (card) {
+            var kwEls = card.querySelectorAll('.keywords-text');
+            for (var k = 0; k < kwEls.length; k++) {
+               if (keywordsVisible) {
+                 kwEls[k].classList.remove('d-none');
+               } else {
+                 kwEls[k].classList.add('d-none');
+               }
+            }
+          }
+        }
       }
 
       // Atualiza contador de cartões visíveis ao lado do ícone
@@ -365,6 +505,15 @@
      * Inicializa listeners após o carregamento do DOM.
      */
     function initFilter() {
+      // Salva o HTML original de cada card para permitir reset dos highlights
+      var cols = getCardColumns();
+      cols.forEach(function(col) {
+        var card = col.querySelector('.card');
+        if (card) {
+          card._originalHTML = card.innerHTML;
+        }
+      });
+
       var inputEl = document.getElementById('cardFilterInput');
       if (!inputEl) return;
       // Aplica o filtro a cada alteração de texto
@@ -381,11 +530,11 @@
       // Toggle global de exibição das palavras-chave
       // - O botão com ícone de chave alterna a visibilidade de todos os elementos
       //   com a classe .keywords-text.
-      // - Estado inicial: oculto (classe d-none). Ao clicar, remove/insere d-none.
+      // - Estado inicial: visível. Ao clicar, insere/remove d-none.
       var toggleBtn = document.getElementById('toggleKeywordsBtn');
       if (toggleBtn) {
         // Atributo para acompanhar estado (true = visível)
-        toggleBtn.setAttribute('data-visible', 'false');
+        toggleBtn.setAttribute('data-visible', 'true');
         toggleBtn.addEventListener('click', function () {
           var nowVisible = toggleBtn.getAttribute('data-visible') === 'true' ? false : true;
           toggleBtn.setAttribute('data-visible', String(nowVisible));

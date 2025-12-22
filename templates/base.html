@@ -26,7 +26,7 @@
 <body>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-md navbar-dark bg-primary">
-        <div class="container">
+        <div class="container-fluid px-4">
             <a class="navbar-brand d-flex align-items-center {% if request.resolver_match and request.resolver_match.app_name == 'home' and request.resolver_match.url_name == 'index' %}brand-active{% else %}brand-inactive{% endif %}" href="{% url 'voting:votacoes_disponiveis' %}">
                 <img src="/media/full_logo_branco.png" alt="VoteBem" style="height:32px; vertical-align:middle;" />
                 <span class="ms-2">VoteBem</span>
@@ -82,7 +82,7 @@
     
     <!-- Messages -->
     {% if messages %}
-        <div class="container mt-3">
+        <div class="container-fluid px-4 mt-3">
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                     {{ message }}
@@ -93,14 +93,14 @@
     {% endif %}
     
     <!-- Main Content -->
-    <main class="container my-4">
+    <main class="container-fluid px-4 my-4">
         {% block content %}
         {% endblock %}
     </main>
     
     <!-- Footer -->
     <footer class="bg-light text-center text-muted py-3 mt-5">
-        <div class="container">
+        <div class="container-fluid px-4">
             <div class="mb-2">
                 <a href="{% url 'home:about' %}" class="text-decoration-none me-3">Quem somos</a>
                 <a href="{% url 'home:contact' %}" class="text-decoration-none me-3">Fale conosco</a>
