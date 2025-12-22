@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'votebem.middleware_site_lock.SiteLockMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -111,7 +112,7 @@ ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USER_MODEL_USERNAME_FIELD = 'username'
 ACCOUNT_USER_MODEL_EMAIL_FIELD = 'email'
 ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True
 ACCOUNT_SESSION_REMEMBER = True
@@ -121,6 +122,7 @@ ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 86400  # 1 day
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_LOGIN_REDIRECT_URL = '/'
+ACCOUNT_ADAPTER = 'votebem.utils.adapters.CustomAccountAdapter'
 
 # Social Account Configuration
 SOCIALACCOUNT_AUTO_SIGNUP = True

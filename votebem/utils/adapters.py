@@ -1,9 +1,20 @@
 from django.conf import settings
 from django.contrib.sites.shortcuts import get_current_site
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
+from allauth.account.adapter import DefaultAccountAdapter
 from allauth.socialaccount.models import SocialApp
 import logging
+import uuid
 
+
+class CustomAccountAdapter(DefaultAccountAdapter):
+    def populate_username(self, request, user):
+        """
+        Forces a unique UUID-based username to avoid conflicts, 
+        since we rely on email for authentication.
+        """
+        if not user.username:
+            user.username = str(uuid.uuid4())
 
 class SafeSocialAccountAdapter(DefaultSocialAccountAdapter):
     def get_app(self, request, provider):

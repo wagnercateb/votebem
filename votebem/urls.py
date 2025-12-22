@@ -20,10 +20,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from .health import health_check
+from . import views
 
 urlpatterns = [
     # Administrative interface with namespace
     path('gerencial/', include('voting.admin_urls')),
+    # Site Lock
+    path('site-lock/', views.site_lock_view, name='site_lock'),
     # Django admin
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
