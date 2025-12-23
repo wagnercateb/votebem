@@ -51,26 +51,7 @@
                         {% endif %}
                         
                         <div class="mt-auto">
-                            <div class="row text-center mb-3">
-                                <div class="col-4">
-                                    <div class="text-success">
-                                        <strong>{{ voto.votacao.get_votos_sim_populares }}</strong>
-                                        <br><small>SIM</small>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="text-danger">
-                                        <strong>{{ voto.votacao.get_votos_nao_populares }}</strong>
-                                        <br><small>NÃO</small>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="text-muted">
-                                        <strong>{{ voto.votacao.get_total_votos_populares }}</strong>
-                                        <br><small>TOTAL</small>
-                                    </div>
-                                </div>
-                            </div>
+
                             
                             <a href="{% url 'voting:votacao_detail' pk=voto.votacao.pk %}" class="btn btn-primary btn-sm w-100">
                                 <i class="bi bi-eye"></i> Ver Detalhes

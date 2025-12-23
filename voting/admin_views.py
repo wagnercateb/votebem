@@ -1537,13 +1537,19 @@ def ajax_import_congress_votes(request):
         votacao_composta_id = f"{prop_id_int}-{sufixo_int}"
         api_url_votes = f"{CamaraAPIService.BASE_URL}/votacoes/{votacao_composta_id}/votos"
 
-        # Garantir que a Proposição exista
-        proposicao, _ = Proposicao.objects.get_or_create(
-            id_proposicao=prop_id_int,
-            defaults={
-                'titulo': '', 'ementa': '', 'tipo': '', 'numero': 0, 'ano': 0,
-            }
-        )
+        # Garantir que a Proposição exista e tenha dados completos (incluindo keywords)
+        proposicao = Proposicao.objects.filter(id_proposicao=prop_id_int).first()
+        if not proposicao or not proposicao.keywords:
+            try:
+                # Usa a implementação unificada que carrega keywords corretamente
+                proposicao = camara_api._sync_single_proposicao({'id': prop_id_int})
+            except Exception:
+                # Fallback: se falhar o sync (ex: erro API), garante que objeto exista
+                if not proposicao:
+                    proposicao = Proposicao.objects.create(
+                        id_proposicao=prop_id_int,
+                        titulo='', ementa='', tipo='', numero=0, ano=0
+                    )
 
         # Buscar detalhes e votos individuais na API com estratégia de fallback
         # 1) Tentar com ID composto diretamente
@@ -3352,31 +3358,16 @@ def ajax_proposicao_votacoes(request):
     # Quando db_only, não consultar API para criar proposição ausente
     if proposicao is None and db_only:
         return JsonResponse({'ok': True, 'source': 'db', 'dados': []})
-    if proposicao is None:
-        # Buscar detalhes mínimos para criar Proposicao e poder relacionar
+    if proposicao is None or not proposicao.keywords:
+        # Unified implementation: use _sync_single_proposicao to ensure keywords are loaded
         try:
-            details = camara_api.get_proposicao_details(prop_id_int) or {}
-            dados = details.get('dados') or {}
-            # Campos obrigatórios
-            titulo = (dados.get('ementa') or '')[:500]
-            ementa = dados.get('ementa') or ''
-            tipo = dados.get('siglaTipo') or ''
-            numero = int(dados.get('numero') or 0)
-            ano = int(dados.get('ano') or 0)
-            autor = ''
-            estado = dados.get('statusProposicao', {}).get('descricaoSituacao') or ''
-            proposicao = Proposicao.objects.create(
-                id_proposicao=prop_id_int,
-                titulo=titulo,
-                ementa=ementa,
-                tipo=tipo,
-                numero=numero,
-                ano=ano,
-                autor=autor,
-                estado=estado,
-            )
+            proposicao = camara_api._sync_single_proposicao({'id': prop_id_int})
         except Exception as e:
-            return JsonResponse({'ok': False, 'error': f'Falha ao garantir proposição: {e}'}, status=500)
+            # If sync fails and we don't have the proposition, return error
+            if proposicao is None:
+                return JsonResponse({'ok': False, 'error': f'Falha ao garantir proposição: {e}'}, status=500)
+            # If we have it (but maybe missing keywords), just continue
+            pass
 
     # 1) Consulta cache local
     cached = list(ProposicaoVotacao.objects.filter(proposicao=proposicao).order_by('votacao_sufixo'))

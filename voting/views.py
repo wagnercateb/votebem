@@ -35,10 +35,12 @@ class VotacoesDisponiveisView(ListView):
         context = super().get_context_data(**kwargs)
         if self.request.user.is_authenticated:
             # Get user's votes to show which ones they've already voted on
-            user_votes = Voto.objects.filter(user=self.request.user).values_list('votacao_id', flat=True)
-            context['user_votes'] = list(user_votes)
+            # Return a dict {votacao_id: voto_value} to allow displaying "Votei Sim/Não"
+            user_votes_qs = Voto.objects.filter(user=self.request.user).values('votacao_id', 'voto')
+            user_votes = {item['votacao_id']: item['voto'] for item in user_votes_qs}
+            context['user_votes'] = user_votes
         else:
-            context['user_votes'] = []
+            context['user_votes'] = {}
 
         # Grouping helper flags for template rendering:
         # Determine if the current page has any cards already voted by the user,

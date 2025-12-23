@@ -390,3 +390,15 @@ def id_info(
         'api_votos_url': api_votos_url,
         'votacao_detail_url': votacao_detail_url,
     }
+
+
+@register.filter
+def get_item(dictionary, key):
+    """
+    Template filter to get a value from a dictionary by key.
+    Usage: {{ mydict|get_item:mykey }}
+    """
+    if dictionary is None:
+        return None
+    return dictionary.get(key)
+

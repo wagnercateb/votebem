@@ -10,11 +10,38 @@ import uuid
 class CustomAccountAdapter(DefaultAccountAdapter):
     def populate_username(self, request, user):
         """
-        Forces a unique UUID-based username to avoid conflicts, 
-        since we rely on email for authentication.
+        Generates a username based on the user's first name.
+        Falls back to email prefix or UUID if needed.
+        Ensures uniqueness.
         """
-        if not user.username:
-            user.username = str(uuid.uuid4())
+        if user.username:
+            return
+
+        from allauth.utils import generate_unique_username
+        from django.utils.text import slugify
+
+        candidates = []
+        
+        first_name = getattr(user, 'first_name', '')
+        if first_name:
+            clean_first_name = slugify(first_name)
+            if clean_first_name:
+                candidates.append(clean_first_name)
+        
+        # If we don't have a first name candidate, try email
+        if not candidates:
+            email = getattr(user, 'email', '')
+            if email:
+                try:
+                    candidates.append(email.split('@')[0])
+                except IndexError:
+                    pass
+        
+        # If we still don't have a candidate, use UUID
+        if not candidates:
+            candidates.append(str(uuid.uuid4()))
+        
+        user.username = generate_unique_username(candidates)
 
 class SafeSocialAccountAdapter(DefaultSocialAccountAdapter):
     def get_app(self, request, provider):
