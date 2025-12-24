@@ -161,9 +161,9 @@
     <div class="action-card">
         <h3>Votações oficiais</h3>
         <ul class="action-list">
+            <li><a href="{% url 'gerencial:votacoes_por_periodo' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre a tela para obter votações por período na Câmara API">Obter votações por período</a></li>
             <li><a href="{% url 'gerencial:votacoes_oficiais_list' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista Votações oficiais já obtidas, com ou sem votos individuais">Listar votações oficiais, obter por ano</a></li>
             <li><a href="{% url 'gerencial:votos_oficiais_app' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Obtem uma ou mais votações oficiais usando API da Câmara">Obter votação por proposicao_id via App</a></li>
-            <li><a href="{% url 'gerencial:votacoes_por_periodo' %}" data-bs-toggle="tooltip" data-bs-placement="top" title="Abre a tela para obter votações por período na Câmara API">Obter votações por período</a></li>
             <li><a href="/admin/voting/congressmanvote/" data-bs-toggle="tooltip" data-bs-placement="top" title="Lista Votação oficial no Django Admin">Votos individuais oficiais via Django</a></li>
         </ul>
     </div>

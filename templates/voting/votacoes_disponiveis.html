@@ -12,7 +12,7 @@
             <div class="d-flex align-items-center">
                 
                 <h1><i class="bi bi-vote-fill"></i>
-                    <span id="totalActiveCount" title="Total de votações ativas">0</span>
+                    <span id="totalActiveCount" title="Total de votações ativas">{{ total_active_count }}</span>
                      Votações Disponíveis
                 </h1>
                 <!-- Botão para mostrar/ocultar palavras-chave das proposições -->
@@ -537,7 +537,7 @@
       // Inicializa contador de cartões ATIVOS (total na página)
       var totalActiveEl = document.getElementById('totalActiveCount');
       if (totalActiveEl) {
-        totalActiveEl.textContent = String(countTotalActive());
+        // totalActiveEl.textContent = String(countTotalActive());
       }
 
       // Toggle global de exibição das palavras-chave

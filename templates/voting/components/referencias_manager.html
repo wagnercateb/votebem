@@ -1,0 +1,58 @@
+{% load static %}
+<div class="vb-refs-manager" data-pv-id="{{ pv_id }}">
+    <div class="vb-refs-body" style="display:block;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>Referências vinculadas</strong>
+            {% if show_pv_id %}
+            <small class="text-muted">PV #{{ pv_id }}</small>
+            {% endif %}
+        </div>
+        
+        <div class="row g-2 mb-2">
+            <div class="col-md-6">
+                <input type="url" class="form-control form-control-sm vb-ref-url" placeholder="https://..." autocomplete="off">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm vb-ref-kind">
+                    <option value="web_page">Página Web</option>
+                    <option value="sound">Áudio</option>
+                    <option value="social_media">Vídeo no YouTube</option>
+                </select>
+            </div>
+            <div class="col-md-3 text-end">
+                <button type="button" class="btn btn-sm btn-primary vb-ref-add">Adicionar</button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-hover vb-refs-table">
+                <thead>
+                    <tr>
+                        <th style="padding:6px;">URL</th>
+                        <th style="padding:6px;">Tipo</th>
+                        <th style="padding:6px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Populated via JS -->
+                </tbody>
+            </table>
+        </div>
+        <div class="vb-refs-status text-muted" style="font-size:0.9em;">Carregando...</div>
+    </div>
+</div>
+
+<script src="{% static 'js/components/referencias_manager.js' %}"></script>
+<script>
+    // Auto-initialize if the script is loaded and the function exists
+    // Otherwise, the parent script should call it.
+    if (typeof initReferenciasManager === 'function') {
+        document.querySelectorAll('.vb-refs-manager[data-pv-id="{{ pv_id }}"]').forEach(el => {
+            // Check if already initialized to avoid double binding
+            if (!el.dataset.initialized) {
+                initReferenciasManager(el, "{{ pv_id }}");
+                el.dataset.initialized = "true";
+            }
+        });
+    }
+</script>

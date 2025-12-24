@@ -27,7 +27,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-md navbar-dark bg-primary">
         <div class="container-fluid px-4">
-            <a class="navbar-brand d-flex align-items-center {% if request.resolver_match and request.resolver_match.app_name == 'home' and request.resolver_match.url_name == 'index' %}brand-active{% else %}brand-inactive{% endif %}" href="{% url 'voting:votacoes_disponiveis' %}">
+            <a class="navbar-brand btn btn-outline-light fw-bold me-2 d-flex align-items-center {% if request.resolver_match and request.resolver_match.app_name == 'home' and request.resolver_match.url_name == 'index' %}brand-active{% else %}brand-inactive{% endif %}" href="{% url 'voting:votacoes_disponiveis' %}">
                 <img src="/media/full_logo_branco.png" alt="VoteBem" style="height:32px; vertical-align:middle;" />
                 <span class="ms-2">VoteBem</span>
             </a>
@@ -39,12 +39,12 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match and request.resolver_match.app_name == 'voting' and request.resolver_match.url_name == 'votacoes_disponiveis' %}active{% endif %}" href="{% url 'voting:votacoes_disponiveis' %}">
+                        <a class="btn btn-outline-light fw-bold me-2 {% if request.resolver_match and request.resolver_match.app_name == 'voting' and request.resolver_match.url_name == 'votacoes_disponiveis' %}active{% endif %}" href="{% url 'voting:votacoes_disponiveis' %}">
                             <i class="bi bi-vote-fill"></i> Votações
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match and request.resolver_match.app_name == 'voting' and request.resolver_match.url_name == 'ranking' %}active{% endif %}" href="{% url 'voting:ranking' %}">
+                        <a class="btn btn-outline-light fw-bold me-2 {% if request.resolver_match and request.resolver_match.app_name == 'voting' and request.resolver_match.url_name == 'ranking' %}active{% endif %}" href="{% url 'voting:ranking' %}">
                             <i class="bi bi-trophy"></i> Ranking
                         </a>
                     </li>

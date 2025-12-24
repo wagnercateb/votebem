@@ -17,7 +17,7 @@ class VotacoesDisponiveisView(ListView):
     model = VotacaoVoteBem
     template_name = 'voting/votacoes_disponiveis.html'
     context_object_name = 'votacoes'
-    paginate_by = 20
+    paginate_by = 200
     
     def get_queryset(self):
         # Show voting sessions that are marked active and have started.
@@ -29,10 +29,20 @@ class VotacoesDisponiveisView(ListView):
             no_ar_desde__lte=now
         ).select_related('proposicao_votacao__proposicao') \
          .prefetch_related('proposicao_votacao__proposicao__proposicaotema_set__tema') \
-         .order_by('-no_ar_desde')
+         .order_by('-data_hora_votacao')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Calculate total active votings (ignoring pagination)
+        now = timezone.now()
+        context['total_active_count'] = VotacaoVoteBem.objects.filter(
+            ativo=True,
+            no_ar_desde__lte=now
+        ).filter(
+            Q(no_ar_ate__isnull=True) | Q(no_ar_ate__gte=now)
+        ).count()
+
         if self.request.user.is_authenticated:
             # Get user's votes to show which ones they've already voted on
             # Return a dict {votacao_id: voto_value} to allow displaying "Votei Sim/Não"
