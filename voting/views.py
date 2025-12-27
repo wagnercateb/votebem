@@ -731,3 +731,32 @@ def votos_oficiais_app_public(request):
         'votos_json': json.dumps(votos_data, ensure_ascii=False),
     }
     return render(request, 'voting/votos_oficiais_app.html', context)
+
+def referencias_list_public(request):
+    pv_id = request.GET.get('pv_id')
+    if not pv_id:
+        return JsonResponse({'ok': False, 'error': 'Parâmetro pv_id é obrigatório.'}, status=400)
+    try:
+        pv_id_int = int(pv_id)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'pv_id deve ser numérico.'}, status=400)
+    try:
+        pv = ProposicaoVotacao.objects.select_related('proposicao').get(pk=pv_id_int)
+    except ProposicaoVotacao.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Registro ProposicaoVotacao não encontrado.'}, status=404)
+    refs = (
+        Referencia.objects
+        .filter(proposicao_votacao=pv)
+        .order_by('-created_at')
+        .values('id', 'url', 'kind', 'created_at')
+    )
+    dados = []
+    for r in refs:
+        c_at = r.get('created_at')
+        dados.append({
+            'id': r['id'],
+            'url': r['url'],
+            'kind': r['kind'],
+            'created_at': c_at.isoformat() if hasattr(c_at, 'isoformat') else str(c_at),
+        })
+    return JsonResponse({'ok': True, 'pv_id': pv.id, 'dados': dados})

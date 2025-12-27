@@ -204,8 +204,13 @@
                     {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }} - 
                     {{ votacao.titulo }}
                 </h4>
-                 <small>Proposição: {{ votacao.proposicao_votacao.proposicao.titulo|default:"(sem título)" }}</small><br>
-                <small>Criada em: {{ votacao.created_at|date:"d/m/Y H:i" }}</small>
+                <small>
+                    <ul>
+                    <li><b>Resumo:</b> {{ votacao.resumo }}</li>
+                    <li><b>Proposição:</b> {{ votacao.proposicao_votacao.proposicao.titulo|default:"(sem título)" }}</li>
+                    <li><b>Votada em:</b> {{ votacao.proposicao_votacao.data_votacao|date:"d/m/Y H:i" }}</li>
+                    </ul>
+                </small>
             </div>
             <div class="votacao-actions">
                 {# Button: Proposicao - abre gerencial com proposicao_id da linha #}

@@ -19,4 +19,5 @@ urlpatterns = [
     path('congressman/<int:congressman_id>/', views.CongressmanDetailView.as_view(), name='congressman_detail'),
     # Public subpage for official votes via app
     path('votos/oficiais/', views.votos_oficiais_app_public, name='votos_oficiais_app'),
+    path('referencias/list/', views.referencias_list_public, name='referencias_list_public'),
 ]

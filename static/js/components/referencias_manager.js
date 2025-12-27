@@ -50,10 +50,17 @@
 
         loadReferences() {
             this.elements.statusEl.textContent = 'Carregando referências...';
-            fetch(`/gerencial/ajax/referencias/list/?pv_id=${encodeURIComponent(this.pvId)}`, { 
-                headers: { 'Accept': 'application/json' } 
+            fetch(`/gerencial/ajax/referencias/list/?pv_id=${encodeURIComponent(this.pvId)}`, {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
             })
-            .then(r => r.json())
+            .then(r => {
+                const ct = r.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    throw new Error('Unexpected response type');
+                }
+                return r.json();
+            })
             .then(json => {
                 if (!json?.ok) { 
                     this.elements.statusEl.textContent = json?.error || 'Falha ao carregar.'; 
@@ -64,8 +71,38 @@
                 this.renderRows(json.dados || []);
             })
             .catch(e => { 
-                console.error(e);
-                this.elements.statusEl.textContent = 'Erro de rede ao carregar referências.'; 
+                const tried = this._triedPublicFallback === true;
+                if (!tried) {
+                    this._triedPublicFallback = true;
+                    this.loadReferencesPublicFallback();
+                    return;
+                }
+                this.elements.statusEl.textContent = 'Erro de rede ao carregar referências.';
+            });
+        }
+
+        loadReferencesPublicFallback() {
+            fetch(`/voting/referencias/list/?pv_id=${encodeURIComponent(this.pvId)}`, {
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(r => {
+                const ct = r.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    throw new Error('Unexpected response type');
+                }
+                return r.json();
+            })
+            .then(json => {
+                if (!json?.ok) {
+                    this.elements.statusEl.textContent = json?.error || 'Falha ao carregar.';
+                    return;
+                }
+                const count = (json.dados || []).length;
+                this.elements.statusEl.textContent = count === 0 ? 'Nenhuma referência cadastrada.' : `${count} referência(s).`;
+                this.renderRows(json.dados || []);
+            })
+            .catch(() => {
+                this.elements.statusEl.textContent = 'Falha ao carregar referências.';
             });
         }
 
