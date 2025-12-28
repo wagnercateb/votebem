@@ -20,4 +20,7 @@ urlpatterns = [
     # Public subpage for official votes via app
     path('votos/oficiais/', views.votos_oficiais_app_public, name='votos_oficiais_app'),
     path('referencias/list/', views.referencias_list_public, name='referencias_list_public'),
+    path('opinar/', views.opinar, name='opinar'),
+    path('opinar/referencias/save', views.opinar_referencia_save, name='opinar_referencia_save'),
+    path('opinar/referencias/delete', views.opinar_referencia_delete, name='opinar_referencia_delete'),
 ]

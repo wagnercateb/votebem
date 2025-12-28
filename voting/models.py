@@ -296,6 +296,35 @@ class ProposicaoTema(models.Model):
 
 
 # ------------------------------------------------------------
+# Divulgadores (referenciadores externos)
+# - Identifica fontes externas (pessoas/canais/sites) que publicam conteúdos
+# - Pode ou não possuir usuário em auth_user; validação por e-mail
+# ------------------------------------------------------------
+class Divulgador(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True, verbose_name="Usuário")
+    email = models.EmailField(unique=True, verbose_name="E-mail")
+    domain_parte = models.CharField(max_length=255, blank=True, null=True, verbose_name="Domínio (parte)")
+    alias = models.CharField(max_length=255, blank=True, null=True, verbose_name="Apelido")
+    tooltip = models.TextField(blank=True, null=True, verbose_name="Tooltip")
+    icon_url = models.URLField(blank=True, null=True, verbose_name="URL do Ícone/Imagem")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'voting_divulgadores'
+        verbose_name = 'Divulgador'
+        verbose_name_plural = 'Divulgadores'
+        ordering = ['alias', 'email']
+        indexes = [
+            models.Index(fields=['email']),
+            models.Index(fields=['domain_parte']),
+        ]
+
+    def __str__(self):
+        return self.alias or self.email
+
+
+# ------------------------------------------------------------
 # Referências externas relacionadas a uma votação de proposição
 # - Tabela deve se chamar exatamente 'voting_referencias'
 # - Relação 1:N com ProposicaoVotacao (uma votação pode ter várias referências)
@@ -327,6 +356,27 @@ class Referencia(models.Model):
         verbose_name='Tipo da Referência'
     )
 
+    # Opcional: vínculo ao divulgador
+    divulgador = models.ForeignKey(
+        'voting.Divulgador',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        verbose_name='Divulgador'
+    )
+
+    # Opcional: título da referência
+    title = models.CharField(max_length=255, blank=True, null=True, verbose_name='Título')
+
+    # Opcional: vínculo direto à votação VoteBem (quando referência for específica desta entrada)
+    votacao_votebem = models.ForeignKey(
+        'voting.VotacaoVoteBem',
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        verbose_name='Votação VoteBem'
+    )
+
     # Metadados comuns
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -341,6 +391,9 @@ class Referencia(models.Model):
             models.Index(fields=['proposicao_votacao']),
             # Índice para filtros por tipo
             models.Index(fields=['kind']),
+            # Índices novos
+            models.Index(fields=['divulgador']),
+            models.Index(fields=['votacao_votebem']),
         ]
 
     def __str__(self):

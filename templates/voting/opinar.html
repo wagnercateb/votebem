@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load divulgadores_tags %}
+{% block title %}Opinar - VoteBem{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <h3 class="mb-3">Opinar</h3>
+  <div class="row">
+    <div class="col-lg-12">
+      {% for v in votacoes %}
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ v.titulo }}</strong>
+            {% if v.proposicao_votacao and v.proposicao_votacao.proposicao %}
+            <span class="text-muted ms-2">{{ v.proposicao_votacao.proposicao.tipo }} {{ v.proposicao_votacao.proposicao.numero }}/{{ v.proposicao_votacao.proposicao.ano }}</span>
+            {% endif %}
+          </div>
+          <span class="badge {% if v.is_active %}bg-success{% else %}bg-secondary{% endif %}">{% if v.is_active %}Ativa{% else %}Inativa{% endif %}</span>
+        </div>
+        <div class="card-body">
+          {% if v.proposicao_votacao and v.proposicao_votacao.data_votacao %}
+          <div class="mb-2 text-muted">Votada em: {{ v.proposicao_votacao.data_votacao|date:"d/m/Y H:i" }}</div>
+          {% endif %}
+          {% with ref=ref_by_vv|get_item:v.id %}
+          <div class="row g-2 align-items-center">
+            <div class="col-md-5">
+              <label class="form-label">Título:</label>
+              <input type="text" class="form-control form-control-sm" id="ref-title-{{ v.id }}" value="{{ ref.title|default:'' }}">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Endereço do vídeo:</label>
+              <input type="url" class="form-control form-control-sm" id="ref-url-{{ v.id }}" value="{{ ref.url|default:'' }}">
+            </div>
+            <div class="col-md-2 d-grid">
+              <button type="button" class="btn btn-sm btn-primary" onclick="saveRef({{ v.id }})">Salvar</button>
+              <button type="button" class="btn btn-sm btn-outline-danger mt-2" onclick="deleteRef({{ v.id }})">Apagar</button>
+            </div>
+          </div>
+          {% endwith %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<script>
+function getCookie(name) {
+  var value = null;
+  if (document.cookie) {
+    document.cookie.split(';').forEach(function (c) {
+      var s = c.trim();
+      if (s.substring(0, name.length + 1) === (name + '=')) {
+        value = decodeURIComponent(s.substring(name.length + 1));
+      }
+    });
+  }
+  return value;
+}
+function saveRef(vvId) {
+  var title = document.getElementById('ref-title-' + vvId).value || '';
+  var url = document.getElementById('ref-url-' + vvId).value || '';
+  var fd = new URLSearchParams();
+  fd.append('vv_id', vvId);
+  fd.append('title', title);
+  fd.append('url', url);
+  fetch('/voting/opinar/referencias/save', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': getCookie('csrftoken') || ''
+    },
+    body: fd.toString(),
+    credentials: 'same-origin'
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (json) {
+    if (!json.ok) { alert(json.error || 'Falha ao salvar'); return; }
+    alert('Salvo');
+  })
+  .catch(function () { alert('Erro de rede'); });
+}
+function deleteRef(vvId) {
+  if (!confirm('Apagar referência desta votação?')) return;
+  var fd = new URLSearchParams();
+  fd.append('vv_id', vvId);
+  fetch('/voting/opinar/referencias/delete', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': getCookie('csrftoken') || ''
+    },
+    body: fd.toString(),
+    credentials: 'same-origin'
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (json) {
+    if (!json.ok) { alert(json.error || 'Falha ao apagar'); return; }
+    document.getElementById('ref-title-' + vvId).value = '';
+    document.getElementById('ref-url-' + vvId).value = '';
+    alert('Apagado');
+  })
+  .catch(function () { alert('Erro de rede'); });
+}
+</script>
+{% endblock %}

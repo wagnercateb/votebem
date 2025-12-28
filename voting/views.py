@@ -118,7 +118,7 @@ class VotacaoDetailView(DetailView):
         # Referências externas vinculadas à votação oficial da proposição
         # Usa relação 1:N em Referencia(proposicao_votacao) para listar links explicativos
         try:
-            referencias = Referencia.objects.filter(proposicao_votacao=votacao.proposicao_votacao).order_by('-created_at')
+            referencias = Referencia.objects.select_related('divulgador').filter(proposicao_votacao=votacao.proposicao_votacao).order_by('-created_at')
         except Exception:
             referencias = []
         context['referencias'] = referencias
@@ -734,29 +734,126 @@ def votos_oficiais_app_public(request):
 
 def referencias_list_public(request):
     pv_id = request.GET.get('pv_id')
-    if not pv_id:
-        return JsonResponse({'ok': False, 'error': 'Parâmetro pv_id é obrigatório.'}, status=400)
-    try:
-        pv_id_int = int(pv_id)
-    except Exception:
-        return JsonResponse({'ok': False, 'error': 'pv_id deve ser numérico.'}, status=400)
-    try:
-        pv = ProposicaoVotacao.objects.select_related('proposicao').get(pk=pv_id_int)
-    except ProposicaoVotacao.DoesNotExist:
-        return JsonResponse({'ok': False, 'error': 'Registro ProposicaoVotacao não encontrado.'}, status=404)
-    refs = (
-        Referencia.objects
-        .filter(proposicao_votacao=pv)
-        .order_by('-created_at')
-        .values('id', 'url', 'kind', 'created_at')
-    )
+    vv_id = request.GET.get('vv_id')
+    pv = None
+    vv = None
+    if vv_id:
+        try:
+            vv = VotacaoVoteBem.objects.select_related('proposicao_votacao__proposicao').get(pk=int(vv_id))
+        except Exception:
+            vv = None
+    if pv_id and not vv:
+        try:
+            pv = ProposicaoVotacao.objects.select_related('proposicao').get(pk=int(pv_id))
+        except Exception:
+            pv = None
+    if not pv and not vv:
+        return JsonResponse({'ok': False, 'error': 'Parâmetro pv_id ou vv_id é obrigatório.'}, status=400)
+    if vv and not pv:
+        pv = vv.proposicao_votacao
+    qs = Referencia.objects.filter(proposicao_votacao=pv)
+    if vv:
+        qs = qs.filter(models.Q(votacao_votebem__isnull=True) | models.Q(votacao_votebem=vv))
+    refs = qs.select_related('divulgador').order_by('-created_at')
     dados = []
     for r in refs:
-        c_at = r.get('created_at')
         dados.append({
-            'id': r['id'],
-            'url': r['url'],
-            'kind': r['kind'],
-            'created_at': c_at.isoformat() if hasattr(c_at, 'isoformat') else str(c_at),
+            'id': r.id,
+            'url': r.url,
+            'kind': r.kind,
+            'title': r.title or '',
+            'created_at': r.created_at.isoformat() if hasattr(r.created_at, 'isoformat') else str(r.created_at),
+            'divulgador': ({
+                'id': r.divulgador_id,
+                'alias': r.divulgador.alias if r.divulgador and r.divulgador.alias else '',
+                'icon_url': r.divulgador.icon_url if r.divulgador and r.divulgador.icon_url else '',
+            } if r.divulgador_id else None),
         })
-    return JsonResponse({'ok': True, 'pv_id': pv.id, 'dados': dados})
+    return JsonResponse({'ok': True, 'pv_id': pv.id if pv else None, 'vv_id': vv.id if vv else None, 'dados': dados})
+
+def _get_divulgador_for_user(user):
+    from .models import Divulgador
+    if not user or not getattr(user, 'email', None):
+        return None
+    try:
+        return Divulgador.objects.select_related('user').get(email__iexact=user.email.strip())
+    except Divulgador.DoesNotExist:
+        return None
+
+@login_required
+def opinar(request):
+    divulgador = _get_divulgador_for_user(request.user)
+    if not divulgador:
+        messages.error(request, 'Você não está cadastrado como divulgador.')
+        return redirect('voting:votacoes_disponiveis')
+    now = timezone.now()
+    votacoes = (
+        VotacaoVoteBem.objects
+        .select_related('proposicao_votacao__proposicao')
+        .order_by('-data_hora_votacao')
+    )
+    # Map existing referencia per vv for this divulgador
+    refs = (
+        Referencia.objects
+        .filter(divulgador=divulgador)
+        .select_related('votacao_votebem')
+    )
+    ref_by_vv = {r.votacao_votebem_id: r for r in refs if r.votacao_votebem_id}
+    return render(request, 'voting/opinar.html', {
+        'votacoes': votacoes,
+        'divulgador': divulgador,
+        'ref_by_vv': ref_by_vv,
+        'now': now,
+    })
+
+@login_required
+def opinar_referencia_save(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método não permitido.'}, status=405)
+    divulgador = _get_divulgador_for_user(request.user)
+    if not divulgador:
+        return JsonResponse({'ok': False, 'error': 'Usuário não é divulgador.'}, status=403)
+    vv_id = request.POST.get('vv_id')
+    title = (request.POST.get('title') or '').strip()
+    url = (request.POST.get('url') or '').strip()
+    if not vv_id:
+        return JsonResponse({'ok': False, 'error': 'vv_id é obrigatório.'}, status=400)
+    try:
+        vv = VotacaoVoteBem.objects.select_related('proposicao_votacao').get(pk=int(vv_id))
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Votação inválida.'}, status=404)
+    if not url:
+        return JsonResponse({'ok': False, 'error': 'URL é obrigatória.'}, status=400)
+    ref, created = Referencia.objects.get_or_create(
+        divulgador=divulgador,
+        votacao_votebem=vv,
+        defaults={
+            'proposicao_votacao': vv.proposicao_votacao,
+            'url': url,
+            'kind': Referencia.Kind.SOCIAL_MEDIA if 'youtu' in url else Referencia.Kind.WEB_PAGE,
+            'title': title or None,
+        }
+    )
+    if not created:
+        ref.url = url
+        ref.title = title or None
+        ref.kind = Referencia.Kind.SOCIAL_MEDIA if 'youtu' in url else Referencia.Kind.WEB_PAGE
+        ref.save(update_fields=['url', 'title', 'kind', 'updated_at'])
+    return JsonResponse({'ok': True, 'ref_id': ref.id})
+
+@login_required
+def opinar_referencia_delete(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método não permitido.'}, status=405)
+    divulgador = _get_divulgador_for_user(request.user)
+    if not divulgador:
+        return JsonResponse({'ok': False, 'error': 'Usuário não é divulgador.'}, status=403)
+    vv_id = request.POST.get('vv_id')
+    if not vv_id:
+        return JsonResponse({'ok': False, 'error': 'vv_id é obrigatório.'}, status=400)
+    try:
+        ref = Referencia.objects.get(divulgador=divulgador, votacao_votebem_id=int(vv_id))
+    except Referencia.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Referência não encontrada.'}, status=404)
+    ref.delete()
+    return JsonResponse({'ok': True})

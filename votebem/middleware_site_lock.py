@@ -41,6 +41,10 @@ class SiteLockMiddleware:
         if path.startswith('/voting/referencias/list/'):
             return self.get_response(request)
 
+        # Allow access to divulgar opinion endpoints
+        if path.startswith('/voting/opinar'):
+            return self.get_response(request)
+
         # Redirect all other requests to the lock page
         # We pass the current path as 'next' so we can redirect back after unlock
         return redirect(f'{lock_url}?next={path}')

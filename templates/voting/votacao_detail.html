@@ -197,20 +197,19 @@
             </div>
             <div class="card-body">
                 <style>
-                    /* Ícones quadrados para referências (um pouco menores que a área exemplo) */
-                    .entenda-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; }
-                    .entenda-item { display: flex; align-items: center; justify-content: center; height: 70px; border: 1px solid #dee2e6; border-radius: 8px; background-color: #f8f9fa; text-decoration: none; color: inherit; }
+                    .entenda-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
+                    .entenda-item { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 120px; border: 1px solid #dee2e6; border-radius: 8px; background-color: #f8f9fa; text-decoration: none; color: inherit; padding: 6px; position: relative; }
                     .entenda-item:hover { background-color: #eef2f6; }
-                    /* Keep squares size; make icon proportionally larger */
-                    .entenda-item i { font-size: calc(70px * 0.6); color: #000; }
-                    /* Toggle state: when playing, turn icon green */
-                    .entenda-item.playing i { color: #198754; }
+                    .entenda-icon { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; }
+                    .entenda-icon i { font-size: 40px; color: #000; }
+                    .entenda-icon img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; }
+                    .entenda-label { margin-top: 6px; font-size: 0.75rem; text-align: center; color: #333; }
+                    .entenda-item.playing .entenda-icon i { color: #198754; }
+                    .title-overlay { position: fixed; left: 0; right: 0; top: 0; margin: 0 auto; z-index: 1040; background: rgba(255,255,0,0.3); color: #14532d; font-size: 1.5rem; font-weight: 700; text-align: center; padding: 10px 12px; display: none; }
                 </style>
                 <div class="entenda-grid">
                     {% for r in referencias %}
-                        {# Audio should play inline: correct URL and no new window #}
                         {% if r.kind == 'sound' %}
-                            {# Play audio inline without navigating away #}
                             {% with audio_src=r.url %}
                                 {% if r.url|slice:':1' != '/' and r.url|slice:':6' == 'media/' %}
                                     {% with audio_src='/'|add:r.url %}{% endwith %}
@@ -218,8 +217,22 @@
                                 <a class="entenda-item"
                                    href="#"
                                    data-audio-id="ref-audio-{{ r.id }}"
+                                   data-title="{{ r.title|default:'' }}"
                                    aria-pressed="false">
-                                    <i class="bi bi-volume-up" aria-hidden="true"></i>
+                                    <div class="entenda-icon">
+                                        {% if r.divulgador and r.divulgador.icon_url %}
+                                            <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}{% if r.kind == 'web_page' %}Artigo{% elif r.kind == 'social_media' %}Vídeo{% elif r.kind == 'sound' %}Áudio{% else %}Referência{% endif %}{% endif %}">
+                                        {% else %}
+                                            <i class="bi bi-volume-up" aria-hidden="true"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="entenda-label">
+                                        {% if r.divulgador and r.divulgador.alias %}
+                                            {{ r.divulgador.alias }}
+                                        {% else %}
+                                            {% if r.kind == 'web_page' %}Artigo{% elif r.kind == 'social_media' %}Vídeo{% elif r.kind == 'sound' %}Áudio{% else %}Referência{% endif %}
+                                        {% endif %}
+                                    </div>
                                 </a>
                                 <audio id="ref-audio-{{ r.id }}" src="{% if audio_src|slice:':1' == '/' or audio_src|slice:':7' == 'http://' or audio_src|slice:':8' == 'https://' %}{{ audio_src }}{% else %}/{{ audio_src }}{% endif %}" preload="none"></audio>
                             {% endwith %}
@@ -229,22 +242,58 @@
                                     {% with link_src='/'|add:r.url %}{% endwith %}
                                 {% endif %}
                                 {% if r.kind == 'web_page' %}
-                                  <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" >
-                                    <i class="bi bi-book" aria-hidden="true"></i>
+                                  <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" data-title="{{ r.title|default:'' }}">
+                                    <div class="entenda-icon">
+                                        {% if r.divulgador and r.divulgador.icon_url %}
+                                            <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}Artigo{% endif %}">
+                                        {% else %}
+                                            <i class="bi bi-book" aria-hidden="true"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="entenda-label">
+                                        {% if r.divulgador and r.divulgador.alias %}
+                                            {{ r.divulgador.alias }}
+                                        {% else %}Artigo{% endif %}
+                                    </div>
                                   </a>
                                 {% elif r.kind == 'social_media' %}
-                                  <a class="entenda-item entenda-yt" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" rel="noopener" data-yt-url="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}">
-                                    <i class="bi bi-youtube" aria-hidden="true"></i>
+                                  <a class="entenda-item entenda-yt" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" rel="noopener" data-yt-url="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" data-title="{{ r.title|default:'' }}">
+                                    <div class="entenda-icon">
+                                        {% if r.divulgador and r.divulgador.icon_url %}
+                                            <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}Vídeo{% endif %}">
+                                        {% else %}
+                                            <i class="bi bi-youtube" aria-hidden="true"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="entenda-label">
+                                        {% if r.divulgador and r.divulgador.alias %}
+                                            {{ r.divulgador.alias }}
+                                        {% else %}Vídeo{% endif %}
+                                    </div>
                                   </a>
                                 {% else %}
-                                  <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" title="{{ r.title|default:r.kind }}">
-                                    <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                                  <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" data-title="{{ r.title|default:'' }}">
+                                    <div class="entenda-icon">
+                                        {% if r.divulgador and r.divulgador.icon_url %}
+                                            <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}Referência{% endif %}">
+                                        {% else %}
+                                            <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="entenda-label">
+                                        {% if r.divulgador and r.divulgador.alias %}
+                                            {{ r.divulgador.alias }}
+                                        {% else %}
+                                            {% if r.kind == 'web_page' %}Artigo{% elif r.kind == 'social_media' %}Vídeo{% elif r.kind == 'sound' %}Áudio{% else %}Referência{% endif %}
+                                        {% endif %}
+                                    </div>
                                   </a>
                                 {% endif %}
                             {% endwith %}
                         {% endif %}
                     {% endfor %}
                 </div>
+                <div id="title-overlay" class="title-overlay"></div>
                 <style>
                   .yt-overlay { position: fixed; inset: 0; z-index: 1050; }
                   .yt-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.25); transition: background 0.2s ease; }
@@ -277,6 +326,25 @@
                 <script src="https://www.youtube.com/iframe_api"></script>
                 <script>
                 document.addEventListener('DOMContentLoaded', function () {
+                  var tOverlay = document.getElementById('title-overlay');
+                  function showTitleOverlay(txt) {
+                    if (!tOverlay) return;
+                    if (!txt) return;
+                    tOverlay.textContent = txt;
+                    tOverlay.style.display = 'block';
+                  }
+                  function hideTitleOverlay() {
+                    if (!tOverlay) return;
+                    tOverlay.style.display = 'none';
+                    tOverlay.textContent = '';
+                  }
+                  document.querySelectorAll('.entenda-item').forEach(function (a) {
+                    a.addEventListener('mouseenter', function () {
+                      var t = a.getAttribute('data-title') || '';
+                      if (t) showTitleOverlay(t);
+                    });
+                    a.addEventListener('mouseleave', function () { hideTitleOverlay(); });
+                  });
                   document.querySelectorAll('.entenda-item[data-audio-id]').forEach(function (item) {
                     var audio = document.getElementById(item.dataset.audioId);
                     if (!audio) return;
