@@ -3,6 +3,9 @@
   Admin lookup/import controls are intentionally removed to avoid shared templates.  
 {% endcomment %}
 <div class="vb-votos-oficiais">
+{% load static %}
+{% with target_pv=pv|default:votacao.proposicao_votacao %}
+
 <style>
   /* Scoped styles for public page */
   .vb-votos-oficiais .card { border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 12px; }
@@ -15,28 +18,31 @@
   .vb-votos-oficiais .sort-icon, .vb-votos-oficiais .sort-hint { margin-left: 6px; }
   /* Garantir que a ementa seja exibida por completo, sem truncamento */
   .vb-votos-oficiais .vb-ementa { white-space: normal; overflow: visible; text-overflow: clip; display: block; word-break: break-word; }
+  
+  /* References styles */
+  .vb-refs-container { margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px; display: none; }
+  .vb-refs-container.active { display: block; }
 </style>
 
 <div class="card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <h2 class="card-title mb-0">Votação oficial
-      {% if pv and pv.proposicao %}
-        {{ pv.proposicao.tipo }} {{ pv.proposicao.numero }}/{{ pv.proposicao.ano }}
-        {% if pv.proposicao.conhecida_por %}<br /><i>Conhecida por: {{ pv.proposicao.conhecida_por }}</i>{% endif %}
-      {% elif votacao and votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao %}
-        {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
-        {% if votacao.proposicao_votacao.proposicao.conhecida_por %}<br /><i>Conhecida por: {{ votacao.proposicao_votacao.proposicao.conhecida_por }}</i>{% endif %}
+      {% if target_pv and target_pv.proposicao %}
+        {{ target_pv.proposicao.tipo }} {{ target_pv.proposicao.numero }}/{{ target_pv.proposicao.ano }}
+        {% if target_pv.proposicao.conhecida_por %}<br /><i>Conhecida por: {{ target_pv.proposicao.conhecida_por }}</i>{% endif %}
       {% endif %}
     </h2>
     <div class="d-flex gap-2">
-      {% if pv and pv.proposicao and pv.proposicao.id_proposicao %}
-        <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ pv.proposicao.id_proposicao }}" target="_blank" class="btn btn-sm btn-outline-primary">
+      {% if target_pv and target_pv.proposicao and target_pv.proposicao.id_proposicao %}
+        <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ target_pv.proposicao.id_proposicao }}" target="_blank" class="btn btn-sm btn-outline-primary">
           Ver na Câmara
         </a>
-      {% elif votacao and votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao and votacao.proposicao_votacao.proposicao.id_proposicao %}
-        <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ votacao.proposicao_votacao.proposicao.id_proposicao }}" target="_blank" class="btn btn-sm btn-outline-primary">
-          Ver na Câmara
-        </a>
+      {% endif %}
+
+      {% if target_pv %}
+        <button type="button" class="btn btn-sm btn-outline-info" onclick="togglePublicRefs({{ target_pv.id }})">
+            <i class="bi bi-link-45deg"></i> Ver Referências
+        </button>
       {% endif %}
 
       {% if votacao %}
@@ -48,14 +54,6 @@
     </div>
   </div>
   <div class="card-body">
-
-    {# Mostrar o título da proposição logo abaixo do título da página #}
-    <!-- {% if pv and pv.proposicao and pv.proposicao.titulo %}
-      <div class="text-muted mb-2">Proposição: {{ pv.proposicao.titulo }}</div>
-    {% elif votacao and votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao and votacao.proposicao_votacao.proposicao.titulo %}
-      <div class="text-muted mb-2">Proposição: {{ votacao.proposicao_votacao.proposicao.titulo }}</div>
-    {% endif %} -->
-    {% comment %} Show description only when a proposição/votação context (pv) exists {% endcomment %}
     {% if pv %}
       <div class="text-muted"><b>Descrição: {{ pv.descricao|default:"(sem descrição)" }}</b></div>
       {% if pv.data_votacao %}
@@ -63,13 +61,107 @@
       {% endif %}
     {% endif %}
     {# Exibir ementa completa, sem truncamento #}
-    {% if pv and pv.proposicao and pv.proposicao.ementa %}
-      <div class="vb-ementa mt-2"><b>Ementa:</b> {{ pv.proposicao.ementa }}</div>
-    {% elif votacao and votacao.proposicao_votacao and votacao.proposicao_votacao.proposicao and votacao.proposicao_votacao.proposicao.ementa %}
-      <div class="vb-ementa mt-2"><b>Ementa:</b> {{ votacao.proposicao_votacao.proposicao.ementa }}</div>
+    {% if target_pv and target_pv.proposicao and target_pv.proposicao.ementa %}
+      <div class="vb-ementa mt-2"><b>Ementa:</b> {{ target_pv.proposicao.ementa }}</div>
     {% endif %}
+
+    <!-- Container for References Component -->
+    <div id="vb-public-refs-container" class="vb-refs-container">
+        <!-- Component structure injected here or pre-defined -->
+        <div class="vb-refs-manager" data-readonly="true">
+            <div class="vb-refs-body">
+                <h5 class="mb-3">Referências e Mídia</h5>
+                <div class="vb-refs-status text-muted mb-2">Carregando...</div>
+                <div class="table-responsive">
+                    <table class="table table-sm vb-refs-table">
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
   </div>
 </div>
+
+<script src="{% static 'js/components/referencias_manager.js' %}"></script>
+<script>
+    // Inline fallback class in case external script fails (e.g. network error)
+    class SimplePublicRefsManager {
+        constructor(container, pvId) {
+            this.container = container;
+            this.pvId = pvId;
+            this.tbody = container.querySelector('.vb-refs-table tbody');
+            this.statusEl = container.querySelector('.vb-refs-status');
+            this.load();
+        }
+        load() {
+            this.statusEl.textContent = 'Carregando...';
+            // Use public endpoint
+            fetch(`/voting/referencias/list/?pv_id=${encodeURIComponent(this.pvId)}`, {
+                headers: { 'Accept': 'application/json' }
+            })
+            .then(r => r.json())
+            .then(json => {
+                if (!json.ok) throw new Error(json.error || 'Erro na resposta');
+                const list = json.dados || [];
+                this.statusEl.textContent = list.length ? `${list.length} referência(s).` : 'Nenhuma referência encontrada.';
+                this.render(list);
+            })
+            .catch(e => {
+                console.error(e);
+                this.statusEl.textContent = 'Erro ao carregar referências (fallback).';
+            });
+        }
+        render(list) {
+            this.tbody.innerHTML = '';
+            list.forEach(r => {
+                const tr = document.createElement('tr');
+                let icon = 'bi-link-45deg';
+                let label = 'Link';
+                if (r.kind === 'sound') { icon = 'bi-mic'; label = 'Áudio'; }
+                if (r.kind === 'social_media') { icon = 'bi-youtube'; label = 'Vídeo'; }
+                
+                tr.innerHTML = `
+                    <td style="padding:6px;">
+                        <a href="${r.url}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                            <i class="bi ${icon}"></i> ${r.url}
+                        </a>
+                    </td>
+                    <td style="padding:6px;">
+                        <span class="badge bg-light text-dark border">${label}</span>
+                    </td>
+                `;
+                this.tbody.appendChild(tr);
+            });
+        }
+    }
+
+    function togglePublicRefs(pvId) {
+        const container = document.getElementById('vb-public-refs-container');
+        if (!container) return;
+        
+        const isHidden = container.style.display === 'none' || container.style.display === '';
+        container.style.display = isHidden ? 'block' : 'none';
+        
+        if (isHidden && !container.dataset.loaded) {
+            container.dataset.loaded = 'true';
+            const mgrEl = container.querySelector('.vb-refs-manager');
+            
+            if (window.initReferenciasManager) {
+                // Use the main component if loaded
+                window.initReferenciasManager(mgrEl, pvId);
+            } else {
+                // Fallback if script failed to load
+                console.warn('ReferenciasManager script not loaded, using fallback.');
+                new SimplePublicRefsManager(mgrEl, pvId);
+            }
+        }
+    }
+</script>
+
+{% endwith %}
+
 
 <div class="card" style="margin-bottom: 10px;">
   <div class="filters" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">

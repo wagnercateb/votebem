@@ -174,7 +174,7 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalh
 
 **Wagner Cateb**
 - GitHub: [@wagnercateb](https://github.com/wagnercateb)
-- Email: wagnercateb@gmail.com
+- Email: contato@votebem.online
 
 ## 🙏 Agradecimentos
 

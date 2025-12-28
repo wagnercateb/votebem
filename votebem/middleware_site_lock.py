@@ -37,6 +37,10 @@ class SiteLockMiddleware:
         if path.startswith(settings.STATIC_URL) or path.startswith(settings.MEDIA_URL):
             return self.get_response(request)
 
+        # Allow access to public references list (API)
+        if path.startswith('/voting/referencias/list/'):
+            return self.get_response(request)
+
         # Redirect all other requests to the lock page
         # We pass the current path as 'next' so we can redirect back after unlock
         return redirect(f'{lock_url}?next={path}')

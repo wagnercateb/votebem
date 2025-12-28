@@ -229,11 +229,11 @@
                                     {% with link_src='/'|add:r.url %}{% endwith %}
                                 {% endif %}
                                 {% if r.kind == 'web_page' %}
-                                  <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" title="{{ r.title|default:r.kind }}">
+                                  <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" >
                                     <i class="bi bi-book" aria-hidden="true"></i>
                                   </a>
                                 {% elif r.kind == 'social_media' %}
-                                  <a class="entenda-item entenda-yt" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" rel="noopener" title="{{ r.title|default:r.kind }}" data-yt-url="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}">
+                                  <a class="entenda-item entenda-yt" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" rel="noopener" data-yt-url="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}">
                                     <i class="bi bi-youtube" aria-hidden="true"></i>
                                   </a>
                                 {% else %}

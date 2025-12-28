@@ -27,6 +27,7 @@
                 tableBody: container.querySelector('.vb-refs-table tbody'),
                 statusEl: container.querySelector('.vb-refs-status')
             };
+            this.readOnly = container.getAttribute('data-readonly') === 'true';
 
             this.init();
         }
@@ -37,14 +38,16 @@
         }
 
         bindEvents() {
-            if (this.elements.addBtn) {
-                this.elements.addBtn.addEventListener('click', () => this.createReference());
-            }
-            // Bind Enter key on input
-            if (this.elements.urlInp) {
-                this.elements.urlInp.addEventListener('keyup', (e) => {
-                    if (e.key === 'Enter') this.createReference();
-                });
+            if (!this.readOnly) {
+                if (this.elements.addBtn) {
+                    this.elements.addBtn.addEventListener('click', () => this.createReference());
+                }
+                // Bind Enter key on input
+                if (this.elements.urlInp) {
+                    this.elements.urlInp.addEventListener('keyup', (e) => {
+                        if (e.key === 'Enter') this.createReference();
+                    });
+                }
             }
         }
 
@@ -161,22 +164,40 @@
             const tr = document.createElement('tr');
             const esc = (s) => String(s || '').replace(/"/g, '&quot;');
             
-            tr.innerHTML = `
-                <td style="padding:6px;">
-                    <input type="url" class="form-control form-control-sm vb-ref-url-edit" value="${esc(r.url)}" data-ref-id="${r.id}">
-                </td>
-                <td style="padding:6px;">
-                    <select class="form-select form-select-sm vb-ref-kind-edit" data-ref-id="${r.id}">
-                        <option value="web_page" ${r.kind === 'web_page' ? 'selected' : ''}>Página Web</option>
-                        <option value="sound" ${r.kind === 'sound' ? 'selected' : ''}>Áudio</option>
-                        <option value="social_media" ${r.kind === 'social_media' ? 'selected' : ''}>Vídeo no YouTube</option>
-                    </select>
-                </td>
-                <td style="padding:6px;">
-                    <button type="button" class="btn btn-sm btn-success vb-ref-save" data-ref-id="${r.id}" title="Salvar alterações"><i class="bi bi-check"></i> Salvar</button>
-                    <button type="button" class="btn btn-sm btn-outline-danger vb-ref-del" data-ref-id="${r.id}" title="Excluir"><i class="bi bi-trash"></i> Excluir</button>
-                </td>
-            `;
+            if (this.readOnly) {
+                let icon = 'bi-link-45deg';
+                let label = 'Link';
+                if (r.kind === 'sound') { icon = 'bi-mic'; label = 'Áudio'; }
+                if (r.kind === 'social_media') { icon = 'bi-youtube'; label = 'Vídeo'; }
+                
+                tr.innerHTML = `
+                    <td style="padding:6px;">
+                        <a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                            <i class="bi ${icon}"></i> ${esc(r.url)}
+                        </a>
+                    </td>
+                    <td style="padding:6px;">
+                        <span class="badge bg-light text-dark border">${label}</span>
+                    </td>
+                `;
+            } else {
+                tr.innerHTML = `
+                    <td style="padding:6px;">
+                        <input type="url" class="form-control form-control-sm vb-ref-url-edit" value="${esc(r.url)}" data-ref-id="${r.id}">
+                    </td>
+                    <td style="padding:6px;">
+                        <select class="form-select form-select-sm vb-ref-kind-edit" data-ref-id="${r.id}">
+                            <option value="web_page" ${r.kind === 'web_page' ? 'selected' : ''}>Página Web</option>
+                            <option value="sound" ${r.kind === 'sound' ? 'selected' : ''}>Áudio</option>
+                            <option value="social_media" ${r.kind === 'social_media' ? 'selected' : ''}>Vídeo no YouTube</option>
+                        </select>
+                    </td>
+                    <td style="padding:6px;">
+                        <button type="button" class="btn btn-sm btn-success vb-ref-save" data-ref-id="${r.id}" title="Salvar alterações"><i class="bi bi-check"></i> Salvar</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger vb-ref-del" data-ref-id="${r.id}" title="Excluir"><i class="bi bi-trash"></i> Excluir</button>
+                    </td>
+                `;
+            }
             
             // Insert at top (descending order)
             if (this.elements.tableBody.firstChild) {
@@ -185,7 +206,9 @@
                 this.elements.tableBody.appendChild(tr);
             }
             
-            this.bindRowActions(tr);
+            if (!this.readOnly) {
+                this.bindRowActions(tr);
+            }
         }
 
         bindRowActions(tr) {

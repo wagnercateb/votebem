@@ -159,7 +159,7 @@ log "Starting SSL Setup for VoteBem..."
 
 # Get domain and email for SSL (with defaults)
 DOMAIN_DEFAULT="votebem.online"
-EMAIL_DEFAULT="wagnercateb@gmail.com"
+EMAIL_DEFAULT="contato@votebem.online"
 read -rp "Enter your domain name (default: ${DOMAIN_DEFAULT}): " DOMAIN_INPUT
 DOMAIN="${DOMAIN_INPUT:-$DOMAIN_DEFAULT}"
 read -rp "Enter your email for SSL certificate (default: ${EMAIL_DEFAULT}): " EMAIL_INPUT
