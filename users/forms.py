@@ -1,6 +1,22 @@
 from django import forms
 from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
 from .models import UserProfile
+
+class UserRegisterForm(UserCreationForm):
+    email = forms.EmailField()
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password1', 'password2']
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip()
+        if not email:
+            raise forms.ValidationError('Informe um e-mail válido.')
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('Este e-mail já está em uso.')
+        return email
 
 class UserUpdateForm(forms.ModelForm):
     email = forms.EmailField()

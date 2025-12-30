@@ -8,22 +8,55 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from .models import UserProfile
-from .forms import UserProfileForm, UserUpdateForm
+from .forms import UserProfileForm, UserUpdateForm, UserRegisterForm
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.conf import settings
 
 class RegisterView(CreateView):
     """User registration view"""
-    form_class = UserCreationForm
+    form_class = UserRegisterForm
     template_name = 'users/register.html'
-    success_url = reverse_lazy('voting:votacoes_disponiveis')
+    success_url = reverse_lazy('users:login')
     
     def form_valid(self, form):
-        response = super().form_valid(form)
-        # Create user profile
-        UserProfile.objects.create(user=self.object)
-        # Log the user in
-        login(self.request, self.object, backend='django.contrib.auth.backends.ModelBackend')
-        messages.success(self.request, 'Conta criada com sucesso!')
-        return response
+        user = form.save(commit=False)
+        user.email = form.cleaned_data.get('email')
+        user.is_active = False
+        user.save()
+        UserProfile.objects.create(user=user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        activation_link = self.request.build_absolute_uri(
+            reverse_lazy('users:activate', kwargs={'uidb64': uid, 'token': token})
+        )
+        subject = 'VoteBem - Confirmação de e-mail'
+        message = f'Olá {user.username},\n\nClique no link para ativar sua conta:\n{activation_link}\n\nSe você não solicitou, ignore este e-mail.'
+        send_mail(
+            subject,
+            message,
+            getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@votebem.com'),
+            [user.email],
+            fail_silently=False
+        )
+        messages.success(self.request, 'Conta criada! Verifique seu e-mail para ativar a conta.')
+        return redirect(self.success_url)
+
+def activate_account(request, uidb64, token):
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+    except Exception:
+        user = None
+    if user and default_token_generator.check_token(user, token):
+        user.is_active = True
+        user.save(update_fields=['is_active'])
+        messages.success(request, 'Sua conta foi ativada! Agora você pode entrar.')
+        return redirect('users:login')
+    messages.error(request, 'Link de ativação inválido ou expirado.')
+    return redirect('users:register')
 
 class ProfileView(LoginRequiredMixin, TemplateView):
     """User profile view with editing capabilities"""

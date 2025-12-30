@@ -44,6 +44,11 @@ class SiteLockMiddleware:
         # Allow access to divulgar opinion endpoints
         if path.startswith('/voting/opinar'):
             return self.get_response(request)
+        # Allow password reset and activation flows
+        if path.startswith('/users/password-reset') or path.startswith('/users/password_reset') or path.startswith('/users/reset/'):
+            return self.get_response(request)
+        if path.startswith('/users/activate/'):
+            return self.get_response(request)
 
         # Redirect all other requests to the lock page
         # We pass the current path as 'next' so we can redirect back after unlock
