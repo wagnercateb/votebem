@@ -58,7 +58,7 @@
                                                 <strong class="text-primary">{{ user.pontos_totais }}</strong> pontos
                                             </p>
                                             <small class="text-muted">
-                                                {{ user.total_votos }} votos • {{ user.total_enquetes }} enquetes
+                                                {{ user.total_votos }} votos 
                                             </small>
                                         </div>
                                     </div>
@@ -85,7 +85,6 @@
                                     <th>Usuário</th>
                                     <th class="text-center">Pontos</th>
                                     <th class="text-center">Votos</th>
-                                    <th class="text-center">Enquetes</th>
                                     <th class="text-center">Respostas</th>
                                 </tr>
                             </thead>
@@ -122,9 +121,6 @@
                                         </td>
                                         <td class="text-center">
                                             <span class="badge bg-info">{{ user.total_votos }}</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-success">{{ user.total_enquetes }}</span>
                                         </td>
                                         <td class="text-center">
                                             <span class="badge bg-warning">{{ user.total_respostas }}</span>
@@ -194,8 +190,6 @@
                 <h6>Sistema de Pontuação:</h6>
                 <ul class="list-unstyled">
                     <li><i class="bi bi-vote-fill text-primary"></i> <strong>+10 pontos</strong> por voto em proposição</li>
-                    <li><i class="bi bi-question-circle text-success"></i> <strong>+20 pontos</strong> por enquete criada</li>
-                    <li><i class="bi bi-chat-dots text-info"></i> <strong>+5 pontos</strong> por resposta em enquete</li>
                     <li><i class="bi bi-chat-text text-warning"></i> <strong>+3 pontos</strong> por comentário em resposta</li>
                 </ul>
                 
@@ -219,10 +213,6 @@
                 <div class="card-body text-center">
                     <h2 class="text-primary">{{ user_position }}º</h2>
                     <p class="mb-1"><strong>{{ user.pontos_totais }}</strong> pontos</p>
-                    <small class="text-muted">
-                        {{ user.total_votos }} votos • {{ user.total_enquetes }} enquetes • {{ user.total_respostas }} respostas
-                    </small>
-                    
                     <hr>
                     
                     <div class="d-grid">

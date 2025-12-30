@@ -93,6 +93,18 @@
                             {{ votacao.explicacao }}
                         </div>
                         {% endif %}
+                        
+                        <!-- Vote também: links para votações relacionadas da mesma proposição -->
+                        {% if related_votacoes %}
+                        <div class="mt-3 border-top pt-2">
+                            <span>Vote também (mesmo projeto): </span>
+                            {% for rv in related_votacoes %}
+                                {# Usar caminho root-relative para seguir host/porta atual #}
+                                <a href="/voting/votacao/{{ rv.id }}/" class="link-primary">{{ rv.titulo }}</a>{% if not forloop.last %} • {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
                         <hr />
                         <!-- Data da votação (ProposicaoVotacao.data_votacao) -->
                         {% if votacao.proposicao_votacao and votacao.proposicao_votacao.data_votacao %}
@@ -160,16 +172,6 @@
 <p><strong>Autor:</strong> {{ votacao.proposicao_votacao.proposicao.autor }}</p>
                     {% endif %}
 
-                    <!-- Vote também: links para votações relacionadas da mesma proposição -->
-                    {% if related_votacoes %}
-                    <div class="mt-3">
-                        <span>Vote também: </span>
-                        {% for rv in related_votacoes %}
-                            {# Usar caminho root-relative para seguir host/porta atual #}
-                            <a href="/voting/votacao/{{ rv.id }}/" class="link-primary">{{ rv.titulo }}</a>{% if not forloop.last %} • {% endif %}
-                        {% endfor %}
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
