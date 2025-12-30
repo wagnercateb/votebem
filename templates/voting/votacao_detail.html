@@ -110,6 +110,7 @@
                               Ver proposição original
                           </a>
                         {% endif %}
+                        <br>
                         <!-- Linha adicional com a descrição da ProposicaoVotacao
                              Suporta duas chaves de contexto: voting_proposicaovotacao e votacao.proposicao_votacao -->
                         <i>
@@ -202,10 +203,10 @@
                     .entenda-item:hover { background-color: #eef2f6; }
                     .entenda-icon { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; }
                     .entenda-icon i { font-size: 40px; color: #000; }
-                    .entenda-icon img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; }
-                    .entenda-label { margin-top: 6px; font-size: 0.75rem; text-align: center; color: #333; }
+                    .entenda-icon img { width: 64px; height: 64px; object-fit: cover; border-radius: 50%; }
+                    .entenda-label { margin-top: 4px; font-size: 0.75rem; text-align: center; color: #333; line-height: 1.1; }
                     .entenda-item.playing .entenda-icon i { color: #198754; }
-                    .title-overlay { position: fixed; left: 0; right: 0; top: 0; margin: 0 auto; z-index: 1040; background: rgba(255,255,0,0.3); color: #14532d; font-size: 1.5rem; font-weight: 700; text-align: center; padding: 10px 12px; display: none; }
+                    .title-overlay { position: fixed; left: 0; right: 0; top: 50%; transform: translateY(-50%); margin: 0 auto; z-index: 1040; background: #ffff00; color: #14532d; font-size: 1.5rem; font-weight: 700; text-align: center; padding: 10px 12px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
                 </style>
                 <div class="entenda-grid">
                     {% for r in referencias %}

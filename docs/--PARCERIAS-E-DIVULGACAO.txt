@@ -23,7 +23,7 @@ Para parcerias:
 
     Gostaria então de convidá-los a conhecer https://votebem.online/ para conversarmos sobre uma parceria. Por enquanto, o acesso requer a senha 'vtbm'. O site é um MVP (minimum viable product), já funcional mas com muitas melhorias a implementar. Embora eu tenha conhecimento técnico, o tempo disponível é insuficiente para todas as frentes, principalmente onde vocês são fortes: capacidade de divulgação, formalização, respaldo legal necessário para um jornalismo corajoso.
 
-    Fico à disposição para conversas e esclarecimentos no email contato@votebem.online e (31) 99164.5935. Entre 31/12/2025 e 14/01/2026, estarei sem internet ou telefone.
+    Fico à disposição para conversas e esclarecimentos no email contato@votebem.online e (31) 99164.5935. (Entre 31/12/2025 e 14/01/2026, estarei sem internet ou telefone.)
 
     Ótimo fim de ano para toda a equipe e um 2026 auspicioso, se tudo der certo!
 
@@ -62,16 +62,16 @@ Emails:
 	atendimento@manualdomundo.com.br,  comercial@manualdomundo.com.br (parcerias),  comunicacao@manualdomundo.com.br (assessoria de imprensa) (Manual do Mundo, Mari e Iberê)
 	contato@grupophn.com (ciência e curiosidades, Luiz Phellype Marques, Ivan Lima, Amanda Constantino e Paulo de Aragão), bem comercial, é uma editora
 	contato@richardrasmussen.com.br (Richard Rasmussen, biólogo e conservacionista)
-	castanhari@play9.com.br ( Felipe Castanhari, 14M, Canal Nostalgia, história, personalidades, ciência)
+	castanhari@play9.com.br (Felipe Castanhari, 14M, Canal Nostalgia, história, personalidades, ciência)
 	jornalista Thais Bilenky, https://www.instagram.com/thais_bilenky, canal do Uol "A Hora" (https://www.youtube.com/watch?v=73hcBQd9SEA)
+    atendimento@sophya.com.br (Luis Felipe Cortella)
+    Leandro Karnal (atendimento@agenciakratos.com.br)
+    Marcelo Tas (brunocosta@tvcultura.com.br)
+    Biólogo Henrique (henriquecharles.ufrrj@gmail.com)
+    Jornalismo (contato@revistaforum.com.br)
 
 
 procurar, esgotou:
-    Luis Felipe Cortella (https://www.youtube.com/@CanaldoCortella)
-    Leandro Karnal (https://www.youtube.com/@PrazerKarnal)
-    Marcelo Tas (https://www.youtube.com/@ProvocaTVCultura)
-    Biólogo Henrique (www.youtube.com/@biologohenriqueoficial)
-    Jornalismo (www.youtube.com/@forumrevista)
     Prof José (www.youtube.com/@portaldojosé) Prof de Direito Constitucional e Ciência Política, advogado e jornalista. 
     Pe. Julio Lancellotti (https://www.youtube.com/@OArcanjoNoAr) 
     Drauzio Varella (https://www.youtube.com/@drauziovarella)
@@ -94,7 +94,8 @@ https://icl.com.br/contato/ (Eduardo Moreira, Instituto Conhecimento Liberta), c
 https://operamundi.uol.com.br/contato/ (Breno Altman, Opera Mundi)
 
 ONGs
-    https://fiquemsabendo.com.br/quem-somos/about (tem rede, jornalistas; mariavitoria@fiquemsabendo.com.br; contato@fs.com.br)
+    https://fiquemsabendo.com.br/quem-somos/about (tem rede, jornalistas;       
+        mariavitoria@fiquemsabendo.com.br; contato@fs.com.br)
     contato@cufa.org.br, Central única das favelas, Preto Zezé
     https://institutogalodamanha.org.br/ (dá apoio financeiro)
     https://direitosnarede.org.br/quem-somos/ (rede grande de entidades)
@@ -107,18 +108,35 @@ Artistas:
     aluizer@malab.com.br, Pato Fu
     comunicacao@unsproducoes.com.br, Caetano Veloso
     Gilberto Gil
+        mattosovinicius@mattosovinicius.com.br; atendimentogil@gege.com.br; marina@jangada.ag
     Fernanda Torres
         E-mail de contato geral: contato@fernandatorressp.com.br
         Telefone/WhatsApp (geral): +55 (11) 9 9125-5900 
     Lenine
-    Emicida, Duda Beat, Fernanda Abreu e Xamã
+    Emicida
+        comunicacao@laboratoriofantasma.com
+    Duda Beat
+        ta@iza.com.br — email do manager, que é o mais indicado (Simone Mizrahi); contatodudabeat@gmail.com
+    Fernanda Abreu 
+        contato@garotasanguebom.com.br; assessoria@fernandaabreu.com; contato@fernandaabreu.com
+    Xamã
+        contato@xama44.com
     Mídia Ninja
+        contato@midianinja.org
     342 Artes, grupo ligado à produtora Paula Lavigne, mulher de Caetano
+        342 Artes — Contra a censura e difamação é uma campanha promovida por um grupo de artistas brasileiros, visando combater a criminalização e a censura às manisfestações artísticas e culturais por grupos conservadores brasileiros
+        Paula Antonello Lavigne de Almeida: paulaalavigne@gmail.com
     Chico Buarque
+        cecilia@centralbme.com.br; amanda@centralbme.com.br
     Djavan
+        digital@djavan.com.br
     Seu Jorge
+        atendimento1@seujorge.com; pc@seujorge.com
     Daniela Mercury
+        imprensa@cantodacidade.com.br
     rapper Djonga
+        comunicacao@quadrilhabh.com
+ 
 
     📝 Dicas ao redigir seu convite cultural
 
@@ -134,17 +152,17 @@ Artistas:
 
             Olá,
 
-            Meu nome é Wagner Cateb e venho fazer um **convite informal à Fernanda Torres para uma colaboração cidadã e educacional ao longo de 2026**, um ano marcante pelas eleições e riscos de fake news. A ideia é contribuir para a ampliação do debate público qualificado, de forma plural e responsável, visando melhorar a próxima legislatura.
+            Meu nome é Wagner Cateb e venho fazer um **convite informal à Fernanda Torres para uma colaboração cidadã e educacional ao longo de 2026**, um ano marcante pelas eleições e riscos de fake news. A ideia é contribuir para melhorar a próxima legislatura, mobilizando pessoas públicas para fomentar um debate qualificado, plural e responsável.
 
-            Idealizei o site votebem.online, um projeto independente voltado à **conscientização política, ao debate democrático e ao acompanhamento crítico da atuação de políticos nacionais**. O site organiza dezenas de votações nominais no Congresso e permite que visitantes se informem e "votem" nelas, identificando assim os congressistas que melhor representam sua visão de mundo.
+            Para isso, idealizei o site votebem.online, um projeto independente voltado à **conscientização política, à educação da população e ao acompanhamento crítico da atuação de políticos**. O site organiza dezenas de votações nominais no Congresso e permite que visitantes se informem e "votem" nelas, identificando assim os congressistas que melhor representam sua visão de mundo.
 
-            O projeto não tem vínculo partidário e não envolve remuneração. Trata-se de uma **iniciativa cívica**, com foco em educação e fortalecimento da cultura democrática. Acredito que a voz pública, a visão crítica e a trajetória cultural da Fernanda Torres  dialogam muito bem com esse propósito.
+            O projeto não tem vínculo partidário e não envolve remuneração. Trata-se de uma **iniciativa cívica voluntária**, com foco em educação e fortalecimento da democracia. Acredito que a voz pública, a visão crítica e a trajetória cultural da Fernanda Torres dialogam muito bem com esse propósito.
 
-            A forma imaginada para sua participação seria por vídeo, de uns 3 minutos, manifestando suas convicções pessoais sobre quaisquer votações que lhe interessem (por exemplo, a PEC da blindagem/ bandidagem). No site votebem.online, no contexto daquela votação específica, visitantes terão um link para acessar o vídeo (veja mais detalhes em votebem.online/divulgadores).
+            A forma imaginada para sua participação seria divulgando vídeos, de uns 3 minutos, manifestando suas convicções pessoais sobre quaisquer votações que lhe interessem (por exemplo, a PEC da blindagem/ bandidagem, lei Aldir Blanc, etc). No site votebem.online, no contexto daquela votação específica, visitantes terão um link para acessar o vídeo (veja mais detalhes em votebem.online/divulgadores).
 
-            Caso haja interesse em conversar sobre a proposta do site, sugerir novas possibilidades, etc, estamos à sua inteira disposição.
+            Caso haja interesse em conversar sobre a proposta, sugerir novas possibilidades, etc, estou à sua inteira disposição.
 
-            Agradecemos seu tempo e atenção!
+            Agradeço seu tempo e atenção!
 
             Auspiciosamente,
 
