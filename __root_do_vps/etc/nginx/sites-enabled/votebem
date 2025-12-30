@@ -1,0 +1,37 @@
+# HTTP -> HTTPS redirect + ACME
+server {
+  listen 80;
+  server_name votebem.online www.votebem.online;
+  location /.well-known/acme-challenge/ { root /var/www/html; try_files $uri =404; }
+  location / { return 301 https://$server_name$request_uri; }
+}
+# HTTPS
+server {
+  listen 443 ssl http2;
+  server_name votebem.online www.votebem.online;
+  ssl_certificate /etc/letsencrypt/live/votebem.online/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/votebem.online/privkey.pem;
+  ssl_protocols TLSv1.2 TLSv1.3;
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+  add_header X-Frame-Options DENY always;
+  add_header X-Content-Type-Options nosniff always;
+  add_header X-XSS-Protection "1; mode=block" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+  #errado: usa o path físico, tem que usar a partir do static mapeada abaixo:
+  #        error_page 502 503 504 /dados/votebem/static/maintenance.html;
+  error_page 502 503 504 /static/maintenance.html;
+  #        O arquivo físico  deve estar em: /dados/nginx/app/votebem/static/maintenance.html
+
+  location /static/ { alias /dados/nginx/app/votebem/static/; expires 1y; add_header Cache-Control "public, immutable"; }
+  location /media/  { alias /dados/votebem/votebem/media/; }
+
+  location / {
+    proxy_pass http://127.0.0.1:8001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+  location ~ /\. { deny all; }
+}
