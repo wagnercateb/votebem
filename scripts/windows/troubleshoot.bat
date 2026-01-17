@@ -1,5 +1,33 @@
 @echo off
 
+REM =======================================================================
+REM VoteBem Windows troubleshooting helper
+REM
+REM Purpose:
+REM   - Run a quick set of checks on a Windows machine to validate that the
+REM     local development/runtime environment for VoteBem is usable:
+REM       * Verifies that Python is installed and reachable on PATH.
+REM       * Detects and activates a local virtual environment (.venv) if present.
+REM       * Confirms that Django can be imported and reports its version.
+REM       * Checks that Docker is installed and that the Docker daemon is
+REM         running by calling "docker ps".
+REM       * Runs "python manage.py check --database default" using the
+REM         production settings module to sanity‑check database connectivity.
+REM   - Prints common guidance for resolving frequent issues (missing Python,
+REM     Django, Docker, virtualenv or permissions).
+REM
+REM Redundancy:
+REM   - This script is optional and mainly useful for manual diagnostics on a
+REM     developer or admin workstation. It is not required for either the
+REM     Linux or Windows Docker deployment flows and can be removed if you
+REM     prefer to troubleshoot using direct commands or IDE tooling.
+REM
+REM Usage:
+REM   - Run from any location; it will cd into the project root (parent of the
+REM     scripts folder) and perform the checks listed above, pausing at the end
+REM     so you can read the output.
+REM =======================================================================
+
 REM Change to project root directory (parent of scripts folder)
 cd /d "%~dp0\.."
 

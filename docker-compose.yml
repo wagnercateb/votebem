@@ -1,3 +1,17 @@
+## Linux production Docker Compose stack for VoteBem
+## - Runs the MariaDB database, Valkey (Redis‑compatible cache) and the Django
+##   application served by Gunicorn.
+## - All persistent data and configuration live under /dados on the host so that
+##   database files, media uploads, logs and embeddings survive container rebuilds.
+## - The `web` service builds from the project Dockerfile, runs migrations,
+##   collects static assets and then starts Gunicorn bound to port 8000.
+## - The application listens on 127.0.0.1:8001 on the host, normally consumed
+##   by a separate host‑level Nginx that terminates HTTP and serves static/media.
+## - The external `vps_network` allows this stack to communicate with other
+##   infrastructure containers that share the same network name.
+## - Redundancy: this is the canonical Linux production stack; do not remove it
+##   unless the production deployment strategy itself is being replaced.
+
 # After changing docker-compose.yml , use docker compose up -d to recreate the container. docker compose restart web does not apply changed environment or volume configuration.
 services:
   # MariaDB database service
