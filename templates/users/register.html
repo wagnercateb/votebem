@@ -11,39 +11,42 @@
             <div class="card-header text-center">
                 <h4><i class="bi bi-person-plus"></i> Criar Conta</h4>
             </div>
+
+
+            <br/>
+            {% comment %}                   
+                Social login rendering is gated by `SOCIAL_LOGIN_ENABLED`.
+                In production, this defaults to False to avoid runtime
+                errors if provider configuration (SocialApp) is missing or
+                duplicated for the current Site. When enabled and configured,
+                the buttons below will appear.
+            {% endcomment %}
+            {% if SOCIAL_LOGIN_ENABLED %}
+            <div class="text-center mb-3">
+                <div class="d-grid gap-2">
+                    {% if SOCIAL_GOOGLE_AVAILABLE %}
+                    <a class="btn btn-outline-danger" href="{% provider_login_url 'google' process='signup' %}">Cadastrar com Google</a>
+                    {% endif %}
+                    {% if SOCIAL_FACEBOOK_AVAILABLE %}
+                    <a class="btn btn-outline-primary" href="{% provider_login_url 'facebook' process='signup' %}">Cadastrar com Facebook</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                ou crie uma conta a seguir usando seu email:
+            </div>
+            {% endif %}
+
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
                     {{ form|crispy }}
-                    
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-person-plus"></i> Criar Conta
                         </button>
                     </div>
                 </form>
-                
-                <hr>
-{% comment %}                   
-                  Social login rendering is gated by `SOCIAL_LOGIN_ENABLED`.
-                  In production, this defaults to False to avoid runtime
-                  errors if provider configuration (SocialApp) is missing or
-                  duplicated for the current Site. When enabled and configured,
-                  the buttons below will appear.
- {% endcomment %}
-                {% if SOCIAL_LOGIN_ENABLED %}
-                <div class="text-center mb-3">
-                    <p class="mb-2">Ou cadastre-se com:</p>
-                    <div class="d-grid gap-2">
-                        {% if SOCIAL_GOOGLE_AVAILABLE %}
-                        <a class="btn btn-outline-danger" href="{% provider_login_url 'google' process='signup' %}">Cadastrar com Google</a>
-                        {% endif %}
-                        {% if SOCIAL_FACEBOOK_AVAILABLE %}
-                        <a class="btn btn-outline-primary" href="{% provider_login_url 'facebook' process='signup' %}">Cadastrar com Facebook</a>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
                 
                 <hr>
                 

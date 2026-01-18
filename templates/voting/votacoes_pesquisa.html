@@ -45,101 +45,160 @@
           <table class="table table-hover mb-0">
             <thead class="table-light">
               {% if is_proposicoes %}
-              <tr>
-                <th>Título</th>
-                <th>Proposição</th>
-                <th>Ementa</th>
-                <th>Ações</th>
-              </tr>
+                <tr>
+                  <th>Título</th>
+                  <th>Proposição</th>
+                  <th>Ementa</th>
+                  <th>Ações</th>
+                </tr>
               {% else %}
-              <tr>
-                <th>Título</th>
-                <th>Ativa</th>
-                <th>Ativa desde</th>
-                <th>Ações</th>
-              </tr>
+                <tr>
+                  <th>Votação</th>
+                  <th>Ações</th>
+                </tr>
               {% endif %}
             </thead>
             <tbody>
               {% for v in votacoes %}
-              {% if is_proposicoes %}
-              <tr>
-                <td>
-                  {% if v.id_proposicao %}
-                    <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.id_proposicao }}" target="camara" class="text-decoration-none">
-                      {{ v.titulo|truncatechars:80 }}
-                    </a>
-                  {% else %}
-                    {{ v.titulo|truncatechars:80 }}
-                  {% endif %}
-                </td>
-                <td>
-                  {% if v.id_proposicao %}
-                    <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.id_proposicao }}" target="camara" class="text-decoration-none">
-                      <span class="badge bg-primary">{{ v.tipo }} {{ v.numero }}/{{ v.ano }}</span>
-                    </a>
-                  {% else %}
-                    <span class="badge bg-primary">{{ v.tipo }} {{ v.numero }}/{{ v.ano }}</span>
-                  {% endif %}
-                </td>
-                <td>
-                  <div class="text-muted small">{{ v.ementa|truncatechars:120 }}</div>
-                </td>
-                <td>
-                  {% if v.id_proposicao %}
-                  <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.id_proposicao }}" class="btn btn-sm btn-outline-primary" target="camara">
-                    <i class="bi bi-box-arrow-up-right"></i> Câmara
-                  </a>
-                  {% endif %}
-                </td>
-              </tr>
-              {% else %}
-              <tr>
-                <td>
-                  {% if v.proposicao_votacao and v.proposicao_votacao.proposicao and v.proposicao_votacao.proposicao.id_proposicao %}
-                    <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.proposicao_votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
-                      {{ v.titulo|truncatechars:80 }}
-                    </a>
-                  {% else %}
-                    {{ v.titulo|truncatechars:80 }}
-                  {% endif %}
-                  <div class="text-muted small">{{ v.resumo|truncatechars:120 }}</div>
-                </td>
-                <td>
-                  {% if v.ativo %}
-                    <span class="badge bg-success">Sim</span>
-                  {% else %}
-                    <span class="badge bg-secondary">Não</span>
-                  {% endif %}
-                </td>
-                <td>{{ v.no_ar_desde|date:"d/m/Y H:i" }}</td>
-                <td>
-                  <a href="{% url 'voting:votacao_detail' v.id %}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-eye"></i> Detalhes
-                  </a>
-                </td>
-              </tr>
-              {% endif %}
+
+                {% if is_proposicoes %}
+                  <tr>
+                    <td>
+                      {% if v.id_proposicao %}
+                        <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.id_proposicao }}" target="camara" class="text-decoration-none">
+                          {{ v.titulo }}
+                        </a>
+                      {% else %}
+                        {{ v.titulo }}
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if v.id_proposicao %}
+                        <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.id_proposicao }}" target="camara" class="text-decoration-none">
+                          <span class="badge bg-primary">{{ v.tipo }} {{ v.numero }}/{{ v.ano }}</span>
+                        </a>
+                      {% else %}
+                        <span class="badge bg-primary">{{ v.tipo }} {{ v.numero }}/{{ v.ano }}</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div class="text-muted small">{{ v.ementa }}</div>
+                    </td>
+                    <td>
+                      {% if v.id_proposicao %}
+                        <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.id_proposicao }}" class="btn btn-sm btn-outline-primary" target="camara">
+                          <i class="bi bi-box-arrow-up-right"></i> Câmara
+                        </a>
+                      {% endif %}
+                    </td>
+                  </tr>
+
+                {% else %}
+
+                  <tr>
+                    <td>
+                      <h5 class="mb-1">
+                        {% if v.proposicao_votacao and v.proposicao_votacao.proposicao %}
+                          {{ v.proposicao_votacao.proposicao.tipo }} {{ v.proposicao_votacao.proposicao.numero }}/{{ v.proposicao_votacao.proposicao.ano }}
+                        {% else %}
+                          {{ v.titulo }}
+                        {% endif %}
+                      </h5>
+
+                      {% if v.proposicao_votacao and v.proposicao_votacao.proposicao and v.proposicao_votacao.proposicao.id_proposicao %}
+                        <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.proposicao_votacao.proposicao.id_proposicao }}" target="camara" class="text-decoration-none">
+                          {{ v.titulo }}
+                        </a>
+                        <div class="text-muted small">{{ v.resumo }}</div>
+                      {% endif %}
+
+                      {% if v.proposicao_votacao and v.proposicao_votacao.data_votacao %}
+                        <span class="text-muted d-block">
+                          Votada, pelos deputados, em: {{ v.proposicao_votacao.data_votacao|date:"d/m/Y H:i" }}
+                        </span>
+                      {% endif %}
+                      {% if v.proposicao_votacao and v.proposicao_votacao.proposicao %}
+                        <p class="mb-1">
+                          <strong>Ementa:</strong> {{ v.proposicao_votacao.proposicao.ementa }}
+                        </p>
+                        {% if v.proposicao_votacao.proposicao.keywords %}
+                          <p class="mb-0">
+                            <strong>Palavras-chave:</strong> {{ v.proposicao_votacao.proposicao.keywords }}
+                          </p>
+                        {% endif %}
+                      {% else %}
+                        <p class="mb-1">
+                          {{ v.resumo }}
+                        </p>
+                      {% endif %}
+                    </td>
+
+                    <!--                 
+                    <td>
+                      <h5 class="mb-1">
+                        {% if v.proposicao_votacao and v.proposicao_votacao.proposicao %}
+                          {{ v.proposicao_votacao.proposicao.tipo }} {{ v.proposicao_votacao.proposicao.numero }}/{{ v.proposicao_votacao.proposicao.ano }}
+                        {% else %}
+                          {{ v.titulo }}
+                        {% endif %}
+                      </h5>
+                      {% if v.proposicao_votacao and v.proposicao_votacao.data_votacao %}
+                      <span class="text-muted d-block">
+                        Votada, pelos deputados, em: {{ v.proposicao_votacao.data_votacao|date:"d/m/Y H:i" }}
+                      </span>
+                      {% endif %}
+                      <span class="text-muted d-block">
+                        Disponível no VoteBem desde: {{ v.no_ar_desde|date:"d/m/Y H:i" }}
+                      </span>
+                      {% if v.proposicao_votacao and v.proposicao_votacao.proposicao %}
+                      <p class="mb-1">
+                        <strong>Ementa:</strong> {{ v.proposicao_votacao.proposicao.ementa }}
+                      </p>
+                      {% if v.proposicao_votacao.proposicao.keywords %}
+                      <p class="mb-0">
+                        <strong>Palavras-chave:</strong> {{ v.proposicao_votacao.proposicao.keywords }}
+                      </p>
+                      {% endif %}
+                      {% else %}
+                      <p class="mb-1">
+                        {{ v.resumo }}
+                      </p>
+                      {% endif %}
+                    </td>
+                    -->
+
+                    <td class="text-nowrap">
+                      <a href="{% url 'voting:votacao_detail' v.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i> Votar
+                      </a>
+                      {% if v.proposicao_votacao and v.proposicao_votacao.proposicao and v.proposicao_votacao.proposicao.id_proposicao %}
+                        <a href="http://www.camara.gov.br/proposicoesWeb/fichadetramitacao?idProposicao={{ v.proposicao_votacao.proposicao.id_proposicao }}" target="camara" class="btn btn-sm btn-outline-secondary">
+                          <i class="bi bi-box-arrow-up-right"></i> Na Câmara
+                        </a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endif %}
               {% endfor %}
             </tbody>
           </table>
         </div>
         {% if is_paginated %}
-        <div class="card-footer">
-          <nav aria-label="Navegação">
-            <ul class="pagination justify-content-center mb-0">
-              {% if page_obj.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">&laquo; Primeira</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">Anterior</a></li>
-              {% endif %}
-              <li class="page-item active"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
-              {% if page_obj.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">Próxima</a></li>
-                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">Última &raquo;</a></li>
-              {% endif %}
-            </ul>
-          </nav>
-        </div>
+          <div class="card-footer">
+            <nav aria-label="Navegação">
+              <ul class="pagination justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                  <li class="page-item"><a class="page-link" href="?page=1{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">&laquo; Primeira</a></li>
+                  <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">Anterior</a></li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                  <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">Próxima</a></li>
+                  <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if q %}&q={{ q }}{% endif %}{% if tipo_sel %}&tipo={{ tipo_sel }}{% endif %}{% if ano_sel %}&ano={{ ano_sel }}{% endif %}{% if ativo_sel %}&ativo={{ ativo_sel }}{% endif %}">Última &raquo;</a></li>
+                {% endif %}
+              </ul>
+            </nav>
+          </div>
         {% endif %}
       </div>
     {% else %}

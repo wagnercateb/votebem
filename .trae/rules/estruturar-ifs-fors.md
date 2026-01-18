@@ -1,0 +1,1 @@
+indent all content inside all {% if %} and {% for %} blocks to have a structured layout so that i can easily identify, visually, the nesting structure of the whole page
