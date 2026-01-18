@@ -1,0 +1,120 @@
+{% extends "admin/voting/base_administrativo.html" %}
+
+{% block title %}Testar email{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item"><a href="{% url 'gerencial:dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active">Testar email</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header">
+        Configuração atual de email
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-5">EMAIL_BACKEND</dt>
+          <dd class="col-sm-7"><code>{{ email_settings.EMAIL_BACKEND }}</code></dd>
+
+          <dt class="col-sm-5">EMAIL_HOST</dt>
+          <dd class="col-sm-7"><code>{{ email_settings.EMAIL_HOST }}</code></dd>
+
+          <dt class="col-sm-5">EMAIL_PORT</dt>
+          <dd class="col-sm-7"><code>{{ email_settings.EMAIL_PORT }}</code></dd>
+
+          <dt class="col-sm-5">EMAIL_USE_TLS</dt>
+          <dd class="col-sm-7"><code>{{ email_settings.EMAIL_USE_TLS }}</code></dd>
+
+          <dt class="col-sm-5">EMAIL_USE_SSL</dt>
+          <dd class="col-sm-7"><code>{{ email_settings.EMAIL_USE_SSL }}</code></dd>
+
+          <dt class="col-sm-5">EMAIL_HOST_USER</dt>
+          <dd class="col-sm-7"><code>{{ email_settings.EMAIL_HOST_USER }}</code></dd>
+
+          <dt class="col-sm-5">DEFAULT_FROM_EMAIL</dt>
+          <dd class="col-sm-7"><code>{{ email_settings.DEFAULT_FROM_EMAIL }}</code></dd>
+
+          <dt class="col-sm-5">SERVER_EMAIL</dt>
+          <dd class="col-sm-7"><code>{{ email_settings.SERVER_EMAIL }}</code></dd>
+
+          <dt class="col-sm-5">DJANGO_SETTINGS_MODULE</dt>
+          <dd class="col-sm-7"><code>{{ email_settings.DJANGO_SETTINGS_MODULE }}</code></dd>
+        </dl>
+      </div>
+    </div>
+
+    {% if connection_status.socket_ok %}
+      <div class="alert alert-success">
+        Conexão de socket com {{ email_settings.EMAIL_HOST }}:{{ email_settings.EMAIL_PORT }} foi estabelecida.
+        {% if connection_status.socket_peer %}
+          <br>Peer: <code>{{ connection_status.socket_peer }}</code>
+        {% endif %}
+      </div>
+    {% elif connection_status.socket_ok is not none %}
+      <div class="alert alert-danger">
+        Falha ao abrir conexão de socket com {{ email_settings.EMAIL_HOST }}:{{ email_settings.EMAIL_PORT }}.
+        {% if connection_status.socket_error_type %}
+          <br><strong>{{ connection_status.socket_error_type }}</strong>: {{ connection_status.socket_error_message }}
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="col-md-6">
+    <div class="card mb-3">
+      <div class="card-header">
+        Testar envio de email via send_mail
+      </div>
+      <div class="card-body">
+        <form method="post" action="">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="id_to_email" class="form-label">Enviar para</label>
+            <input type="email" name="to_email" id="id_to_email" class="form-control" value="{{ default_to_email }}" placeholder="destinatário do teste">
+            <div class="form-text">
+              Por padrão será usado seu email de usuário ou DEFAULT_FROM_EMAIL.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="id_subject" class="form-label">Assunto</label>
+            <input type="text" name="subject" id="id_subject" class="form-control" value="Teste de email VoteBem">
+          </div>
+
+          <div class="mb-3">
+            <label for="id_message" class="form-label">Mensagem</label>
+            <textarea name="message" id="id_message" class="form-control" rows="4">Este é um teste de conexão com o servidor de email do VoteBem.</textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Testar envio de email</button>
+        </form>
+      </div>
+    </div>
+
+    {% if test_result %}
+      {% if test_result.success %}
+        <div class="alert alert-success">
+          Email enviado com sucesso para <strong>{{ test_result.to_email }}</strong>.
+          <br>send_mail retornou: <code>{{ test_result.sent_count }}</code> email(s) enviados.
+        </div>
+      {% endif %}
+    {% endif %}
+
+    {% if error_details %}
+      <div class="alert alert-danger">
+        <strong>Erro ao enviar email de teste.</strong><br>
+        Tipo: <code>{{ error_details.error_type }}</code><br>
+        Mensagem: {{ error_details.error_message }}<br>
+        <details class="mt-2">
+          <summary>Detalhes técnicos</summary>
+          <pre style="white-space: pre-wrap; word-break: break-all;">{{ error_details.error_repr }}</pre>
+        </details>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+

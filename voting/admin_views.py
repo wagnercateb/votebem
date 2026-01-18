@@ -15,7 +15,7 @@ import requests
 from .models import Proposicao, ProposicaoVotacao, VotacaoVoteBem, Voto, Congressman, CongressmanVote, Referencia
 from django.contrib.auth.models import User
 from .services.camara_api import camara_api, CamaraAPIService
-from votebem.utils.devlog import dev_log  # Dev logger for console + file output
+from votebem.utils.devlog import dev_log
 from django.db import transaction
 from django.core.cache import cache
 import threading
@@ -28,6 +28,10 @@ from django.conf import settings
 from decouple import config as env_config
 from functools import wraps
 from django.http import HttpResponseForbidden
+from django.core.mail import send_mail
+import socket
+
+logger = logging.getLogger(__name__)
 
 # Background task helpers
 # ------------------------
@@ -92,8 +96,71 @@ def admin_dashboard(request):
         'total_votos_congressistas': CongressmanVote.objects.count(),
         'total_usuarios': User.objects.count(),
     }
-    
     return render(request, 'admin/voting/admin_dashboard.html', context)
+
+
+@admin_required
+def email_test(request):
+    email_settings = {
+        'EMAIL_BACKEND': getattr(settings, 'EMAIL_BACKEND', ''),
+        'EMAIL_HOST': getattr(settings, 'EMAIL_HOST', ''),
+        'EMAIL_PORT': getattr(settings, 'EMAIL_PORT', ''),
+        'EMAIL_USE_TLS': getattr(settings, 'EMAIL_USE_TLS', ''),
+        'EMAIL_USE_SSL': getattr(settings, 'EMAIL_USE_SSL', ''),
+        'EMAIL_HOST_USER': getattr(settings, 'EMAIL_HOST_USER', ''),
+        'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', ''),
+        'SERVER_EMAIL': getattr(settings, 'SERVER_EMAIL', ''),
+        'DJANGO_SETTINGS_MODULE': os.environ.get('DJANGO_SETTINGS_MODULE', ''),
+    }
+    default_to_email = request.user.email or email_settings['DEFAULT_FROM_EMAIL']
+    test_result = None
+    error_details = None
+    connection_status = {}
+    if request.method == 'POST':
+        to_email = request.POST.get('to_email') or default_to_email
+        subject = request.POST.get('subject') or 'Teste de email VoteBem'
+        message = request.POST.get('message') or 'Este é um teste de conexão com o servidor de email do VoteBem.'
+        host = email_settings['EMAIL_HOST']
+        port = email_settings['EMAIL_PORT']
+        if host and port:
+            try:
+                with socket.create_connection((host, int(port)), timeout=10) as sock:
+                    peer = sock.getpeername()
+                connection_status['socket_ok'] = True
+                connection_status['socket_peer'] = str(peer)
+            except Exception as e:
+                connection_status['socket_ok'] = False
+                connection_status['socket_error_type'] = type(e).__name__
+                connection_status['socket_error_message'] = str(e)
+        try:
+            sent_count = send_mail(
+                subject,
+                message,
+                email_settings['DEFAULT_FROM_EMAIL'] or email_settings['SERVER_EMAIL'] or None,
+                [to_email],
+                fail_silently=False,
+            )
+            test_result = {
+                'success': True,
+                'sent_count': sent_count,
+                'to_email': to_email,
+            }
+        except Exception as e:
+            logger.exception('Erro ao testar envio de e-mail administrativo')
+            error_details = {
+                'success': False,
+                'error_type': type(e).__name__,
+                'error_message': str(e),
+                'error_repr': repr(e),
+            }
+    context = {
+        'email_settings': email_settings,
+        'default_to_email': default_to_email,
+        'test_result': test_result,
+        'error_details': error_details,
+        'connection_status': connection_status,
+    }
+    return render(request, 'admin/voting/email_test.html', context)
 
 
 @staff_member_required
@@ -3785,5 +3852,4 @@ def ajax_task_status(request):
         return JsonResponse({'ok': False, 'error': 'Parâmetro key é obrigatório.'}, status=400)
     payload = _get_status(status_key)
     return JsonResponse({'ok': True, 'status': payload, 'key': status_key})
-
 

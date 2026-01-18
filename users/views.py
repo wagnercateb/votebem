@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+import logging
 from django.contrib.auth import login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.forms import UserCreationForm
@@ -14,6 +15,8 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 class RegisterView(CreateView):
     """User registration view"""
@@ -34,14 +37,22 @@ class RegisterView(CreateView):
         )
         subject = 'VoteBem - Confirmação de e-mail'
         message = f'Olá {user.username},\n\nClique no link para ativar sua conta:\n{activation_link}\n\nSe você não solicitou, ignore este e-mail.'
-        send_mail(
-            subject,
-            message,
-            getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@votebem.com'),
-            [user.email],
-            fail_silently=False
-        )
-        messages.success(self.request, 'Conta criada! Verifique seu e-mail para ativar a conta.')
+        try:
+            send_mail(
+                subject,
+                message,
+                getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@votebem.com'),
+                [user.email],
+                fail_silently=False
+            )
+            messages.success(self.request, 'Conta criada! Verifique seu e-mail para ativar a conta.')
+        except Exception:
+            logger.exception('Erro ao enviar e-mail de ativação para o usuário %s', user.pk)
+            messages.error(
+                self.request,
+                'Conta criada, mas houve um problema ao enviar o e-mail de ativação. '
+                'Entre em contato com o suporte para concluir a ativação.'
+            )
         return redirect(self.success_url)
 
 def activate_account(request, uidb64, token):

@@ -90,4 +90,5 @@ urlpatterns = [
     # RAG tool page (staff only)
     path('rag-tool/', staff_member_required(admin_views.rag_tool), name='rag_tool'),
     path('rag-tool/upload/', staff_member_required(admin_views.rag_upload_files), name='rag_upload_files'),
+    path('email-test/', staff_member_required(admin_views.email_test), name='email_test'),
 ]
