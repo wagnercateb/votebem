@@ -6,8 +6,14 @@
   <h3 class="mb-3">Opinar</h3>
   <div class="row">
     <div class="col-lg-12">
+      <div class="d-flex justify-content-end mb-3">
+        <div class="input-group w-auto" style="max-width: 380px;">
+          <span class="input-group-text" id="cardFilterCount" title="Cartões visíveis">0</span>
+          <input type="text" id="cardFilterInput" class="form-control" placeholder="Filtrar" aria-label="Filtrar votações para opinar" aria-describedby="cardFilterCount">
+        </div>
+      </div>
       {% for v in votacoes %}
-      <div class="card mb-3">
+      <div class="card mb-3 opinar-card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <div>
             <strong>{{ v.titulo }}</strong>
@@ -101,5 +107,48 @@ function deleteRef(vvId) {
   })
   .catch(function () { alert('Erro de rede'); });
 }
+</script>
+<script>
+  (function () {
+    'use strict';
+    function normalizeText(s) {
+      return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+    function applyOpinarFilter() {
+      var inputEl = document.getElementById('cardFilterInput');
+      var countEl = document.getElementById('cardFilterCount');
+      if (!inputEl || !countEl) return;
+      var raw = normalizeText(inputEl.value);
+      var words = raw ? raw.split(' ') : [];
+      var cards = Array.prototype.slice.call(document.querySelectorAll('.opinar-card'));
+      var visible = 0;
+      cards.forEach(function (card) {
+        var text = normalizeText(card.textContent || card.innerText || '');
+        var show = true;
+        for (var i = 0; i < words.length; i++) {
+          if (words[i] && text.indexOf(words[i]) === -1) {
+            show = false;
+            break;
+          }
+        }
+        card.style.display = show ? '' : 'none';
+        if (show) {
+          visible++;
+        }
+      });
+      countEl.textContent = String(visible);
+    }
+    function initOpinarFilter() {
+      var inputEl = document.getElementById('cardFilterInput');
+      if (!inputEl) return;
+      inputEl.addEventListener('input', applyOpinarFilter);
+      applyOpinarFilter();
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initOpinarFilter);
+    } else {
+      initOpinarFilter();
+    }
+  })();
 </script>
 {% endblock %}

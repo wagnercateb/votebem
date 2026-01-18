@@ -796,7 +796,14 @@ def opinar(request):
     votacoes = (
         VotacaoVoteBem.objects
         .select_related('proposicao_votacao__proposicao')
-        .order_by('-data_hora_votacao')
+        .annotate(
+            sort_order_is_null=Case(
+                When(sort_order__isnull=True, then=1),
+                default=0,
+                output_field=IntegerField(),
+            )
+        )
+        .order_by('sort_order_is_null', 'sort_order', '-data_hora_votacao')
     )
     # Map existing referencia per vv for this divulgador
     refs = (

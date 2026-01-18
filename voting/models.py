@@ -367,7 +367,7 @@ class Referencia(models.Model):
     )
 
     # Opcional: título da referência
-    title = models.CharField(max_length=255, blank=True, null=True, verbose_name='Título')
+    title = models.CharField(max_length=1000, blank=True, null=True, verbose_name='Título')
 
     # Opcional: vínculo direto à votação VoteBem (quando referência for específica desta entrada)
     votacao_votebem = models.ForeignKey(
