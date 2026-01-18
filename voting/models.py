@@ -86,13 +86,14 @@ class VotacaoVoteBem(models.Model):
     no_ar_desde = models.DateTimeField(verbose_name="Ativa desde")
     no_ar_ate = models.DateTimeField(blank=True, null=True, verbose_name="Ativa até")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
+    sort_order = models.IntegerField(blank=True, null=True, verbose_name="Ordem de Exibição")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         verbose_name = "Votação VoteBem"
         verbose_name_plural = "Votações VoteBem"
-        ordering = ['-no_ar_desde']
+        ordering = ['sort_order', '-no_ar_desde']
     
     def __str__(self):
         return f"Votação: {self.titulo[:50]}"

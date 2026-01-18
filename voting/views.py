@@ -29,7 +29,13 @@ class VotacoesDisponiveisView(ListView):
             no_ar_desde__lte=now
         ).select_related('proposicao_votacao__proposicao') \
          .prefetch_related('proposicao_votacao__proposicao__proposicaotema_set__tema') \
-         .order_by('-data_hora_votacao')
+         .annotate(
+             sort_order_is_null=Case(
+                 When(sort_order__isnull=True, then=1),
+                 default=0,
+                 output_field=IntegerField(),
+             )
+         ).order_by('sort_order_is_null', 'sort_order', '-data_hora_votacao')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
