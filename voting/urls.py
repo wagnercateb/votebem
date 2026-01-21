@@ -23,4 +23,6 @@ urlpatterns = [
     path('opinar/', views.opinar, name='opinar'),
     path('opinar/referencias/save', views.opinar_referencia_save, name='opinar_referencia_save'),
     path('opinar/referencias/delete', views.opinar_referencia_delete, name='opinar_referencia_delete'),
+    path('opinar/divulgador/save', views.opinar_divulgador_save, name='opinar_divulgador_save'),
 ]
+

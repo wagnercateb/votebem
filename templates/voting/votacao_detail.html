@@ -97,7 +97,7 @@
                         <!-- Vote também: links para votações relacionadas da mesma proposição -->
                         {% if related_votacoes %}
                         <div class="mt-3 border-top pt-2">
-                            <span>Vote também (mesmo projeto): </span>
+                            <span>Outra votação no mesmo projeto: </span>
                             {% for rv in related_votacoes %}
                                 {# Usar caminho root-relative para seguir host/porta atual #}
                                 <a href="/voting/votacao/{{ rv.id }}/" class="link-primary">{{ rv.titulo }}</a>{% if not forloop.last %} • {% endif %}
@@ -195,7 +195,7 @@
         <div class="card mb-4">
             <div class="card-header d-flex align-items-center">
                 <i class="bi bi-info-circle me-2"></i>
-                <strong>Entenda</strong>
+                <strong>Clique para saber mais</strong>
                 <span class="ms-auto text-muted small">{{ referencias_count }} referência{{ referencias_count|pluralize:"s" }}</span>
             </div>
             <div class="card-body">

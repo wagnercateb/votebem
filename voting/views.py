@@ -870,3 +870,20 @@ def opinar_referencia_delete(request):
         return JsonResponse({'ok': False, 'error': 'Referência não encontrada.'}, status=404)
     ref.delete()
     return JsonResponse({'ok': True})
+
+@login_required
+def opinar_divulgador_save(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método não permitido.'}, status=405)
+    
+    divulgador = _get_divulgador_for_user(request.user)
+    if not divulgador:
+        return JsonResponse({'ok': False, 'error': 'Usuário não é divulgador.'}, status=403)
+        
+    icon_url = (request.POST.get('icon_url') or '').strip()
+    
+    # Update only the icon_url field
+    divulgador.icon_url = icon_url if icon_url else None
+    divulgador.save(update_fields=['icon_url', 'updated_at'])
+    
+    return JsonResponse({'ok': True})

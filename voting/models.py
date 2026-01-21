@@ -307,7 +307,7 @@ class Divulgador(models.Model):
     domain_parte = models.CharField(max_length=255, blank=True, null=True, verbose_name="Domínio (parte)")
     alias = models.CharField(max_length=255, blank=True, null=True, verbose_name="Apelido")
     tooltip = models.TextField(blank=True, null=True, verbose_name="Tooltip")
-    icon_url = models.URLField(blank=True, null=True, verbose_name="URL do Ícone/Imagem")
+    icon_url = models.URLField(max_length=1000, blank=True, null=True, verbose_name="URL do Ícone/Imagem")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
