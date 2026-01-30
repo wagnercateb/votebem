@@ -85,7 +85,7 @@
         }
 
         loadReferencesPublicFallback() {
-            fetch(`/voting/referencias/list/?pv_id=${encodeURIComponent(this.pvId)}`, {
+            fetch(`/referencias/list/?pv_id=${encodeURIComponent(this.pvId)}`, {
                 headers: { 'Accept': 'application/json' }
             })
             .then(r => {

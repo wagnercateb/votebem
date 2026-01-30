@@ -73,7 +73,7 @@ if (!window.initReferenciasManager) {
         });
       }
       loadReferencesPublicFallback() {
-        fetch(`/voting/referencias/list/?pv_id=${encodeURIComponent(this.pvId)}`, {
+        fetch(`{% url 'voting:referencias_list_public' %}?pv_id=${encodeURIComponent(this.pvId)}`, {
           headers: { 'Accept': 'application/json' }
         }).then(r => {
           const ct = r.headers.get('content-type') || '';
@@ -435,7 +435,7 @@ if (!window.initReferenciasManager) {
         const pvId = item.pv_id || '';
         const vbId = item.vb_id || '';
         const prioridadeCell = pvId ? `<input type="number" class="form-control form-control-sm vb-pv-prioridade" value="${prioridadeVal}" data-pv-id="${pvId}" placeholder="" style="max-width:90px;" />` : `<span class="text-muted">—</span>`;
-        const votosCell = (votosCount > 0 && (pvId || vbId)) ? `<a href="/voting/votos/oficiais/?votacao_id=${pvId || vbId}" target="votos">${votosCount}</a>` : `${votosCount}`;
+        const votosCell = (votosCount > 0 && (pvId || vbId)) ? `<a href="{% url 'voting:votos_oficiais_app' %}?votacao_id=${pvId || vbId}" target="votos">${votosCount}</a>` : `${votosCount}`;
         const pvAdminPart = pvId ? ` <a href="/admin/voting/proposicaovotacao/${pvId}/change/" class="btn btn-sm btn-outline-secondary" target="pv-admin" title="Editar ProposicaoVotacao no Django">PropVotacao</a>` : '';
         const deleteBtn = `<button type="button" class="btn btn-sm btn-outline-danger vb-delete-pv" data-composed-id="${propId}-${String(id).includes('-') ? String(id).split('-').pop() : String(id)}">Apagar</button>`;
         // Mostrar botão "Criar" somente quando não existe VoteBem e há mais de 1 registro na coluna de votos

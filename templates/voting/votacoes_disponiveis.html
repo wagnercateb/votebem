@@ -18,10 +18,10 @@
                 <!-- Botão para mostrar/ocultar palavras-chave das proposições -->
                 <button id="toggleKeywordsBtn"
                         type="button"
-                        class="btn btn-secondary btn-sm ms-3"
+                        class="btn btn-outline-secondary btn-sm ms-3"
                         title="Mostrar/ocultar palavras-chave"
                         aria-label="Mostrar ou ocultar palavras-chave"
-                        data-visible="true">
+                        data-visible="false">
                   <i class="bi bi-key"></i>
                 </button>
             </div>
@@ -547,11 +547,11 @@
       // Toggle global de exibição das palavras-chave
       // - O botão com ícone de chave alterna a visibilidade de todos os elementos
       //   com a classe .keywords-text.
-      // - Estado inicial: visível. Ao clicar, insere/remove d-none.
+      // - Estado inicial: oculto (false). Ao clicar, insere/remove d-none.
       var toggleBtn = document.getElementById('toggleKeywordsBtn');
       if (toggleBtn) {
-        // Atributo para acompanhar estado (true = visível)
-        toggleBtn.setAttribute('data-visible', 'true');
+        // Atributo para acompanhar estado (false = oculto)
+        toggleBtn.setAttribute('data-visible', 'false');
         toggleBtn.addEventListener('click', function () {
           var nowVisible = toggleBtn.getAttribute('data-visible') === 'true' ? false : true;
           toggleBtn.setAttribute('data-visible', String(nowVisible));

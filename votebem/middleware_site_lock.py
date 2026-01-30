@@ -38,11 +38,11 @@ class SiteLockMiddleware:
             return self.get_response(request)
 
         # Allow access to public references list (API)
-        if path.startswith('/voting/referencias/list/'):
+        if path.startswith('/referencias/list/'):
             return self.get_response(request)
 
         # Allow access to divulgar opinion endpoints
-        if path.startswith('/voting/opinar'):
+        if path.startswith('/opinar'):
             return self.get_response(request)
         # Allow password reset and activation flows
         if path.startswith('/users/password-reset') or path.startswith('/users/password_reset') or path.startswith('/users/reset/'):

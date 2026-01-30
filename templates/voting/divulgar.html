@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Como divulgar - VoteBem{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1 class="mb-4">Como divulgar suas opiniões no site</h1>
+            
+            <p class="lead">
+                Assista ao vídeo abaixo para entender como divulgar suas opiniões no site. Resumindo os passos, é bem simples:
+            </p>
+            
+            <p>
+                <ul>
+                    <li>Faça seu login no site;</li>
+                    <li>Clique em [Votações]: na página <a href="https://votebem.online/" target="_blank">https://votebem.online/</a>, escolha uma votação sobre a qual deseja opinar;</li>
+                    <li>Publique um vídeo de no máximo 5 minutos (no YouTube ou onde preferir) explicando a votação para seu público. Copie o link;</li>
+                    <li>Clique em [Opinar]: na página <a href="https://votebem.online/opinar/" target="_blank">https://votebem.online/opinar/</a>, localize a votação desejada (use Ctrl+F para buscar);</li>
+                    <li>Insira o link do vídeo logo abaixo de "Endereço do vídeo";</li>
+                    <li>Digite uma frase de chamada abaixo de "Título";</li>
+                    <li>Clique em "Salvar".</li>
+                </ul>
+            </p>
+
+            <div class="ratio ratio-16x9 my-4">
+                <iframe src="https://www.youtube.com/embed/qS02N6zsSTI?origin=http://127.0.0.1:8000" title="YouTube video player" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            </div>
+            <div class="text-center mb-4">
+                <a href="https://www.youtube.com/watch?v=qS02N6zsSTI" target="_blank" class="btn btn-outline-danger">
+                    <i class="bi bi-youtube"></i> Assistir no YouTube
+                </a>
+                <p class="text-muted small mt-2">
+                    Caso o vídeo não carregue acima, utilize o botão para assistir diretamente no YouTube.
+                </p>
+            </div>
+
+            <p>
+                Precisando de ajuda, entre em contato conosco através do e-mail <a href="mailto:contato@votebem.online">contato@votebem.online</a>.
+            </p>
+            <p>Obrigado por participar e divulgar, seu público também agradece!</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

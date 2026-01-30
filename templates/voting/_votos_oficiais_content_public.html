@@ -98,7 +98,7 @@
         load() {
             this.statusEl.textContent = 'Carregando...';
             // Use public endpoint
-            fetch(`/voting/referencias/list/?pv_id=${encodeURIComponent(this.pvId)}`, {
+            fetch(`{% url 'voting:referencias_list_public' %}?pv_id=${encodeURIComponent(this.pvId)}`, {
                 headers: { 'Accept': 'application/json' }
             })
             .then(r => r.json())

@@ -871,6 +871,9 @@ def opinar_referencia_delete(request):
     ref.delete()
     return JsonResponse({'ok': True})
 
+def divulgar(request):
+    return render(request, 'voting/divulgar.html')
+
 @login_required
 def opinar_divulgador_save(request):
     if request.method != 'POST':

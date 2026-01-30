@@ -100,7 +100,7 @@
                             <span>Outra votação no mesmo projeto: </span>
                             {% for rv in related_votacoes %}
                                 {# Usar caminho root-relative para seguir host/porta atual #}
-                                <a href="/voting/votacao/{{ rv.id }}/" class="link-primary">{{ rv.titulo }}</a>{% if not forloop.last %} • {% endif %}
+                                <a href="{% url 'voting:votacao_detail' rv.id %}" class="link-primary">{{ rv.titulo }}</a>{% if not forloop.last %} • {% endif %}
                             {% endfor %}
                         </div>
                         {% endif %}

@@ -135,7 +135,7 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
                     'id': pv.id,
                     # Prefer showing the Câmara voting suffix in labels (user-facing)
                     'sufixo': getattr(pv, 'votacao_sufixo', None),
-                    'url': f"/voting/votos/oficiais/?votacao_id={pv.id}",
+                    'url': reverse('voting:votos_oficiais_app') + f"?votacao_id={pv.id}",
                     'descricao': descricao,
                 })
 
@@ -171,7 +171,7 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
                     vb_items.append({
                         'id': v.id,
                         'sufixo': sufixo,
-                        'url': f"/voting/votos/oficiais/?votacao_id={v.id}",
+                        'url': reverse('voting:votos_oficiais_app') + f"?votacao_id={v.id}",
                         'descricao': descricao or '',
                     })
                 if vb_items:
@@ -192,7 +192,7 @@ def proposicao_action_bar(context: Dict[str, Any], proposicao_id: Optional[int] 
                         pv_items2.append({
                             'id': pv.id,
                             'sufixo': getattr(pv, 'votacao_sufixo', None),
-                            'url': f"/voting/votos/oficiais/?votacao_id={pv.id}",
+                            'url': reverse('voting:votos_oficiais_app') + f"?votacao_id={pv.id}",
                             'descricao': getattr(pv, 'descricao', '') or ''
                         })
                     if pv_items2:

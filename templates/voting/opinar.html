@@ -77,7 +77,7 @@ function saveDivulgadorIcon() {
   var iconUrl = document.getElementById('divulgadorIconUrl').value || '';
   var fd = new URLSearchParams();
   fd.append('icon_url', iconUrl);
-  fetch('/voting/opinar/divulgador/save', {
+  fetch('{% url "voting:opinar_divulgador_save" %}', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -100,7 +100,7 @@ function saveRef(vvId) {
   fd.append('vv_id', vvId);
   fd.append('title', title);
   fd.append('url', url);
-  fetch('/voting/opinar/referencias/save', {
+  fetch('{% url "voting:opinar_referencia_save" %}', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -120,7 +120,7 @@ function deleteRef(vvId) {
   if (!confirm('Apagar referência desta votação?')) return;
   var fd = new URLSearchParams();
   fd.append('vv_id', vvId);
-  fetch('/voting/opinar/referencias/delete', {
+  fetch('{% url "voting:opinar_referencia_delete" %}', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',

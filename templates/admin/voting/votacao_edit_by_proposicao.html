@@ -189,8 +189,8 @@
                             Editar só essa
                         </a>
                         {# Botão para abrir a página pública da votação em nova aba #}
-                        <a class="btn btn-outline-primary btn-sm" href="http://localhost:8001/voting/votacao/{{ votacao.pk }}/" target="_blank" rel="noopener" title="Abrir votação pública">
-                            Ver Votebem pública
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'voting:votacao_detail' votacao.pk %}" target="_blank" rel="noopener" title="Abrir votação pública">
+                            <i class="bi bi-box-arrow-up-right"></i> Ver
                         </a>                        {# Botão para abrir a edição oficial da Proposição vinculada (admin gerencial) #}
                         <a class="btn btn-outline-success btn-sm" href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ proposicao.pk }}" target="_blank" rel="noopener" title="Abrir edição da proposição">
                             Ver proposição oficial
