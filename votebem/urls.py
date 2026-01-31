@@ -33,7 +33,7 @@ urlpatterns = [
     path('users/', include('users.urls')),
     path('', include('voting.urls')),
     path('polls/', include('polls.urls')),
-    path('home/', include('home.urls')),
+    path('', include('home.urls')),
     path('health/', health_check, name='health_check'),
     path('favicon.ico', RedirectView.as_view(url=settings.STATIC_URL + 'favicon.ico', permanent=True)),
     path('favicon.png', RedirectView.as_view(url=settings.STATIC_URL + 'favicon.png', permanent=True)),

@@ -4,7 +4,7 @@ from . import views
 app_name = 'voting'
 
 urlpatterns = [
-    path('', views.VotacoesDisponiveisView.as_view(), name='votacoes_disponiveis'),
+    path('votacoes/', views.VotacoesDisponiveisView.as_view(), name='votacoes_disponiveis'),
     # Alias para a rota antiga/esperada: /voting/votacoes_disponiveis/
     path('votacoes_disponiveis/', views.VotacoesDisponiveisView.as_view(), name='votacoes_disponiveis_legacy'),
     path('pesquisar/', views.VotacoesPesquisaView.as_view(), name='votacoes_pesquisa'),

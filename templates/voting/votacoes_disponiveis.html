@@ -15,44 +15,57 @@
                     <span id="totalActiveCount" title="Total de votações ativas">{{ total_active_count }}</span>
                      Votações Disponíveis
                 </h1>
-                <!-- Botão para mostrar/ocultar palavras-chave das proposições -->
-                <button id="toggleKeywordsBtn"
-                        type="button"
-                        class="btn btn-outline-secondary btn-sm ms-3"
-                        title="Mostrar/ocultar palavras-chave"
-                        aria-label="Mostrar ou ocultar palavras-chave"
-                        data-visible="false">
-                  <i class="bi bi-key"></i>
-                </button>
+                <!-- Dropdown Detalhes para alternar Palavras-chaves e Temas -->
+                <div class="dropdown ms-3 d-inline-block">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="detalhesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        +Detalhes
+                    </button>
+                    <ul class="dropdown-menu p-3" aria-labelledby="detalhesDropdown">
+                        <li>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="checkKeywords">
+                                <label class="form-check-label" for="checkKeywords">
+                                    Palavras-chaves
+                                </label>
+                            </div>
+                        </li>
+                        <li>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="checkThemes">
+                                <label class="form-check-label" for="checkThemes">
+                                    Temas
+                                </label>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
             </div>
-            {% if user.is_authenticated %}
-                <a href="{% url 'voting:meus_votos' %}" class="btn btn-outline-primary me-2">
-                    <i class="bi bi-list-check"></i> Meus Votos
+            <div class="d-flex align-items-center">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'voting:meus_votos' %}" class="btn btn-outline-primary btn-sm me-2">
+                        <i class="bi bi-list-check"></i> Meus Votos
+                    </a>
+                {% endif %}
+
+                <a href="{% url 'voting:votacoes_pesquisa' %}" class="btn btn-outline-primary btn-sm me-2" title="Ir para a pesquisa de votações">
+                    <i class="bi bi-search"></i> Pesquisar
                 </a>
-            {% endif %}
 
-            <a href="{% url 'voting:votacoes_pesquisa' %}"
-                class="input-group-text text-decoration-none"
-                id="cardFilterLabel"
-                title="Ir para a pesquisa de votações">
-                <i class="bi bi-search"></i>
-            </a>
-
-            <!-- Substituição do botão de pesquisa por uma caixa de texto de filtro.
-                 Requisito: qualquer cartão que contenha TODAS as palavras digitadas
-                 (em qualquer lugar dentro do cartão) deve ficar visível; os demais, ocultos.
-                 Implementação 100% client-side (JavaScript nesta página), sem chamadas ao servidor.
-                 Observação: a contagem de cartões FILTRADOS (visíveis) aparece ao lado do ícone. -->
-            <div class="input-group w-auto" style="max-width: 380px;">
-                <!-- Ícone de busca agora é clicável e abre a página de pesquisa -->
-                <!-- Contador de cartões atualmente VISÍVEIS após o filtro -->
-                <span class="input-group-text" id="cardFilterCount" title="Cartões visíveis">0</span>
-                <input type="text"
-                       id="cardFilterInput"
-                       class="form-control"
-                       placeholder="Filtrar"
-                       aria-label="Filtrar votações disponíveis"
-                       aria-describedby="cardFilterLabel cardFilterCount">
+                <!-- Substituição do botão de pesquisa por uma caixa de texto de filtro.
+                     Requisito: qualquer cartão que contenha TODAS as palavras digitadas
+                     (em qualquer lugar dentro do cartão) deve ficar visível; os demais, ocultos.
+                     Implementação 100% client-side (JavaScript nesta página), sem chamadas ao servidor.
+                     Observação: a contagem de cartões FILTRADOS (visíveis) aparece ao lado do ícone. -->
+                <div class="input-group input-group-sm w-auto" style="max-width: 380px;">
+                    <!-- Contador de cartões atualmente VISÍVEIS após o filtro -->
+                    <span class="input-group-text" id="cardFilterCount" title="Cartões visíveis">0</span>
+                    <input type="text"
+                           id="cardFilterInput"
+                           class="form-control"
+                           placeholder="Filtrar"
+                           aria-label="Filtrar votações disponíveis"
+                           aria-describedby="cardFilterCount">
+                </div>
             </div>
         </div>
         
@@ -101,7 +114,7 @@
                                     <div class="text-center">
                                         {% with temas=votacao.proposicao_votacao.proposicao.proposicaotema_set.all %}
                                             {% if temas %}
-                                                <div class="mt-1">
+                                                <div class="mt-1 themes-text d-none">
                                                     {% for pt in temas %}
                                                         <span class="badge rounded-pill bg-light border me-1" style="color: darkgreen;">{{ pt.tema.nome }}</span>
                                                     {% endfor %}
@@ -111,7 +124,7 @@
                                         {# Palavras-chave da proposição: inicialmente ocultas, visíveis via botão com ícone de chave #}
                                         {% with kw=votacao.proposicao_votacao.proposicao.keywords %}
                                           {% if kw %}
-                                            <div class="mt-2 keywords-text">
+                                            <div class="mt-2 keywords-text d-none">
                                                 <i><small class="text-muted">
                                                     Palavras-chave:
                                                     <span style="color: #a04000;">{{ kw }}</span>
@@ -179,7 +192,7 @@
                                     <div class="text-center">
                                         {% with temas=votacao.proposicao_votacao.proposicao.proposicaotema_set.all %}
                                             {% if temas %}
-                                                <div class="mt-1">
+                                                <div class="mt-1 themes-text d-none">
                                                     {% for pt in temas %}
                                                         <span class="badge rounded-pill bg-light border me-1" style="color: darkgreen;">{{ pt.tema.nome }}</span>
                                                     {% endfor %}
@@ -189,7 +202,7 @@
                                         {# Palavras-chave da proposição: inicialmente ocultas, visíveis via botão com ícone de chave #}
                                         {% with kw=votacao.proposicao_votacao.proposicao.keywords %}
                                           {% if kw %}
-                                            <div class="mt-2 keywords-text">
+                                            <div class="mt-2 keywords-text d-none">
                                                 <i><small class="text-muted">
                                                     Palavras-chave:
                                                     <span style="color: #a04000;">{{ kw }}</span>
@@ -465,12 +478,12 @@
       var words = raw.length ? raw.split(' ') : [];
       var highlightRegex = createHighlightRegex(words);
       
-      // Verifica estado do toggle de palavras-chave para manter consistência
-      var toggleBtn = document.getElementById('toggleKeywordsBtn');
-      var keywordsVisible = true; // Default
-      if (toggleBtn) {
-        keywordsVisible = toggleBtn.getAttribute('data-visible') === 'true';
-      }
+      // Verifica estado dos checkboxes
+      var checkKw = document.getElementById('checkKeywords');
+      var keywordsVisible = checkKw ? checkKw.checked : false;
+
+      var checkTh = document.getElementById('checkThemes');
+      var themesVisible = checkTh ? checkTh.checked : false;
 
       var cols = getCardColumns();
       var visibleCount = 0;
@@ -497,15 +510,15 @@
              highlightMatches(card, highlightRegex);
           }
           
-          // 5. Sincroniza visibilidade das palavras-chave
+          // 5. Sincroniza visibilidade das palavras-chave e temas
           if (card) {
             var kwEls = card.querySelectorAll('.keywords-text');
             for (var k = 0; k < kwEls.length; k++) {
-               if (keywordsVisible) {
-                 kwEls[k].classList.remove('d-none');
-               } else {
-                 kwEls[k].classList.add('d-none');
-               }
+               kwEls[k].classList.toggle('d-none', !keywordsVisible);
+            }
+            var thEls = card.querySelectorAll('.themes-text');
+            for (var t = 0; t < thEls.length; t++) {
+               thEls[t].classList.toggle('d-none', !themesVisible);
             }
           }
         }
@@ -544,26 +557,14 @@
         // totalActiveEl.textContent = String(countTotalActive());
       }
 
-      // Toggle global de exibição das palavras-chave
-      // - O botão com ícone de chave alterna a visibilidade de todos os elementos
-      //   com a classe .keywords-text.
-      // - Estado inicial: oculto (false). Ao clicar, insere/remove d-none.
-      var toggleBtn = document.getElementById('toggleKeywordsBtn');
-      if (toggleBtn) {
-        // Atributo para acompanhar estado (false = oculto)
-        toggleBtn.setAttribute('data-visible', 'false');
-        toggleBtn.addEventListener('click', function () {
-          var nowVisible = toggleBtn.getAttribute('data-visible') === 'true' ? false : true;
-          toggleBtn.setAttribute('data-visible', String(nowVisible));
-          // Alterna estilo do botão para feedback visual
-          toggleBtn.classList.toggle('btn-secondary', nowVisible);
-          toggleBtn.classList.toggle('btn-outline-secondary', !nowVisible);
-          // Alterna a visibilidade das palavras-chave
-          var kwEls = Array.prototype.slice.call(document.querySelectorAll('.keywords-text'));
-          for (var i = 0; i < kwEls.length; i++) {
-            kwEls[i].classList.toggle('d-none', !nowVisible);
-          }
-        });
+      // Listeners para os checkboxes de detalhes
+      var checkKw = document.getElementById('checkKeywords');
+      if (checkKw) {
+        checkKw.addEventListener('change', applyCardFilter);
+      }
+      var checkTh = document.getElementById('checkThemes');
+      if (checkTh) {
+        checkTh.addEventListener('change', applyCardFilter);
       }
     }
 

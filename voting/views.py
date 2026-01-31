@@ -614,7 +614,14 @@ class VotacoesPesquisaView(ListView):
             return qs
         else:
             # Default: search VotacaoVoteBem table
-            qs = VotacaoVoteBem.objects.select_related('proposicao_votacao__proposicao').order_by('-no_ar_desde')
+            # List only active records as requested
+            qs = VotacaoVoteBem.objects.filter(ativo=True).select_related('proposicao_votacao__proposicao').annotate(
+                sort_order_is_null=Case(
+                    When(sort_order__isnull=True, then=1),
+                    default=0,
+                    output_field=IntegerField(),
+                )
+            ).order_by('sort_order_is_null', 'sort_order', '-data_hora_votacao')
             if q:
                 qs = qs.filter(
                     Q(titulo__icontains=q) |
@@ -629,10 +636,7 @@ class VotacoesPesquisaView(ListView):
                     qs = qs.filter(proposicao_votacao__proposicao__ano=int(ano))
                 except ValueError:
                     pass
-            if ativo == 'sim':
-                qs = qs.filter(ativo=True)
-            elif ativo == 'nao':
-                qs = qs.filter(ativo=False)
+            
             return qs
 
     def get_context_data(self, **kwargs):
@@ -795,6 +799,7 @@ def opinar(request):
     now = timezone.now()
     votacoes = (
         VotacaoVoteBem.objects
+        .filter(ativo=True)
         .select_related('proposicao_votacao__proposicao')
         .annotate(
             sort_order_is_null=Case(
