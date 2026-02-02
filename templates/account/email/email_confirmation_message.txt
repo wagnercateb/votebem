@@ -1,0 +1,13 @@
+{% load account %}{% user_display user as user_display %}
+Olá de {{ current_site.name }}!
+
+Você está recebendo este e-mail porque o usuário {{ user_display }} cadastrou o endereço de e-mail {{ user.email }} em {{ current_site.name }}.
+
+Para confirmar este endereço de e-mail, por favor clique no link abaixo:
+
+{{ activate_url }}
+
+Se você não solicitou este cadastro, por favor ignore este e-mail.
+
+Obrigado,
+{{ current_site.name }}

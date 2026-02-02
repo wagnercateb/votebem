@@ -1,0 +1,21 @@
+{% load account %}{% user_display user as user_display %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <p>Olá de {{ current_site.name }}!</p>
+
+    <p>Você está recebendo este e-mail porque o usuário <strong>{{ user_display }}</strong> cadastrou o endereço de e-mail <strong>{{ user.email }}</strong> em {{ current_site.name }}.</p>
+
+    <p>Para confirmar este endereço de e-mail, por favor clique no link abaixo:</p>
+
+    <p><a href="{{ activate_url }}">{{ activate_url }}</a></p>
+
+    <p>Se você não solicitou este cadastro, por favor ignore este e-mail.</p>
+
+    <p>Obrigado,<br>
+    Equipe {{ current_site.name }}</p>
+</body>
+</html>
