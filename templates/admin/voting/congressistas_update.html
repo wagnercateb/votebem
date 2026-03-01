@@ -3,7 +3,7 @@
 {% block title %}Atualizar Deputados - VoteBem{% endblock %}
 
 {% block breadcrumb_items %}
-<li class="breadcrumb-item"><a href="/gerencial/dashboard/">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{% url 'gerencial:dashboard' %}">Dashboard</a></li>
 <li class="breadcrumb-item active">Atualizar Deputados</li>
 {% endblock %}
 
@@ -18,7 +18,7 @@
         </div>
         <input type="hidden" name="run" value="1">
         <button type="submit" class="btn btn-primary">Atualizar Deputados</button>
-        <a href="/gerencial/dashboard/" class="btn btn-secondary">Voltar ao Dashboard</a>
+        <a href="{% url 'gerencial:dashboard' %}" class="btn btn-secondary">Voltar ao Dashboard</a>
     </form>
 
     {% if result_summary %}

@@ -20,17 +20,20 @@ from django.urls import path
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
+from django.views.generic import RedirectView
 from . import admin_views
 
 app_name = 'gerencial'
 
 urlpatterns = [
-    # Root subpage for Votação oficial via App
-    # Root subpage for Votação oficial via App
-    # Route-level gate: requires authenticated staff
-    path('', staff_member_required(admin_views.votos_oficiais_app), name='votos_oficiais_app'),
-    # Dashboard
-    path('dashboard/', staff_member_required(admin_views.admin_dashboard), name='dashboard'),
+    # Dashboard (now at the root of /gerencial/)
+    path('', staff_member_required(admin_views.admin_dashboard), name='dashboard'),
+    
+    # Redirect old dashboard URL to the new root
+    path('dashboard/', RedirectView.as_view(pattern_name='gerencial:dashboard', permanent=True)),
+
+    # Obter votações (moved from root to specific path)
+    path('votacoes/obter-votos-congressistas/', staff_member_required(admin_views.votos_oficiais_app), name='votos_oficiais_app'),
     
     # Proposições
     path('proposicoes/statistics/', staff_member_required(admin_views.proposicoes_statistics), name='proposicoes_statistics'),

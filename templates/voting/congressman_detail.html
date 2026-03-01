@@ -32,6 +32,17 @@
             padding: 0.15rem 0.35rem;
             line-height: 1;
         }
+        
+        /* Badge ciano para pontos positivos */
+        .badge-cyan {
+            background-color: cyan !important;
+            color: #000 !important;
+            padding: 0.15rem 0.35rem;
+            border-radius: 0.375rem;
+            display: inline-block;
+            line-height: 1;
+            font-weight: bold;
+        }
     </style>
     <div class="row">
         <div class="col-12">
@@ -86,7 +97,7 @@
                         </div>
                         <div class="col-md-4 text-center">
                             {% if voting_details %}
-                                {# Compatibilidade assinada em [-100, 100] com cor gradiente red→green #}
+                                {# Compatibilidade em [0, 100] com cor gradiente red→green #}
                                 <h3 style="color: {{ compatibility_color }} !important;">{{ signed_compatibility_pct }}%</h3>
                                 <p>Compatibilidade</p>
                             {% else %}
@@ -105,11 +116,22 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-list-alt"></i>
                         Detalhes das Votações
                     </h5>
+                    <div class="d-flex align-items-center">
+                        <div class="custom-control custom-checkbox mr-3">
+                            <input type="checkbox" class="custom-control-input" id="filter-iguais" checked>
+                            <label class="custom-control-label" for="filter-iguais" style="color:#000 !important; cursor:pointer;">Iguais</label>
+                        </div>
+                        &nbsp;&nbsp;
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="filter-diferentes" checked>
+                            <label class="custom-control-label" for="filter-diferentes" style="color:#000 !important; cursor:pointer;">Diferentes</label>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -127,7 +149,7 @@
                             </thead>
                             <tbody>
                                 {% for detail in voting_details %}
-                                <tr>
+                                <tr class="voting-row" data-points="{{ detail.points }}">
                                     <td>
                                         <span data-toggle="tooltip" 
                                               title="{{ detail.ementa }}" 
@@ -161,7 +183,7 @@
                                     </td>
                                     <td>
                                         {% if detail.points > 0 %}
-                                            <span>+{{ detail.points }}</span>
+                                            <span class="badge-cyan">+{{ detail.points }}</span>
                                         {% else %}
                                             <span>0</span>
                                         {% endif %}
@@ -233,6 +255,52 @@
 </div>
 
 <script>
+/**
+ * Filtering logic for the voting details table.
+ * It hides or shows rows based on whether the vote resulted in points (Iguais) or not (Diferentes).
+ */
+(function() {
+    function setupFilters() {
+        const checkboxIguais = document.getElementById('filter-iguais');
+        const checkboxDiferentes = document.getElementById('filter-diferentes');
+        const rows = document.querySelectorAll('.voting-row');
+
+        if (!checkboxIguais || !checkboxDiferentes) return;
+
+        function updateTableFilters() {
+            const showIguais = checkboxIguais.checked;
+            const showDiferentes = checkboxDiferentes.checked;
+
+            rows.forEach(row => {
+                const points = parseFloat(row.getAttribute('data-points')) || 0;
+                const isIguais = points > 0;
+                const isDiferentes = points === 0;
+
+                if ((isIguais && showIguais) || (isDiferentes && showDiferentes)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Attach listeners to both checkboxes
+        checkboxIguais.addEventListener('change', updateTableFilters);
+        checkboxDiferentes.addEventListener('change', updateTableFilters);
+
+        // Run once on load to ensure state is correct
+        updateTableFilters();
+    }
+
+    // Run setup when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupFilters);
+    } else {
+        setupFilters();
+    }
+})();
+
+// Separate jQuery logic for tooltips if jQuery is present
 if (typeof $ !== 'undefined' && typeof $.fn !== 'undefined' && $.fn.tooltip) {
     $(function(){
         $('[data-toggle="tooltip"]').tooltip();

@@ -237,7 +237,7 @@
                         <h1>🗳️ VoteBem - Painel Administrativo</h1>
                     </div>
                     <div class="col-md-6 text-end">
-                        <a href="/gerencial/dashboard/" class="btn btn-outline-light btn-sm">Dashboard</a>
+                        <a href="{% url 'gerencial:dashboard' %}" class="btn btn-outline-light btn-sm">Dashboard</a>
                         <a href="/admin/" class="btn btn-outline-light btn-sm">Django Admin</a>
                         <a href="/" class="btn btn-outline-light btn-sm" target="_principal">Site Principal</a>
                     </div>
@@ -248,7 +248,7 @@
         {% block breadcrumbs %}
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/gerencial/dashboard/">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'gerencial:dashboard' %}">Dashboard</a></li>
                 {% block breadcrumb_items %}{% endblock %}
             </ol>
         </nav>

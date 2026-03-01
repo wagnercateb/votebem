@@ -376,3 +376,56 @@ So:
 ----------
 
 
+
+
+CONFIGURAÇÃO PARA ENVIAR EMAILS XXX@votebem.online E RECEBE-LOS COM CATCH ALL REDIRECIONANDO PARA @gmail e @bcb
+
+You are using:
+📥 Receive mail → ImprovMX (catch-all forwarding)
+📤 Send mail → Zoho Free
+🌐 DNS → Hostinger
+
+You must have:
+
+✅ ONE single SPF TXT record
+✅ That includes BOTH Zoho AND ImprovMX
+❌ Never two SPF records
+
+If you have two, Zoho disables SPF automatically.
+
+The Correct SPF Record For Your Case
+  Go to Hostinger → DNS → TXT record for:
+  Host: @
+  And set SPF to:
+  v=spf1 include:zoho.com include:spf.improvmx.com ~all
+
+    ImprovMX needs SPF for forwarding legitimacy
+    Zoho needs SPF to authorize sending
+    The SPF record tells Gmail/Outlook:
+      Both Zoho and ImprovMX can act for votebem.online
+
+But SPF Alone Is Not Enough
+  To avoid spam and Zoho blocking:
+  You MUST also configure:
+  1️⃣ Zoho DKIM
+  In Zoho Admin → Domains → DKIM
+  Add the TXT record they give you in Hostinger.
+  Without DKIM, Gmail may spam your messages.
+
+DNS records no Hostinger:
+CNAME	www	0	votebem.online	300	
+CAA	@	0	0 issue "letsencrypt.org"	14400	
+CAA	@	0	0 issuewild "letsencrypt.org"	14400	
+A	@	0	72.61.59.53	60	
+
+  records de email:
+    TXT	zmail._domainkey	0	"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCMaTo/GzzOKxmNC11egPqbD+ApCAgcZ4ckWfnJBfPxB6tkxIFGFv7KmVFpFaooWnpF9wFbWa6R7u1MjEEBAd65b/FZEhtO4pJPWIdaC28uHf/fnSiJnG89Ax0KkaK+dCh4ZqTgxbC4tYTQuQ4V0UtHKw9kyWEulLvW6vUsHo4ZwQIDAQAB"	14400	
+    TXT	@	0	"google-site-verification=T4Cu80i6SXoygWDNa4ylwoDNfLxDCKoLv3KMk093AFw"	14400	
+    TXT	@	0	"v=spf1 include:zoho.com include:spf.improvmx.com ~all"	14400	
+    MX	@	10	mx1.improvmx.com	14400	
+    MX	@	20	mx2.improvmx.com	14400	
+
+no Improvmx: configurar em https://app.improvmx.com/:
+  * @votebem.online forwards to wagnercateb@gmail.com
+
+No Gmail, configurar o forwarding (pedir instruções detalhadas para o ChatGPT)

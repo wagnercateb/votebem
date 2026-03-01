@@ -51,9 +51,9 @@ class VotacoesDisponiveisView(ListView):
 
         if self.request.user.is_authenticated:
             # Get user's votes to show which ones they've already voted on
-            # Return a dict {votacao_id: voto_value} to allow displaying "Votei Sim/Não"
-            user_votes_qs = Voto.objects.filter(user=self.request.user).values('votacao_id', 'voto')
-            user_votes = {item['votacao_id']: item['voto'] for item in user_votes_qs}
+            # Return a dict {votacao_id: {'voto': voto, 'peso': peso}} to allow displaying vote and importance
+            user_votes_qs = Voto.objects.filter(user=self.request.user).values('votacao_id', 'voto', 'peso')
+            user_votes = {item['votacao_id']: {'voto': item['voto'], 'peso': item['peso']} for item in user_votes_qs}
             context['user_votes'] = user_votes
         else:
             context['user_votes'] = {}
@@ -213,22 +213,6 @@ class DeleteVotoView(LoginRequiredMixin, View):
 
         messages.success(request, 'Seu voto foi excluído. Você pode votar novamente.')
         return redirect('voting:votacao_detail', pk=votacao_id)
-
-class MeusVotosView(LoginRequiredMixin, ListView):
-    """List user's votes"""
-    model = Voto
-    template_name = 'voting/meus_votos.html'
-    context_object_name = 'votos'
-    paginate_by = 20
-    
-    def get_queryset(self):
-        # Use updated path via ProposicaoVotacao -> Proposicao
-        return (
-            Voto.objects
-            .filter(user=self.request.user)
-            .select_related('votacao__proposicao_votacao__proposicao')
-            .order_by('-created_at')
-        )
 
 class RankingView(ListView):
     """Show voting statistics and rankings"""
@@ -465,7 +449,7 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
         voting_details = []
         accumulated_points = 0
         # Track total possible points considering user's weight (peso) per compared vote.
-        # This allows computing a signed compatibility in [-100, 100].
+        # This allows computing a compatibility percentage in [0, 100].
         total_possible_points = 0
         
         # Get all propositions where both user and congressman voted
@@ -480,7 +464,7 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
                 
                 # Calculate points based on vote agreement, weighted by user's peso.
                 # Also accumulate the total possible points (sum of pesos) for compared votes
-                # so we can compute a signed percentage (agreement vs disagreement).
+                # so we can compute a compatibility percentage.
                 try:
                     peso_val = getattr(user_vote, 'peso', 1) or 1
                 except Exception:
@@ -525,33 +509,19 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
         
         context['voting_details'] = voting_details
         context['total_accumulated_points'] = accumulated_points
-        # Total weighted points possible (denominator for signed compatibility)
+        # Total weighted points possible (denominator for compatibility)
         context['total_possible_points'] = total_possible_points
         # Total de votações comparadas (denominador para compatibilidade)
         context['total_votacoes_comparadas'] = len(voting_details)
-        # Compatibilidade: acumulado / total comparações * 100, limitado a 100%
-        try:
-            total = context['total_votacoes_comparadas']
-            if total > 0:
-                pct = int(round((accumulated_points * 100.0) / total))
-                context['compatibility_pct'] = min(100, pct)
-            else:
-                context['compatibility_pct'] = 0
-        except Exception:
-            context['compatibility_pct'] = 0
-        
-        # Signed compatibility percentage in [-100, 100] using weights (peso):
-        # formula => 100 * (agreements - disagreements) / total_weight
-        # which equals 100 * (2*agreements - total_weight) / total_weight
+        # Compatibilidade: acumulado / total_possible_points * 100, limitado a 100%
+        # total_possible_points é a soma dos pesos de todos os votos comparados.
         try:
             denom = total_possible_points
             if denom and denom > 0:
-                signed_pct = int(round(((accumulated_points * 2 - denom) * 100.0) / denom))
-                # Clamp to [-100, 100]
-                signed_pct = max(-100, min(100, signed_pct))
-                context['signed_compatibility_pct'] = signed_pct
-                # Compute a red→green gradient color based on signed percentage
-                context['compatibility_color'] = self._gradient_color(signed_pct)
+                pct = int(round((accumulated_points * 100.0) / denom))
+                context['signed_compatibility_pct'] = min(100, pct)
+                # Compute a red→green gradient color based on percentage [0, 100]
+                context['compatibility_color'] = self._gradient_color(context['signed_compatibility_pct'])
             else:
                 context['signed_compatibility_pct'] = 0
                 context['compatibility_color'] = self._gradient_color(0)
@@ -562,21 +532,21 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
         
         return context
 
-    def _gradient_color(self, signed_pct: int) -> str:
+    def _gradient_color(self, pct: int) -> str:
         """
-        Map signed compatibility percentage [-100, 100] to a red→green gradient.
+        Map compatibility percentage [0, 100] to a red→green gradient.
 
-        -100 → red (hue 0), 0 → yellow-ish (hue ~60), 100 → green (hue 120).
+        0 → red (hue 0), 50 → yellow-ish (hue ~60), 100 → green (hue 120).
         Returns a CSS color string using HSL for smooth gradients.
         """
         try:
-            val = max(-100, min(100, int(round(signed_pct))))
+            val = max(0, min(100, int(round(pct))))
         except Exception:
             val = 0
         # Normalize to [0,1] and map to hue [0,120]
-        # -100 => 0.0 => hue 0 (red)
-        # +100 => 1.0 => hue 120 (green)
-        normalized = (val + 100) / 200.0
+        # 0 => 0.0 => hue 0 (red)
+        # 100 => 1.0 => hue 120 (green)
+        normalized = val / 100.0
         hue = int(round(120 * normalized))
         # Use high saturation and medium-lightness for visibility
         return f"hsl({hue}, 80%, 40%)"
