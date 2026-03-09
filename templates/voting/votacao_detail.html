@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
+{% load referencias_tags %}
 
 {% block title %}{{ votacao.titulo }} - VoteBem{% endblock %}
 
@@ -223,18 +224,26 @@
                                    data-title="{{ r.title|default:'' }}"
                                    aria-pressed="false">
                                     <div class="entenda-icon">
-                                        {% if r.divulgador and r.divulgador.icon_url %}
-                                            <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}{% if r.kind == 'web_page' %}Artigo{% elif r.kind == 'social_media' %}Vídeo{% elif r.kind == 'sound' %}Áudio{% else %}Referência{% endif %}{% endif %}">
-                                        {% else %}
-                                            <i class="bi bi-volume-up" aria-hidden="true"></i>
-                                        {% endif %}
+                                        {% with auto_icon=r.url|get_referencia_icon %}
+                                            {% if auto_icon %}
+                                                <img src="{{ auto_icon }}" alt="Icone Automático">
+                                            {% elif r.divulgador and r.divulgador.icon_url %}
+                                                <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}{% if r.kind == 'web_page' %}Artigo{% elif r.kind == 'social_media' %}Vídeo{% elif r.kind == 'sound' %}Áudio{% else %}Referência{% endif %}{% endif %}">
+                                            {% else %}
+                                                <i class="bi bi-volume-up" aria-hidden="true"></i>
+                                            {% endif %}
+                                        {% endwith %}
                                     </div>
                                     <div class="entenda-label">
-                                        {% if r.divulgador and r.divulgador.alias %}
-                                            {{ r.divulgador.alias }}
-                                        {% else %}
-                                            {% if r.kind == 'web_page' %}Artigo{% elif r.kind == 'social_media' %}Vídeo{% elif r.kind == 'sound' %}Áudio{% else %}Referência{% endif %}
-                                        {% endif %}
+                                        {% with auto_label=r.url|get_referencia_label %}
+                                            {% if auto_label %}
+                                                {{ auto_label }}
+                                            {% elif r.divulgador and r.divulgador.alias %}
+                                                {{ r.divulgador.alias }}
+                                            {% else %}
+                                                {% if r.kind == 'web_page' %}Artigo{% elif r.kind == 'social_media' %}Vídeo{% elif r.kind == 'sound' %}Áudio{% else %}Referência{% endif %}
+                                            {% endif %}
+                                        {% endwith %}
                                     </div>
                                 </a>
                                 <audio id="ref-audio-{{ r.id }}" src="{% if audio_src|slice:':1' == '/' or audio_src|slice:':7' == 'http://' or audio_src|slice:':8' == 'https://' %}{{ audio_src }}{% else %}/{{ audio_src }}{% endif %}" preload="none"></audio>
@@ -247,48 +256,72 @@
                                 {% if r.kind == 'web_page' %}
                                   <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" data-title="{{ r.title|default:'' }}">
                                     <div class="entenda-icon">
-                                        {% if r.divulgador and r.divulgador.icon_url %}
-                                            <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}Artigo{% endif %}">
-                                        {% else %}
-                                            <i class="bi bi-book" aria-hidden="true"></i>
-                                        {% endif %}
+                                        {% with auto_icon=r.url|get_referencia_icon %}
+                                            {% if auto_icon %}
+                                                <img src="{{ auto_icon }}" alt="Icone Automático">
+                                            {% elif r.divulgador and r.divulgador.icon_url %}
+                                                <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}Artigo{% endif %}">
+                                            {% else %}
+                                                <i class="bi bi-book" aria-hidden="true"></i>
+                                            {% endif %}
+                                        {% endwith %}
                                     </div>
                                     <div class="entenda-label">
-                                        {% if r.divulgador and r.divulgador.alias %}
-                                            {{ r.divulgador.alias }}
-                                        {% else %}Artigo{% endif %}
+                                        {% with auto_label=r.url|get_referencia_label %}
+                                            {% if auto_label %}
+                                                {{ auto_label }}
+                                            {% elif r.divulgador and r.divulgador.alias %}
+                                                {{ r.divulgador.alias }}
+                                            {% else %}Artigo{% endif %}
+                                        {% endwith %}
                                     </div>
                                   </a>
                                 {% elif r.kind == 'social_media' %}
                                   <a class="entenda-item entenda-yt" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" rel="noopener" data-yt-url="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" data-title="{{ r.title|default:'' }}">
                                     <div class="entenda-icon">
-                                        {% if r.divulgador and r.divulgador.icon_url %}
-                                            <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}Vídeo{% endif %}">
-                                        {% else %}
-                                            <i class="bi bi-youtube" aria-hidden="true"></i>
-                                        {% endif %}
+                                        {% with auto_icon=r.url|get_referencia_icon %}
+                                            {% if auto_icon %}
+                                                <img src="{{ auto_icon }}" alt="Icone Automático">
+                                            {% elif r.divulgador and r.divulgador.icon_url %}
+                                                <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}Vídeo{% endif %}">
+                                            {% else %}
+                                                <i class="bi bi-youtube" aria-hidden="true"></i>
+                                            {% endif %}
+                                        {% endwith %}
                                     </div>
                                     <div class="entenda-label">
-                                        {% if r.divulgador and r.divulgador.alias %}
-                                            {{ r.divulgador.alias }}
-                                        {% else %}Vídeo{% endif %}
+                                        {% with auto_label=r.url|get_referencia_label %}
+                                            {% if auto_label %}
+                                                {{ auto_label }}
+                                            {% elif r.divulgador and r.divulgador.alias %}
+                                                {{ r.divulgador.alias }}
+                                            {% else %}Vídeo{% endif %}
+                                        {% endwith %}
                                     </div>
                                   </a>
                                 {% else %}
                                   <a class="entenda-item" href="{% if link_src|slice:':1' == '/' or link_src|slice:':7' == 'http://' or link_src|slice:':8' == 'https://' %}{{ link_src }}{% else %}/{{ link_src }}{% endif %}" target="_blank" rel="noopener noreferrer" data-title="{{ r.title|default:'' }}">
                                     <div class="entenda-icon">
-                                        {% if r.divulgador and r.divulgador.icon_url %}
-                                            <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}Referência{% endif %}">
-                                        {% else %}
-                                            <i class="bi bi-link-45deg" aria-hidden="true"></i>
-                                        {% endif %}
+                                        {% with auto_icon=r.url|get_referencia_icon %}
+                                            {% if auto_icon %}
+                                                <img src="{{ auto_icon }}" alt="Icone Automático">
+                                            {% elif r.divulgador and r.divulgador.icon_url %}
+                                                <img src="{{ r.divulgador.icon_url }}" alt="{% if r.divulgador and r.divulgador.alias %}{{ r.divulgador.alias }}{% else %}Referência{% endif %}">
+                                            {% else %}
+                                                <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                                            {% endif %}
+                                        {% endwith %}
                                     </div>
                                     <div class="entenda-label">
-                                        {% if r.divulgador and r.divulgador.alias %}
-                                            {{ r.divulgador.alias }}
-                                        {% else %}
-                                            {% if r.kind == 'web_page' %}Artigo{% elif r.kind == 'social_media' %}Vídeo{% elif r.kind == 'sound' %}Áudio{% else %}Referência{% endif %}
-                                        {% endif %}
+                                        {% with auto_label=r.url|get_referencia_label %}
+                                            {% if auto_label %}
+                                                {{ auto_label }}
+                                            {% elif r.divulgador and r.divulgador.alias %}
+                                                {{ r.divulgador.alias }}
+                                            {% else %}
+                                                {% if r.kind == 'web_page' %}Artigo{% elif r.kind == 'social_media' %}Vídeo{% elif r.kind == 'sound' %}Áudio{% else %}Referência{% endif %}
+                                            {% endif %}
+                                        {% endwith %}
                                     </div>
                                   </a>
                                 {% endif %}
