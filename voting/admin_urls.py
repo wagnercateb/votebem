@@ -94,4 +94,8 @@ urlpatterns = [
     path('rag-tool/', staff_member_required(admin_views.rag_tool), name='rag_tool'),
     path('rag-tool/upload/', staff_member_required(admin_views.rag_upload_files), name='rag_upload_files'),
     path('email-test/', staff_member_required(admin_views.email_test), name='email_test'),
+    
+    # Impersonation
+    path('impersonate/<int:user_id>/', admin_views.impersonate_user, name='impersonate_user'),
+    path('stop-impersonating/', admin_views.stop_impersonating, name='stop_impersonating'),
 ]

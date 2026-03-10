@@ -195,6 +195,24 @@
         </ul>
     </div>
     
+    <div class="action-card">
+        <h3>Personificação de Usuário</h3>
+        <div class="p-3">
+            <form action="{% url 'gerencial:impersonate_user' user_id=0 %}" method="post" id="impersonate-form">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="user-select" class="form-label">Selecionar Usuário:</label>
+                    <select class="form-select" id="user-select" name="user_id">
+                        {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }} ({{ user.email }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-warning w-100">Entrar como Usuário</button>
+            </form>
+        </div>
+    </div>
+    
     <!-- <div class="action-card">
         <h3>Enquetes</h3>
         <ul class="action-list">
@@ -249,6 +267,20 @@
     tooltipTriggerList.forEach(function (tooltipTriggerEl) {
       new bootstrap.Tooltip(tooltipTriggerEl);
     });
+
+    // Update form action for impersonation
+    const impersonateForm = document.getElementById('impersonate-form');
+    const userSelect = document.getElementById('user-select');
+
+    if (impersonateForm && userSelect) {
+        userSelect.addEventListener('change', function() {
+            const selectedUserId = this.value;
+            impersonateForm.action = `{% url 'gerencial:impersonate_user' user_id=0 %}`.replace('0', selectedUserId);
+        });
+        // Set initial action based on default selected user
+        const initialSelectedUserId = userSelect.value;
+        impersonateForm.action = `{% url 'gerencial:impersonate_user' user_id=0 %}`.replace('0', initialSelectedUserId);
+    }
   });
 </script>
 {% endblock %}

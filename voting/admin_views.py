@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
@@ -30,6 +31,7 @@ from functools import wraps
 from django.http import HttpResponseForbidden
 from django.core.mail import send_mail
 import socket
+from django.contrib.auth import login, logout
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +97,90 @@ def admin_dashboard(request):
         'total_congressistas': Congressman.objects.count(),
         'total_votos_congressistas': CongressmanVote.objects.count(),
         'total_usuarios': User.objects.count(),
+        'users': User.objects.all().order_by('username'),
     }
     return render(request, 'admin/voting/admin_dashboard.html', context)
+
+@admin_required
+def impersonate_user(request, user_id):
+    """
+    Allows a superuser to log in as another user.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, "Você não tem permissão para personificar usuários.")
+        return redirect('gerencial:dashboard')
+
+    original_user_id = request.session.get('original_user_id', request.user.id)
+    site_unlocked = request.session.get('site_unlocked')
+    
+    user_to_impersonate = get_object_or_404(User, pk=user_id)
+
+    # Log out the current user (admin)
+    logout(request)
+    
+    # Set the backend manually since we have multiple backends configured
+    user_to_impersonate.backend = 'django.contrib.auth.backends.ModelBackend'
+    
+    # Log in as the target user
+    login(request, user_to_impersonate)
+    
+    # Store the original user's ID in the session
+    request.session['original_user_id'] = original_user_id
+    request.session['impersonated_user_id'] = user_id
+    
+    # Restore site lock status if it was present
+    if site_unlocked:
+        request.session['site_unlocked'] = True
+        
+    messages.info(request, f"Você está agora logado como {user_to_impersonate.username}.")
+    
+    # Use explicit redirect
+    target_url = reverse('home:index')
+    return redirect(target_url)
+
+def stop_impersonating(request):
+    """
+    Allows a superuser to stop impersonating another user and log back in as themselves.
+    """
+    original_user_id = request.session.get('original_user_id')
+    site_unlocked = request.session.get('site_unlocked')
+    
+    logger.info(f"Stop impersonating called. original_user_id: {original_user_id}")
+    
+    if not original_user_id:
+        logger.warning("No original_user_id found in session.")
+        # If not impersonating, just redirect to dashboard if staff, else home
+        if request.user.is_authenticated and request.user.is_staff:
+            return redirect('gerencial:dashboard')
+        return redirect('home:index')
+
+    original_user = get_object_or_404(User, pk=original_user_id)
+    
+    # Security check: only allow if the original user was a superuser
+    if not original_user.is_superuser:
+        logger.error(f"Action not allowed for non-superuser: {original_user.username}")
+        messages.error(request, "Ação não permitida.")
+        return redirect('home:index')
+
+    # Log out the impersonated user
+    logout(request)
+    
+    # Set the backend manually
+    original_user.backend = 'django.contrib.auth.backends.ModelBackend'
+    
+    # Log in as the original admin user
+    login(request, original_user)
+    
+    # Restore site lock status if it was present
+    if site_unlocked:
+        request.session['site_unlocked'] = True
+        
+    logger.info(f"Successfully returned to admin user: {original_user.username}")
+    messages.info(request, "Você voltou à sua conta de administrador.")
+    
+    # Use explicit redirect to ensure no confusion with lazy reversing
+    target_url = reverse('gerencial:dashboard')
+    return redirect(target_url)
 
 
 @admin_required

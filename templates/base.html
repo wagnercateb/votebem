@@ -102,6 +102,13 @@
             {% endfor %}
         </div>
     {% endif %}
+
+    {% if request.session.impersonated_user_id %}
+        <div class="alert alert-warning text-center mb-0 rounded-0" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> Você está personificando o usuário <strong>{{ request.user.username }}</strong>.
+            <a href="{% url 'gerencial:stop_impersonating' %}" class="btn btn-sm btn-danger ms-3">Sair da personificação</a>
+        </div>
+    {% endif %}
     
     <!-- Main Content -->
     <main class="container-fluid px-4 my-4">

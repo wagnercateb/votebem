@@ -57,7 +57,11 @@ class StaffOnlyGerencialMiddleware:
         path = request.path or ""
 
         # Enforce staff-only policy for the administrative area.
+        # Exception: allow access to stop-impersonating even for non-staff if they are impersonating.
         if path.startswith("/gerencial/"):
+            if path == "/gerencial/stop-impersonating/":
+                return self.get_response(request)
+                
             user = getattr(request, "user", None)
 
             if not (user and user.is_authenticated and getattr(user, "is_staff", False)):
