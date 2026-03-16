@@ -93,9 +93,9 @@ class VotoAdmin(admin.ModelAdmin):
 
 @admin.register(Congressman)
 class CongressmanAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'partido', 'uf', 'ativo', 'total_votos', 'foto_preview', 'created_at']
+    list_display = ['nome', 'partido', 'uf', 'email', 'ativo', 'total_votos', 'foto_preview', 'created_at']
     list_filter = ['partido', 'uf', 'ativo', 'created_at']
-    search_fields = ['nome', 'partido', 'id_cadastro']
+    search_fields = ['nome', 'partido', 'email', 'id_cadastro']
     readonly_fields = ['created_at', 'updated_at']
     list_editable = ['ativo']
     list_per_page = 100

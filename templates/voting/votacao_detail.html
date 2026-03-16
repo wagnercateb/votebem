@@ -18,8 +18,11 @@
 {{ votacao.proposicao_votacao.proposicao.tipo }} {{ votacao.proposicao_votacao.proposicao.numero }}/{{ votacao.proposicao_votacao.proposicao.ano }}
                         {% endif %}
                     </h5>
-                    {% if user_vote %}
-                        <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{% url 'voting:congressman_list_simplified' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-people"></i> Deputados
+                        </a>
+                        {% if user_vote %}
                             <span class="badge bg-success fs-6">
                                 <i class="bi bi-check-circle"></i> Você votou: {{ user_vote.get_voto_display }}
                             </span>
@@ -33,8 +36,7 @@
                                     <i class="bi bi-trash"></i> Excluir meu voto
                                 </button>
                             </form>
-                        </div>
-                    {% elif votacao.is_active %}
+                        {% elif votacao.is_active %}
                         <span class="btn btn-sm btn-outline-primary" title="Votação ativa no site VoteBem. Votação já encerrada na Câmara">
                             <i class="bi bi-clock"></i> Votação Ativa
                         </span>
@@ -52,6 +54,7 @@
                             <i class="bi bi-pause-circle"></i> Votação Inativa
                         </span>
                     {% endif %}
+                    </div>
                     <div class="dropdown ms-2">
                         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-share"></i> Compartilhar

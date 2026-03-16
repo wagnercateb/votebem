@@ -175,22 +175,30 @@
                                     <td>
                                         <span>{{ detail.voto_congressman }}</span>
                                     </td>
-                                    <td>
-                                        <span>{{ detail.voto_user }}</span>
-                                    </td>
-                                    <td>
-                                        <small>{{ detail.data_user_vote|date:"d/m/Y H:i" }}</small>
-                                    </td>
-                                    <td>
-                                        {% if detail.points > 0 %}
-                                            <span class="badge-cyan">+{{ detail.points }}</span>
-                                        {% else %}
-                                            <span>0</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <strong class="badge-outline">{{ detail.accumulated_points }}</strong>
-                                    </td>
+                                    {% if detail.has_user_vote %}
+                                        <td>
+                                            <span>{{ detail.voto_user }}</span>
+                                        </td>
+                                        <td>
+                                            <small>{{ detail.data_user_vote|date:"d/m/Y H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            {% if detail.points > 0 %}
+                                                <span class="badge-cyan">+{{ detail.points }}</span>
+                                            {% else %}
+                                                <span>0</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <strong class="badge-outline">{{ detail.accumulated_points }}</strong>
+                                        </td>
+                                    {% else %}
+                                        <td colspan="4" class="text-center">
+                                            <a href="{% url 'voting:votacao_detail' detail.votacao_id %}" class="btn btn-sm btn-primary w-100">
+                                                <i class="fas fa-vote-yea"></i> Vote você agora
+                                            </a>
+                                        </td>
+                                    {% endif %}
                                 </tr>
                                 {% endfor %}
                             </tbody>

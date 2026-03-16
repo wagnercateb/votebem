@@ -452,71 +452,88 @@ class CongressmanDetailView(LoginRequiredMixin, DetailView):
         # This allows computing a compatibility percentage in [0, 100].
         total_possible_points = 0
         
-        # Get all propositions where both user and congressman voted
-        user_votes = Voto.objects.filter(user=user).select_related('votacao__proposicao_votacao__proposicao')
+        # Get all congressman votes
+        congressman_votes = CongressmanVote.objects.filter(
+            congressman=congressman
+        ).select_related('proposicao_votacao__proposicao')
+
+        # Get all user votes for comparison
+        user_votes_qs = Voto.objects.filter(user=user).select_related('votacao')
+        user_votes_map = {
+            uv.votacao.proposicao_votacao_id: uv 
+            for uv in user_votes_qs
+        }
         
-        for user_vote in user_votes:
-            try:
-                congressman_vote = CongressmanVote.objects.get(
-                    congressman=congressman,
-                    proposicao_votacao=user_vote.votacao.proposicao_votacao
-                )
-                
-                # Calculate points based on vote agreement, weighted by user's peso.
-                # Also accumulate the total possible points (sum of pesos) for compared votes
-                # so we can compute a compatibility percentage.
+        # Calculate the total points the user has assigned to all their votes
+        # This will be the denominator for compatibility: total_user_points
+        total_user_points = sum(getattr(uv, 'peso', 1) or 1 for uv in user_votes_qs)
+
+        # Also need a map of ProposicaoVotacao -> VotacaoVoteBem to get local voting ID
+        vv_map = {
+            vv.proposicao_votacao_id: vv 
+            for vv in VotacaoVoteBem.objects.filter(
+                proposicao_votacao_id__in=[cv.proposicao_votacao_id for cv in congressman_votes]
+            )
+        }
+        
+        # Track how many votes are actually being compared
+        total_votacoes_comparadas = 0
+        
+        for cv in congressman_votes:
+            uv = user_votes_map.get(cv.proposicao_votacao_id)
+            vv = vv_map.get(cv.proposicao_votacao_id)
+            
+            if not vv:
+                continue
+
+            points = 0
+            peso_val = 0
+            voto_user_display = None
+            data_user_vote = None
+
+            if uv:
+                total_votacoes_comparadas += 1
                 try:
-                    peso_val = getattr(user_vote, 'peso', 1) or 1
+                    peso_val = getattr(uv, 'peso', 1) or 1
                 except Exception:
                     peso_val = 1
 
-                # Every compared vote contributes its weight to the total possible points
-                total_possible_points += peso_val
-
-                # If votes match, add the weight to the accumulated points; otherwise add 0
-                points = 0
                 try:
-                    # Ignore sentinel 2 ("Não Compareceu") when comparing congressman vs user vote
-                    # Only consider real votes (-1, 0, 1) when comparing; ignore dummy (2) and absence (3)
-                    # Abstention-equivalence: treat congressman voto 4 as abstention (0) for comparisons.
-                    if congressman_vote.voto in (-1, 0, 1) and user_vote.voto == congressman_vote.voto:
+                    if cv.voto in (-1, 0, 1) and uv.voto == cv.voto:
                         points = peso_val
-                    elif congressman_vote.voto == 4 and user_vote.voto == 0:
+                    elif cv.voto == 4 and uv.voto == 0:
                         points = peso_val
                 except Exception:
                     points = 0
                 
                 accumulated_points += points
-                
-                voting_details.append({
-                    'titulo': user_vote.votacao.titulo,
-                    # Adiciona resumo e id da VotacaoVoteBem para link local
-                    'resumo': getattr(user_vote.votacao, 'resumo', ''),
-                    'votacao_id': user_vote.votacao.id,
-                    'ementa': user_vote.votacao.proposicao_votacao.proposicao.ementa,
-                    'id_proposicao': user_vote.votacao.proposicao_votacao.proposicao.id_proposicao,
-                    'data_votacao': user_vote.votacao.data_hora_votacao,
-                    'voto_congressman': congressman_vote.get_voto_display_text(),
-                    'voto_user': user_vote.get_voto_display(),
-                    'data_user_vote': user_vote.created_at,
-                    'points': points,
-                    'accumulated_points': accumulated_points,
-                })
-                
-            except CongressmanVote.DoesNotExist:
-                # Congressman didn't vote on this proposition
-                continue
+                voto_user_display = uv.get_voto_display()
+                data_user_vote = uv.created_at
+
+            voting_details.append({
+                'titulo': vv.titulo,
+                'resumo': getattr(vv, 'resumo', ''),
+                'votacao_id': vv.id,
+                'ementa': cv.proposicao_votacao.proposicao.ementa,
+                'id_proposicao': cv.proposicao_votacao.proposicao.id_proposicao,
+                'data_votacao': vv.data_hora_votacao,
+                'voto_congressman': cv.get_voto_display_text(),
+                'voto_user': voto_user_display,
+                'data_user_vote': data_user_vote,
+                'points': points,
+                'accumulated_points': accumulated_points,
+                'has_user_vote': uv is not None,
+            })
         
         context['voting_details'] = voting_details
         context['total_accumulated_points'] = accumulated_points
-        # Total weighted points possible (denominator for compatibility)
-        context['total_possible_points'] = total_possible_points
+        # Total possible points is now the total points assigned by the user to ALL their votes
+        context['total_possible_points'] = total_user_points
         # Total de votações comparadas (denominador para compatibilidade)
-        context['total_votacoes_comparadas'] = len(voting_details)
-        # Compatibilidade: acumulado / total_possible_points * 100, limitado a 100%
-        # total_possible_points é a soma dos pesos de todos os votos comparados.
+        context['total_votacoes_comparadas'] = total_votacoes_comparadas
+        # Compatibilidade: acumulado / total_user_points * 100, limitado a 100%
         try:
-            denom = total_possible_points
+            denom = total_user_points
             if denom and denom > 0:
                 pct = int(round((accumulated_points * 100.0) / denom))
                 context['signed_compatibility_pct'] = min(100, pct)
@@ -711,6 +728,24 @@ def votos_oficiais_app_public(request):
         'votos_json': json.dumps(votos_data, ensure_ascii=False),
     }
     return render(request, 'voting/votos_oficiais_app.html', context)
+
+def congressman_list_simplified(request):
+    """Simplified list of all active congressmen, without voting data."""
+    from .models import Congressman
+    congressmen = Congressman.objects.filter(ativo=True).order_by('nome')
+    votos_data = []
+    for c in congressmen:
+        votos_data.append({
+            'nome': c.nome,
+            'id_cadastro': c.id_cadastro,
+            'partido': c.partido or '',
+            'uf': c.uf or '',
+        })
+
+    context = {
+        'votos_json': json.dumps(votos_data, ensure_ascii=False),
+    }
+    return render(request, 'voting/congressman_list_simplified.html', context)
 
 def referencias_list_public(request):
     pv_id = request.GET.get('pv_id')

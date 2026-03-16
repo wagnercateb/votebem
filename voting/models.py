@@ -161,6 +161,7 @@ class Congressman(models.Model):
     partido = models.CharField(max_length=50, verbose_name="Partido")
     partidos_historico = models.TextField(blank=True, null=True, verbose_name="Partidos (histórico)")
     uf = models.CharField(max_length=2, verbose_name="UF")
+    email = models.EmailField(max_length=255, blank=True, null=True, verbose_name="E-mail")
     foto_url = models.URLField(blank=True, null=True, verbose_name="URL da Foto")
     ativo = models.BooleanField(default=True, verbose_name="Ativo")
     created_at = models.DateTimeField(auto_now_add=True)

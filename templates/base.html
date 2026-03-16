@@ -49,6 +49,11 @@
                             <i class="bi bi-trophy"></i> Ranking
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="btn btn-outline-light fw-bold me-2 {% if request.resolver_match and request.resolver_match.app_name == 'voting' and request.resolver_match.url_name == 'congressman_list_simplified' %}active{% endif %}" href="{% url 'voting:congressman_list_simplified' %}">
+                            <i class="bi bi-people"></i> Deputados
+                        </a>
+                    </li>
                     {% if user.is_authenticated %}
                     {% is_divulgador user as user_is_divulgador %}
                     {% if user_is_divulgador %}

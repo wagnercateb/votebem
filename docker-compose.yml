@@ -44,6 +44,8 @@ services:
     container_name: votebem_valkey
     volumes:
       - /dados/valkey/votebem/data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
     restart: unless-stopped
     networks:
       - vps_network

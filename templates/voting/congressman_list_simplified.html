@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Lista de Deputados{% endblock %}
+
+{% block content %}
+<div class="vb-votos-oficiais">
+
+<style>
+  .vb-votos-oficiais .card { border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-radius: 8px; margin-bottom: 12px; }
+  .vb-votos-oficiais .card-header { background: #f8f9fa; border-bottom: 1px solid #dee2e6; padding: 10px 15px; }
+  .vb-votos-oficiais .card-header .card-title { margin: 0; color: #495057; }
+  .vb-votos-oficiais .card-body { padding: 15px; }
+  .vb-votos-oficiais .table td, .vb-votos-oficiais .table th { padding: 8px 12px; vertical-align: middle; }
+  .vb-votos-oficiais .table tbody tr:hover { background-color: #f1f3f5; }
+  .vb-votos-oficiais th[data-field] { cursor: pointer; }
+  .vb-votos-oficiais .sort-icon, .vb-votos-oficiais .sort-hint { margin-left: 6px; }
+</style>
+
+<div class="card" style="margin-bottom: 10px;">
+  <div class="card-body">
+    <div class="filters" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+      <input type="text" id="f-nome" placeholder="Filtrar por nome" class="form-control">
+      <select id="f-partido" class="form-select">
+        <option value="">Todos os partidos</option>
+      </select>
+      <select id="f-uf" class="form-select">
+        <option value="">Todas as UFs</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h4 class="card-title">Lista de Congressistas</h4></div>
+  <div class="card-body">
+    <table class="table table-sm table-hover" id="table-list" style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="padding:6px;" data-field="nome">Nome <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+          <th style="padding:6px;" data-field="partido">Partido <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+          <th style="padding:6px;" data-field="uf">UF <i class="sort-hint bi bi-arrow-down-up"></i> <i class="sort-icon bi" style="display:none;"></i></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const state = {
+    data: {{ votos_json|default:'[]'|safe }},
+    filtered: []
+  };
+  state.filtered = state.data.slice();
+
+  const listSortState = { field: 'nome', dir: 'asc' };
+
+  function uniq(arr) { return Array.from(new Set(arr.filter(Boolean))).sort(); }
+  
+  function renderOptions(id, values, defaultText) {
+    const el = document.getElementById(id);
+    const cur = el.value;
+    el.innerHTML = `<option value="">${defaultText}</option>`;
+    values.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v; el.appendChild(o);
+    });
+    el.value = cur;
+  }
+
+  function sortList(arr, sort) {
+    if (!sort || !sort.field) return arr;
+    const asc = sort.dir === 'asc';
+    return arr.sort((a, b) => {
+      const va = (a[sort.field] || '').toString().toLowerCase();
+      const vb = (b[sort.field] || '').toString().toLowerCase();
+      const res = va.localeCompare(vb, 'pt-BR');
+      return asc ? res : -res;
+    });
+  }
+
+  function updateSortIcons(tableId, sort) {
+    document.querySelectorAll(`#${tableId} thead th[data-field]`).forEach(th => {
+      const f = th.getAttribute('data-field');
+      const icon = th.querySelector('i.sort-icon');
+      const hint = th.querySelector('i.sort-hint');
+      if (!icon || !hint) return;
+      if (sort && sort.field === f) {
+        icon.className = `sort-icon bi ${sort.dir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill'}`;
+        icon.style.display = 'inline-block';
+        hint.style.display = 'none';
+      } else {
+        icon.style.display = 'none';
+        hint.style.display = 'inline-block';
+      }
+    });
+  }
+
+  function renderList() {
+    const tbody = document.querySelector('#table-list tbody');
+    tbody.innerHTML = '';
+    const rows = sortList(state.filtered.slice(), listSortState);
+    
+    rows.forEach(x => {
+      const idc = x.id_cadastro ? String(x.id_cadastro) : '';
+      const localHref = idc ? `/congressman/${idc}/` : '';
+      const camaraHref = idc ? `https://www.camara.leg.br/deputados/${idc}` : '';
+      
+      let nameHtml = x.nome || '';
+      if (idc) {
+        const homeIcon = `<a href="${camaraHref}" target="_blank" title="Ver no site da Câmara" class="me-1 text-decoration-none text-secondary"><i class="bi bi-house-door"></i></a>`;
+        nameHtml = `${homeIcon}<a href="${localHref}">${x.nome || ''}</a>`;
+      }
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td style="padding:6px;">${nameHtml}</td>`+
+        `<td style="padding:6px;">${x.partido||''}</td>`+
+        `<td style="padding:6px;">${x.uf||''}</td>`;
+      
+      tbody.appendChild(tr);
+    });
+    updateSortIcons('table-list', listSortState);
+  }
+
+  function applyFilters() {
+    const nome = document.getElementById('f-nome').value.toLowerCase();
+    const tokens = nome.split(/\s+/).filter(Boolean);
+    const partido = document.getElementById('f-partido').value;
+    const uf = document.getElementById('f-uf').value;
+
+    state.filtered = state.data.filter(x => {
+      const nomeLower = (x.nome||'').toLowerCase();
+      const nomeMatch = tokens.length === 0 ? true : tokens.every(t => nomeLower.includes(t));
+      return (nomeMatch) &&
+             (!partido || x.partido === partido) &&
+             (!uf || x.uf === uf);
+    });
+    renderList();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Initialize filters
+    renderOptions('f-partido', uniq(state.data.map(x => x.partido)), 'Todos os partidos');
+    renderOptions('f-uf', uniq(state.data.map(x => x.uf)), 'Todas as UFs');
+
+    // Event listeners
+    document.getElementById('f-nome').addEventListener('input', applyFilters);
+    document.getElementById('f-partido').addEventListener('change', applyFilters);
+    document.getElementById('f-uf').addEventListener('change', applyFilters);
+
+    document.querySelectorAll('#table-list thead th[data-field]').forEach(th => {
+      th.addEventListener('click', () => {
+        const f = th.getAttribute('data-field');
+        if (listSortState.field === f) {
+          listSortState.dir = listSortState.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          listSortState.field = f;
+          listSortState.dir = 'asc';
+        }
+        renderList();
+      });
+    });
+
+    renderList();
+  });
+</script>
+
+</div>
+{% endblock %}

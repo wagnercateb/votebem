@@ -557,8 +557,16 @@
     tbody.innerHTML = '';
     state.filtered.forEach(x => {
       const idc = x.id_cadastro ? String(x.id_cadastro) : '';
-      const href = idc ? `https://www.camara.leg.br/deputados/${idc}` : '';
-      const nameHtml = href ? `<a href="${href}" target="deputado">${x.nome||''}</a>` : (x.nome||'');
+      const localHref = idc ? `/congressman/${idc}/` : '';
+      const camaraHref = idc ? `https://www.camara.leg.br/deputados/${idc}` : '';
+      
+      let nameHtml = x.nome || '';
+      if (idc) {
+        // Add small house icon for original link and use local href for the name
+        const homeIcon = `<a href="${camaraHref}" target="_blank" title="Ver no site da Câmara" class="me-1 text-decoration-none text-secondary"><i class="bi bi-house-door"></i></a>`;
+        nameHtml = `${homeIcon}<a href="${localHref}">${x.nome || ''}</a>`;
+      }
+      
       const tr = document.createElement('tr');
       tr.innerHTML = `<td style=\"padding:6px;\">${nameHtml}</td>`+
         `<td style=\"padding:6px;\">${x.partido||''}</td>`+
